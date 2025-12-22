@@ -91,7 +91,6 @@
                     <!-- SLA Steps -->
                     <th class="px-2 py-3 text-center font-medium text-gray-600 bg-blue-50" title="SLA อบรม">อบรม</th>
                     <th class="px-2 py-3 text-center font-medium text-gray-600 bg-blue-50" title="SLA OJT">OJT</th>
-                    <th class="px-2 py-3 text-center font-medium text-gray-600 bg-blue-50" title="SLA เอกสาร">เอกสาร</th>
                     <th class="px-2 py-3 text-center font-medium text-gray-600 bg-blue-50" title="SLA ทำบัตร">บัตร</th>
                     <th class="px-2 py-3 text-center font-medium text-gray-600 bg-blue-50" title="SLA ตรวจความพร้อม">ตรวจ</th>
                     <th class="px-2 py-3 text-center font-medium text-gray-600 bg-blue-50" title="SLA DFlow">DFlow</th>
@@ -101,7 +100,7 @@
             </thead>
             <tbody id="technicianTableBody" class="divide-y divide-gray-200">
                 <tr>
-                    <td colspan="16" class="px-4 py-8 text-center text-gray-500">
+                    <td colspan="15" class="px-4 py-8 text-center text-gray-500">
                         <i class="fas fa-spinner fa-spin mr-2"></i>กำลังโหลดข้อมูล...
                     </td>
                 </tr>
@@ -138,7 +137,7 @@ function loadTechnicians() {
     const province = document.getElementById('provinceFilter').value;
     
     const tbody = document.getElementById('technicianTableBody');
-    tbody.innerHTML = '<tr><td colspan="16" class="px-4 py-8 text-center text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>กำลังโหลดข้อมูล...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="15" class="px-4 py-8 text-center text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>กำลังโหลดข้อมูล...</td></tr>';
     
     fetch(`/api/technicians?status=${status}&area=${area}&province=${encodeURIComponent(province)}`)
         .then(response => response.json())
@@ -148,7 +147,7 @@ function loadTechnicians() {
         })
         .catch(error => {
             console.error('Error:', error);
-            tbody.innerHTML = '<tr><td colspan="16" class="px-4 py-8 text-center text-red-500"><i class="fas fa-exclamation-circle mr-2"></i>เกิดข้อผิดพลาด</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="15" class="px-4 py-8 text-center text-red-500"><i class="fas fa-exclamation-circle mr-2"></i>เกิดข้อผิดพลาด</td></tr>';
         });
 }
 
@@ -156,7 +155,7 @@ function renderTable(data) {
     const tbody = document.getElementById('technicianTableBody');
     
     if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="16" class="px-4 py-8 text-center text-gray-500"><i class="fas fa-inbox mr-2"></i>ไม่พบข้อมูล</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="15" class="px-4 py-8 text-center text-gray-500"><i class="fas fa-inbox mr-2"></i>ไม่พบข้อมูล</td></tr>';
         return;
     }
     
@@ -186,13 +185,12 @@ function renderTable(data) {
                     </span>
                 </td>
                 <td class="px-3 py-2 text-center font-bold ${getSlaClass(tech.sla_total)}">${tech.sla_total || '-'}</td>
-                <td class="px-2 py-2 text-center text-xs bg-blue-50 ${getSlaStepClass(tech.sla_training)}">${tech.sla_training || '-'}</td>
-                <td class="px-2 py-2 text-center text-xs bg-blue-50 ${getSlaStepClass(tech.sla_ojt)}">${tech.sla_ojt || '-'}</td>
-                <td class="px-2 py-2 text-center text-xs bg-blue-50 ${getSlaStepClass(tech.sla_doc)}">${tech.sla_doc || '-'}</td>
-                <td class="px-2 py-2 text-center text-xs bg-blue-50 ${getSlaStepClass(tech.sla_genid)}">${tech.sla_genid || '-'}</td>
-                <td class="px-2 py-2 text-center text-xs bg-blue-50 ${getSlaStepClass(tech.sla_inspection)}">${tech.sla_inspection || '-'}</td>
-                <td class="px-2 py-2 text-center text-xs bg-blue-50 ${getSlaStepClass(tech.sla_dflow)}">${tech.sla_dflow || '-'}</td>
-                <td class="px-2 py-2 text-center text-xs bg-blue-50 ${getSlaStepClass(tech.sla_registration)}">${tech.sla_registration || '-'}</td>
+                <td class="px-2 py-2 text-center text-xs bg-blue-50 ${getSlaStepClass(tech.sla_training)}">${formatSla(tech.sla_training)}</td>
+                <td class="px-2 py-2 text-center text-xs bg-blue-50 ${getSlaStepClass(tech.sla_ojt)}">${formatSla(tech.sla_ojt)}</td>
+                <td class="px-2 py-2 text-center text-xs bg-blue-50 ${getSlaStepClass(tech.sla_genid)}">${formatSla(tech.sla_genid)}</td>
+                <td class="px-2 py-2 text-center text-xs bg-blue-50 ${getSlaStepClass(tech.sla_inspection)}">${formatSla(tech.sla_inspection)}</td>
+                <td class="px-2 py-2 text-center text-xs bg-blue-50 ${getSlaStepClass(tech.sla_dflow)}">${formatSla(tech.sla_dflow)}</td>
+                <td class="px-2 py-2 text-center text-xs bg-blue-50 ${getSlaStepClass(tech.sla_registration)}">${formatSla(tech.sla_registration)}</td>
                 <td class="px-3 py-2 text-gray-600 text-sm">${tech.training_round || '-'}</td>
             </tr>
         `;
@@ -246,17 +244,22 @@ function getStatusClass(status, result) {
 }
 
 function getSlaClass(sla) {
-    if (!sla || sla === 0 || sla < 0) return 'text-gray-400';
+    if (sla === null || sla === undefined || sla === '' || sla < 0) return 'text-gray-400';
     if (sla <= 45) return 'text-green-600';
     if (sla <= 60) return 'text-yellow-600';
     return 'text-red-600';
 }
 
 function getSlaStepClass(sla) {
-    if (!sla || sla === 0 || sla < 0) return 'text-gray-400';
+    if (sla === null || sla === undefined || sla === '' || sla < 0) return 'text-gray-400';
     if (sla <= 7) return 'text-green-600 font-medium';
     if (sla <= 14) return 'text-yellow-600 font-medium';
     return 'text-red-600 font-medium';
+}
+
+function formatSla(sla) {
+    if (sla === null || sla === undefined || sla === '' || sla < 0) return '-';
+    return sla;
 }
 </script>
 {% endblock %}

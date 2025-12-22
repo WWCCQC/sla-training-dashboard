@@ -559,17 +559,26 @@ def get_technician_list(df, status_filter=None, area_filter=None, province_filte
     
     filtered_df = df.copy()
     
-    # Status mapping: ภาษาอังกฤษ -> ภาษาไทย
-    status_mapping = {
-        'Completed': ['ขึ้นทะเบียนเรียบร้อย'],
-        'Onprocess': ['อบรม', 'OJT', 'ขออนุมัติDflow ขึ้นทะเบียนช่าง', 'ขอ User', 'Genid/ปริ้นบัตร/ส่งบัตร', 'ตัวแทนยังไม่ส่งขึ้นทะเบียน'],
-        'Closed': ['ช่างลาออก', 'ไม่ผ่านคุณสมบัติ', 'ไม่เข้าอบรม', 'ไม่ผ่านอบรม']
-    }
+    # Status ที่ถือว่า Completed
+    completed_statuses = ['ขึ้นทะเบียนเรียบร้อย']
+    # Status ที่ถือว่า Onprocess
+    onprocess_statuses = ['อบรม', 'OJT', 'ขออนุมัติDflow ขึ้นทะเบียนช่าง', 'ขอ User', 'Genid/ปริ้นบัตร/ส่งบัตร']
+    # Status ที่ถือว่า Closed
+    closed_statuses = ['ช่างลาออก', 'ไม่ผ่านคุณสมบัติ', 'ไม่เข้าอบรม', 'ไม่ผ่านอบรม']
     
     if status_filter and status_filter != 'all':
-        if status_filter in status_mapping:
-            # กรองด้วย status ที่ map ไว้
-            filtered_df = filtered_df[filtered_df['status'].isin(status_mapping[status_filter])]
+        if status_filter == 'Completed':
+            filtered_df = filtered_df[filtered_df['status'].isin(completed_statuses)]
+        elif status_filter == 'Onprocess':
+            # Onprocess = status ใน onprocess_statuses หรือ (ตัวแทนยังไม่ส่งขึ้นทะเบียน และ result != Closed)
+            mask_onprocess = filtered_df['status'].isin(onprocess_statuses)
+            mask_agent_onprocess = (filtered_df['status'] == 'ตัวแทนยังไม่ส่งขึ้นทะเบียน') & (filtered_df['result'] != 'Closed')
+            filtered_df = filtered_df[mask_onprocess | mask_agent_onprocess]
+        elif status_filter == 'Closed':
+            # Closed = status ใน closed_statuses หรือ (ตัวแทนยังไม่ส่งขึ้นทะเบียน และ result = Closed)
+            mask_closed = filtered_df['status'].isin(closed_statuses)
+            mask_agent_closed = (filtered_df['status'] == 'ตัวแทนยังไม่ส่งขึ้นทะเบียน') & (filtered_df['result'] == 'Closed')
+            filtered_df = filtered_df[mask_closed | mask_agent_closed]
         else:
             # กรองตรงๆ
             filtered_df = filtered_df[filtered_df['status'] == status_filter]
