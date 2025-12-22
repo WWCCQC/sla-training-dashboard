@@ -332,14 +332,15 @@ def get_area_stats(df):
     return sorted(area_stats, key=lambda x: x['total'], reverse=True)
 
 def get_province_stats(df):
-    """สรุปสถิติตามจังหวัด"""
+    """สรุปสถิติตามจังหวัด - นับจำนวนลงทะเบียนและขึ้นทะเบียนเรียบร้อย"""
     if df.empty or 'province' not in df.columns:
         return []
     
     province_stats = []
     for province in df['province'].dropna().unique():
         prov_df = df[df['province'] == province]
-        completed = len(prov_df[prov_df['status'] == 'Completed'])
+        # นับขึ้นทะเบียนเรียบร้อย (ใช้ค่าภาษาไทย)
+        completed = len(prov_df[prov_df['status'] == 'ขึ้นทะเบียนเรียบร้อย'])
         
         province_stats.append({
             'province': province.strip(),
@@ -348,7 +349,7 @@ def get_province_stats(df):
             'success_rate': round((completed / len(prov_df) * 100), 1) if len(prov_df) > 0 else 0
         })
     
-    return sorted(province_stats, key=lambda x: x['total'], reverse=True)[:20]
+    return sorted(province_stats, key=lambda x: x['total'], reverse=True)[:10]
 
 def get_province_stats_all(df):
     """สรุปสถิติตามจังหวัด - ทุกจังหวัดสำหรับแผนที่"""
@@ -413,20 +414,21 @@ def get_monthly_stats(df):
     return monthly_stats
 
 def get_trainer_stats(df):
-    """สรุปสถิติตามผู้อบรม"""
+    """สรุปสถิติตามผู้อบรม - นับจำนวนอบรมทั้งหมดและผ่านอบรม (result_round = 'ผ่าน')"""
     if df.empty or 'training_by' not in df.columns:
         return []
     
     trainer_stats = []
     for trainer in df['training_by'].dropna().unique():
         trainer_df = df[df['training_by'] == trainer]
-        completed = len(trainer_df[trainer_df['status'] == 'Completed'])
+        # นับผ่านอบรม (result_round = 'ผ่าน')
+        passed = len(trainer_df[trainer_df['result_round'] == 'ผ่าน']) if 'result_round' in trainer_df.columns else 0
         
         trainer_stats.append({
             'trainer': trainer,
             'total': len(trainer_df),
-            'completed': completed,
-            'success_rate': round((completed / len(trainer_df) * 100), 1) if len(trainer_df) > 0 else 0
+            'passed': passed,
+            'pass_rate': round((passed / len(trainer_df) * 100), 1) if len(trainer_df) > 0 else 0
         })
     
     return sorted(trainer_stats, key=lambda x: x['total'], reverse=True)[:10]

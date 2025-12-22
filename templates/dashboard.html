@@ -278,8 +278,8 @@
             <div class="flex items-center justify-between py-2 border-b border-gray-100">
                 <span class="text-gray-700">{{ prov.province }}</span>
                 <div class="flex items-center gap-4">
-                    <span class="text-sm text-gray-500">{{ prov.total }} คน</span>
-                    <span class="text-sm text-green-600">{{ prov.completed }} สำเร็จ</span>
+                    <span class="text-sm text-gray-500">{{ prov.total }} ลงทะเบียน</span>
+                    <span class="text-sm font-medium text-green-600">{{ prov.completed }} สำเร็จ</span>
                 </div>
             </div>
             {% endfor %}
@@ -296,9 +296,10 @@
             <div class="flex items-center justify-between py-2 border-b border-gray-100">
                 <span class="text-gray-700 text-sm">{{ trainer.trainer[:40] }}{% if trainer.trainer|length > 40 %}...{% endif %}</span>
                 <div class="flex items-center gap-4">
-                    <span class="text-sm text-gray-500">{{ trainer.total }} คน</span>
-                    <span class="px-2 py-1 rounded-full text-xs {% if trainer.success_rate >= 50 %}bg-green-100 text-green-800{% else %}bg-yellow-100 text-yellow-800{% endif %}">
-                        {{ trainer.success_rate }}%
+                    <span class="text-sm text-gray-500">{{ trainer.total }} อบรม</span>
+                    <span class="text-sm font-medium text-green-600">{{ trainer.passed }} ผ่าน</span>
+                    <span class="px-2 py-1 rounded-full text-xs {% if trainer.pass_rate >= 50 %}bg-green-100 text-green-800{% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                        {{ trainer.pass_rate }}%
                     </span>
                 </div>
             </div>
