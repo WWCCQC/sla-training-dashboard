@@ -70,20 +70,19 @@
                     <th class="px-3 py-3 text-left font-medium text-gray-600">พื้นที่</th>
                     <th class="px-3 py-3 text-center font-medium text-gray-600">สถานะปัจจุบัน</th>
                     <th class="px-3 py-3 text-center font-medium text-gray-600 bg-red-50">SLA รวม</th>
-                    <!-- SLA Steps -->
-                    <th class="px-2 py-3 text-center font-medium text-gray-600 text-xs">อบรม</th>
-                    <th class="px-2 py-3 text-center font-medium text-gray-600 text-xs">OJT</th>
-                    <th class="px-2 py-3 text-center font-medium text-gray-600 text-xs">เอกสาร</th>
-                    <th class="px-2 py-3 text-center font-medium text-gray-600 text-xs">บัตร</th>
-                    <th class="px-2 py-3 text-center font-medium text-gray-600 text-xs">ตรวจ</th>
-                    <th class="px-2 py-3 text-center font-medium text-gray-600 text-xs">DFlow</th>
-                    <th class="px-2 py-3 text-center font-medium text-gray-600 text-xs">ลงทะเบียน</th>
+                    <!-- SLA Steps - 6 ขั้นตอน (ไม่รวมเอกสาร) -->
+                    <th class="px-2 py-3 text-center font-medium text-gray-600 text-xs bg-blue-50">อบรม</th>
+                    <th class="px-2 py-3 text-center font-medium text-gray-600 text-xs bg-blue-50">OJT</th>
+                    <th class="px-2 py-3 text-center font-medium text-gray-600 text-xs bg-blue-50">บัตร</th>
+                    <th class="px-2 py-3 text-center font-medium text-gray-600 text-xs bg-blue-50">ตรวจ</th>
+                    <th class="px-2 py-3 text-center font-medium text-gray-600 text-xs bg-blue-50">DFlow</th>
+                    <th class="px-2 py-3 text-center font-medium text-gray-600 text-xs bg-blue-50">ลงทะเบียน</th>
                     <th class="px-3 py-3 text-left font-medium text-gray-600">รอบอบรม</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
                 {% for tech in pending %}
-                <tr class="hover:bg-gray-50 {% if tech.sla_total > 60 %}bg-red-50{% elif tech.sla_total > 45 %}bg-yellow-50{% endif %}">
+                <tr class="hover:bg-gray-50 {% if tech.sla_total >= 0 and tech.sla_total > 60 %}bg-red-50{% elif tech.sla_total >= 0 and tech.sla_total > 45 %}bg-yellow-50{% endif %}">
                     <td class="px-3 py-2 text-gray-500">{{ loop.index }}</td>
                     <td class="px-3 py-2">
                         <div class="font-medium text-gray-800">{{ tech.name or '-' }}</div>
@@ -97,35 +96,36 @@
                     <td class="px-3 py-2 text-gray-600 text-xs">{{ tech.area or '-' }}</td>
                     <td class="px-3 py-2 text-center">
                         <span class="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                            {{ tech.result or 'Onprocess' }}
+                            {{ tech.status or 'Onprocess' }}
                         </span>
                     </td>
                     <td class="px-3 py-2 text-center bg-red-50">
-                        <span class="text-lg font-bold {% if tech.sla_total > 60 %}text-red-600{% elif tech.sla_total > 45 %}text-orange-600{% else %}text-yellow-600{% endif %}">
-                            {{ tech.sla_total or '-' }}
+                        {% if tech.sla_total is not none and tech.sla_total >= 0 %}
+                        <span class="text-lg font-bold {% if tech.sla_total > 60 %}text-red-600{% elif tech.sla_total > 45 %}text-orange-600{% else %}text-green-600{% endif %}">
+                            {{ tech.sla_total }}
                         </span>
                         <span class="text-xs text-gray-500 block">วัน</span>
+                        {% else %}
+                        <span class="text-gray-400">-</span>
+                        {% endif %}
                     </td>
-                    <td class="px-2 py-2 text-center text-xs {% if tech.sla_training > 7 %}text-red-600 font-medium{% elif tech.sla_training > 0 %}text-green-600{% else %}text-gray-400{% endif %}">
-                        {{ tech.sla_training or '-' }}
+                    <td class="px-2 py-2 text-center text-xs bg-blue-50 {% if tech.sla_training is not none and tech.sla_training >= 0 %}{% if tech.sla_training > 7 %}text-red-600 font-medium{% else %}text-green-600 font-medium{% endif %}{% else %}text-gray-400{% endif %}">
+                        {% if tech.sla_training is not none and tech.sla_training >= 0 %}{{ tech.sla_training }}{% else %}-{% endif %}
                     </td>
-                    <td class="px-2 py-2 text-center text-xs {% if tech.sla_ojt > 7 %}text-red-600 font-medium{% elif tech.sla_ojt > 0 %}text-green-600{% else %}text-gray-400{% endif %}">
-                        {{ tech.sla_ojt or '-' }}
+                    <td class="px-2 py-2 text-center text-xs bg-blue-50 {% if tech.sla_ojt is not none and tech.sla_ojt >= 0 %}{% if tech.sla_ojt > 7 %}text-red-600 font-medium{% else %}text-green-600 font-medium{% endif %}{% else %}text-gray-400{% endif %}">
+                        {% if tech.sla_ojt is not none and tech.sla_ojt >= 0 %}{{ tech.sla_ojt }}{% else %}-{% endif %}
                     </td>
-                    <td class="px-2 py-2 text-center text-xs {% if tech.sla_doc > 7 %}text-red-600 font-medium{% elif tech.sla_doc > 0 %}text-green-600{% else %}text-gray-400{% endif %}">
-                        {{ tech.sla_doc or '-' }}
+                    <td class="px-2 py-2 text-center text-xs bg-blue-50 {% if tech.sla_genid is not none and tech.sla_genid >= 0 %}{% if tech.sla_genid > 7 %}text-red-600 font-medium{% else %}text-green-600 font-medium{% endif %}{% else %}text-gray-400{% endif %}">
+                        {% if tech.sla_genid is not none and tech.sla_genid >= 0 %}{{ tech.sla_genid }}{% else %}-{% endif %}
                     </td>
-                    <td class="px-2 py-2 text-center text-xs {% if tech.sla_genid > 7 %}text-red-600 font-medium{% elif tech.sla_genid > 0 %}text-green-600{% else %}text-gray-400{% endif %}">
-                        {{ tech.sla_genid or '-' }}
+                    <td class="px-2 py-2 text-center text-xs bg-blue-50 {% if tech.sla_inspection is not none and tech.sla_inspection >= 0 %}{% if tech.sla_inspection > 7 %}text-red-600 font-medium{% else %}text-green-600 font-medium{% endif %}{% else %}text-gray-400{% endif %}">
+                        {% if tech.sla_inspection is not none and tech.sla_inspection >= 0 %}{{ tech.sla_inspection }}{% else %}-{% endif %}
                     </td>
-                    <td class="px-2 py-2 text-center text-xs {% if tech.sla_inspection > 7 %}text-red-600 font-medium{% elif tech.sla_inspection > 0 %}text-green-600{% else %}text-gray-400{% endif %}">
-                        {{ tech.sla_inspection or '-' }}
+                    <td class="px-2 py-2 text-center text-xs bg-blue-50 {% if tech.sla_dflow is not none and tech.sla_dflow >= 0 %}{% if tech.sla_dflow > 7 %}text-red-600 font-medium{% else %}text-green-600 font-medium{% endif %}{% else %}text-gray-400{% endif %}">
+                        {% if tech.sla_dflow is not none and tech.sla_dflow >= 0 %}{{ tech.sla_dflow }}{% else %}-{% endif %}
                     </td>
-                    <td class="px-2 py-2 text-center text-xs {% if tech.sla_dflow > 7 %}text-red-600 font-medium{% elif tech.sla_dflow > 0 %}text-green-600{% else %}text-gray-400{% endif %}">
-                        {{ tech.sla_dflow or '-' }}
-                    </td>
-                    <td class="px-2 py-2 text-center text-xs {% if tech.sla_registration > 7 %}text-red-600 font-medium{% elif tech.sla_registration > 0 %}text-green-600{% else %}text-gray-400{% endif %}">
-                        {{ tech.sla_registration or '-' }}
+                    <td class="px-2 py-2 text-center text-xs bg-blue-50 {% if tech.sla_registration is not none and tech.sla_registration >= 0 %}{% if tech.sla_registration > 7 %}text-red-600 font-medium{% else %}text-green-600 font-medium{% endif %}{% else %}text-gray-400{% endif %}">
+                        {% if tech.sla_registration is not none and tech.sla_registration >= 0 %}{{ tech.sla_registration }}{% else %}-{% endif %}
                     </td>
                     <td class="px-3 py-2 text-gray-600 text-sm">{{ tech.training_round or '-' }}</td>
                 </tr>
@@ -133,7 +133,7 @@
                 
                 {% if pending|length == 0 %}
                 <tr>
-                    <td colspan="15" class="px-4 py-8 text-center text-gray-500">
+                    <td colspan="14" class="px-4 py-8 text-center text-gray-500">
                         <i class="fas fa-check-circle text-green-500 text-2xl mb-2"></i>
                         <p>ไม่มีช่างที่รอดำเนินการ</p>
                     </td>

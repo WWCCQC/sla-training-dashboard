@@ -628,7 +628,9 @@ def get_technician_list(df, status_filter=None, area_filter=None, province_filte
     return technicians
 
 def get_pending_technicians(df):
-    """รายชื่อช่างที่อยู่ระหว่างดำเนินการ (Onprocess)"""
+    """รายชื่อช่างที่อยู่ระหว่างดำเนินการ (Onprocess)
+    ใช้เงื่อนไข SLA แบบใหม่: sla >= 0 ที่มี start/end date จริง
+    """
     if df.empty:
         return []
     
@@ -640,9 +642,15 @@ def get_pending_technicians(df):
         (df['status'].isin(onprocess_statuses)) | 
         ((df['status'] == 'ตัวแทนยังไม่ส่งขึ้นทะเบียน') & (df['result'] != 'Closed'))
     ].copy()
-    pending_df = pending_df.sort_values('sla_total', ascending=False)
     
-    return get_technician_list(pending_df, limit=50)
+    # เรียงลำดับตาม sla_total มากที่สุดก่อน (เฉพาะที่มีค่า >= 0)
+    # ถ้า sla_total เป็น NaN หรือ < 0 ให้ไปท้ายสุด
+    pending_df['sla_sort'] = pending_df['sla_total'].apply(lambda x: x if pd.notna(x) and x >= 0 else -9999)
+    pending_df = pending_df.sort_values('sla_sort', ascending=False)
+    pending_df = pending_df.drop(columns=['sla_sort'])
+    
+    # ส่งคืนทั้งหมด ไม่จำกัด limit
+    return get_technician_list(pending_df)
 
 # ===============================
 # ROUTES
