@@ -109,6 +109,73 @@
         color: #9CA3AF;
         font-weight: 400;
     }
+    
+    /* Modal styles */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+    
+    .modal-overlay.active {
+        opacity: 1;
+        visibility: visible;
+    }
+    
+    .modal-content {
+        background: white;
+        border-radius: 1rem;
+        max-width: 900px;
+        width: 95%;
+        max-height: 85vh;
+        overflow: hidden;
+        transform: scale(0.9);
+        transition: transform 0.3s ease;
+    }
+    
+    .modal-overlay.active .modal-content {
+        transform: scale(1);
+    }
+    
+    .modal-header {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%);
+        color: white;
+    }
+    
+    .modal-body {
+        padding: 1rem 1.5rem;
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+    
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: white;
+        opacity: 0.8;
+        transition: opacity 0.2s;
+    }
+    
+    .modal-close:hover {
+        opacity: 1;
+    }
 </style>
 {% endblock %}
 
@@ -162,6 +229,61 @@
         <!-- Stats List -->
         <div id="province-list" class="space-y-2 max-h-[550px] overflow-y-auto">
             <!-- Will be populated by JavaScript -->
+        </div>
+    </div>
+</div>
+
+<!-- Province Detail Modal -->
+<div id="province-modal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div>
+                <h3 id="modal-province-name" class="text-xl font-bold">จังหวัด</h3>
+                <p id="modal-province-stats" class="text-sm text-blue-200 mt-1"></p>
+            </div>
+            <button class="modal-close" onclick="closeProvinceModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="modal-loading" class="text-center py-8 text-gray-500">
+                <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                <p>กำลังโหลดข้อมูล...</p>
+            </div>
+            <div id="modal-content" class="hidden">
+                <!-- Tabs -->
+                <div class="flex gap-2 mb-4 border-b">
+                    <button class="tab-btn active px-4 py-2 text-sm font-medium border-b-2 border-blue-500 text-blue-600" data-tab="all">
+                        ทั้งหมด (<span id="tab-all-count">0</span>)
+                    </button>
+                    <button class="tab-btn px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700" data-tab="passed">
+                        ผ่านอบรม (<span id="tab-passed-count">0</span>)
+                    </button>
+                    <button class="tab-btn px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700" data-tab="completed">
+                        ขึ้นทะเบียนแล้ว (<span id="tab-completed-count">0</span>)
+                    </button>
+                </div>
+                <!-- Table -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-3 py-2 text-left font-medium text-gray-600">#</th>
+                                <th class="px-3 py-2 text-left font-medium text-gray-600">ชื่อ-นามสกุล</th>
+                                <th class="px-3 py-2 text-left font-medium text-gray-600">Depot</th>
+                                <th class="px-3 py-2 text-center font-medium text-gray-600">ผลอบรม</th>
+                                <th class="px-3 py-2 text-center font-medium text-gray-600">OJT</th>
+                                <th class="px-3 py-2 text-center font-medium text-gray-600">สถานะ</th>
+                                <th class="px-3 py-2 text-center font-medium text-gray-600">SLA</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modal-table-body" class="divide-y divide-gray-200">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="modal-empty" class="hidden text-center py-8 text-gray-500">
+                <i class="fas fa-inbox text-4xl mb-2"></i>
+                <p>ไม่พบข้อมูลช่างในจังหวัดนี้</p>
+            </div>
         </div>
     </div>
 </div>
@@ -350,11 +472,23 @@ document.addEventListener('DOMContentLoaded', function() {
         info.update();
     }
     
-    // Zoom to feature on click
+    // Zoom to feature on click and show modal
     function zoomToFeature(e) {
         map.fitBounds(e.target.getBounds());
-        const provinceName = e.target.feature.properties.NAME_1 || e.target.feature.properties.name;
-        highlightProvinceInList(provinceName);
+        const englishName = e.target.feature.properties.NAME_1 || e.target.feature.properties.name;
+        const thaiName = getThaiProvinceName(englishName);
+        const data = findProvinceData(englishName) || findProvinceData(thaiName);
+        
+        console.log('Click province:', englishName, thaiName, data);
+        
+        highlightProvinceInList(englishName);
+        
+        // Always show modal when clicking on a province
+        if (typeof openProvinceModal === 'function') {
+            openProvinceModal(thaiName, data);
+        } else {
+            console.error('openProvinceModal is not defined');
+        }
     }
     
     // Add interactions to each feature
@@ -483,8 +617,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 iconAnchor: [40, 15]
             });
             
-            // Add marker with label
-            const marker = L.marker(center, { icon: labelIcon });
+            // Add marker with label (interactive: false to allow clicks through to polygon)
+            const marker = L.marker(center, { icon: labelIcon, interactive: false });
             labelsLayer.addLayer(marker);
         });
         
@@ -600,6 +734,176 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize
     loadData();
+});
+
+// ===== Modal Functions =====
+let currentTechnicians = [];
+let currentFilter = 'all';
+
+function openProvinceModal(provinceName, data) {
+    const modal = document.getElementById('province-modal');
+    document.getElementById('modal-province-name').textContent = provinceName;
+    
+    // Handle case when data is null/undefined
+    const total = data ? data.total : 0;
+    const completed = data ? data.completed : 0;
+    const successRate = data ? data.success_rate : 0;
+    
+    document.getElementById('modal-province-stats').textContent = 
+        `ลงทะเบียน ${total} คน | สำเร็จ ${completed} คน | อัตราสำเร็จ ${successRate}%`;
+    
+    // Show loading
+    document.getElementById('modal-loading').classList.remove('hidden');
+    document.getElementById('modal-content').classList.add('hidden');
+    document.getElementById('modal-empty').classList.add('hidden');
+    
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    
+    // Fetch technician data
+    fetch(`/api/technicians?province=${encodeURIComponent(provinceName)}`)
+        .then(response => response.json())
+        .then(technicians => {
+            currentTechnicians = technicians;
+            
+            document.getElementById('modal-loading').classList.add('hidden');
+            
+            if (technicians.length === 0) {
+                document.getElementById('modal-empty').classList.remove('hidden');
+            } else {
+                document.getElementById('modal-content').classList.remove('hidden');
+                
+                // Count tabs
+                const allCount = technicians.length;
+                const passedCount = technicians.filter(t => t.theory_result === 'ผ่าน').length;
+                const completedCount = technicians.filter(t => t.status === 'ขึ้นทะเบียนเรียบร้อย').length;
+                
+                document.getElementById('tab-all-count').textContent = allCount;
+                document.getElementById('tab-passed-count').textContent = passedCount;
+                document.getElementById('tab-completed-count').textContent = completedCount;
+                
+                // Reset to "all" tab
+                currentFilter = 'all';
+                updateTabStyles();
+                renderModalTable(technicians);
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching technicians:', error);
+            document.getElementById('modal-loading').classList.add('hidden');
+            document.getElementById('modal-empty').classList.remove('hidden');
+        });
+}
+
+function closeProvinceModal() {
+    const modal = document.getElementById('province-modal');
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+function renderModalTable(technicians) {
+    const tbody = document.getElementById('modal-table-body');
+    
+    if (technicians.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">ไม่พบข้อมูล</td></tr>';
+        return;
+    }
+    
+    let html = '';
+    technicians.forEach((tech, index) => {
+        const theoryClass = tech.theory_result === 'ผ่าน' ? 'text-green-600' : 
+                           (tech.theory_result === 'ไม่ผ่าน' ? 'text-red-600' : 'text-gray-400');
+        const ojtClass = tech.ojt_result === 'ผ่าน' ? 'text-green-600' : 
+                        (tech.ojt_result === 'ไม่ผ่าน' ? 'text-red-600' : 'text-gray-400');
+        const statusClass = getStatusBadgeClass(tech.status);
+        const slaClass = getSlaColorClass(tech.sla_total);
+        
+        html += `
+            <tr class="hover:bg-gray-50">
+                <td class="px-3 py-2 text-gray-500">${index + 1}</td>
+                <td class="px-3 py-2">
+                    <div class="font-medium text-gray-800">${tech.name || '-'}</div>
+                    <div class="text-xs text-gray-400">${tech.name_en || ''}</div>
+                </td>
+                <td class="px-3 py-2 text-sm text-gray-600">${tech.depot || '-'}</td>
+                <td class="px-3 py-2 text-center ${theoryClass} font-medium">${tech.theory_result || '-'}</td>
+                <td class="px-3 py-2 text-center ${ojtClass} font-medium">${tech.ojt_result || '-'}</td>
+                <td class="px-3 py-2 text-center">
+                    <span class="px-2 py-1 rounded-full text-xs font-medium ${statusClass}">
+                        ${tech.status || '-'}
+                    </span>
+                </td>
+                <td class="px-3 py-2 text-center font-bold ${slaClass}">${tech.sla_total >= 0 ? tech.sla_total : '-'}</td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+}
+
+function getStatusBadgeClass(status) {
+    if (status === 'ขึ้นทะเบียนเรียบร้อย') return 'bg-green-100 text-green-800';
+    if (['อบรม', 'OJT', 'ขออนุมัติDflow ขึ้นทะเบียนช่าง', 'ขอ User', 'Genid/ปริ้นบัตร/ส่งบัตร', 'ตัวแทนยังไม่ส่งขึ้นทะเบียน'].includes(status)) 
+        return 'bg-yellow-100 text-yellow-800';
+    if (['ช่างลาออก', 'ไม่ผ่านคุณสมบัติ', 'ไม่เข้าอบรม', 'ไม่ผ่านอบรม'].includes(status)) 
+        return 'bg-red-100 text-red-800';
+    return 'bg-gray-100 text-gray-800';
+}
+
+function getSlaColorClass(sla) {
+    if (sla === null || sla === undefined || sla < 0) return 'text-gray-400';
+    if (sla <= 45) return 'text-green-600';
+    if (sla <= 60) return 'text-yellow-600';
+    return 'text-red-600';
+}
+
+function updateTabStyles() {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        if (btn.dataset.tab === currentFilter) {
+            btn.classList.add('active', 'border-b-2', 'border-blue-500', 'text-blue-600');
+            btn.classList.remove('text-gray-500');
+        } else {
+            btn.classList.remove('active', 'border-b-2', 'border-blue-500', 'text-blue-600');
+            btn.classList.add('text-gray-500');
+        }
+    });
+}
+
+// Initialize modal event listeners after DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Tab click handlers
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            currentFilter = this.dataset.tab;
+            updateTabStyles();
+            
+            let filtered = currentTechnicians;
+            if (currentFilter === 'passed') {
+                filtered = currentTechnicians.filter(t => t.theory_result === 'ผ่าน');
+            } else if (currentFilter === 'completed') {
+                filtered = currentTechnicians.filter(t => t.status === 'ขึ้นทะเบียนเรียบร้อย');
+            }
+            
+            renderModalTable(filtered);
+        });
+    });
+
+    // Close modal on overlay click
+    const modalElement = document.getElementById('province-modal');
+    if (modalElement) {
+        modalElement.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeProvinceModal();
+            }
+        });
+    }
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeProvinceModal();
+        }
+    });
 });
 </script>
 {% endblock %}
