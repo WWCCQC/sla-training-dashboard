@@ -1,0 +1,605 @@
+{% extends "layout.html" %}
+
+{% block title %}แผนที่ประเทศไทย - SLA Training{% endblock %}
+
+{% block extra_styles %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    #map {
+        height: 700px;
+        width: 100%;
+        border-radius: 0.75rem;
+        z-index: 1;
+    }
+    
+    .info {
+        padding: 10px 14px;
+        font: 14px/16px Arial, Helvetica, sans-serif;
+        background: white;
+        background: rgba(255,255,255,0.95);
+        box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        border-radius: 8px;
+    }
+    
+    .info h4 {
+        margin: 0 0 8px;
+        color: #777;
+        font-size: 16px;
+    }
+    
+    .info-content {
+        font-size: 14px;
+    }
+    
+    .info-content .province-name {
+        font-size: 18px;
+        font-weight: bold;
+        color: #1e3a5f;
+        margin-bottom: 8px;
+    }
+    
+    .info-content .stat-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 4px 0;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .info-content .stat-row:last-child {
+        border-bottom: none;
+    }
+    
+    .legend {
+        line-height: 20px;
+        color: #555;
+    }
+    
+    .legend i {
+        width: 20px;
+        height: 14px;
+        float: left;
+        margin-right: 8px;
+        opacity: 0.85;
+        border-radius: 2px;
+    }
+    
+    .province-item {
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    
+    .province-item:hover {
+        background-color: #EFF6FF;
+    }
+    
+    .province-item.active {
+        background-color: #DBEAFE;
+        border-left: 3px solid #2563EB;
+    }
+    
+    .province-label {
+        background: transparent;
+        border: none;
+        text-align: center;
+        white-space: nowrap;
+        pointer-events: none;
+    }
+    
+    .province-label-content {
+        font-size: 10px;
+        font-weight: 600;
+        color: #1e3a5f;
+        text-shadow: 1px 1px 2px white, -1px -1px 2px white, 1px -1px 2px white, -1px 1px 2px white;
+        line-height: 1.2;
+    }
+    
+    .province-label-content .count {
+        display: block;
+        font-size: 12px;
+        font-weight: 700;
+        color: #B45309;
+    }
+    
+    .province-label-content.has-data {
+        color: #1e3a5f;
+    }
+    
+    .province-label-content.no-data {
+        color: #9CA3AF;
+        font-weight: 400;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">
+        <i class="fas fa-map text-blue-500 mr-2"></i>แผนที่ข้อมูลการอบรมรายจังหวัด
+    </h1>
+    <p class="text-gray-600">แสดงสถิติการอบรมช่างแยกตามจังหวัดบนแผนที่ประเทศไทย</p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Map Container -->
+    <div class="lg:col-span-2 bg-white rounded-xl shadow-sm p-4">
+        <div id="map"></div>
+    </div>
+    
+    <!-- Province Stats Panel -->
+    <div class="bg-white rounded-xl shadow-sm p-4">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+            <i class="fas fa-list text-blue-500 mr-2"></i>สถิติรายจังหวัด
+        </h3>
+        
+        <!-- Search -->
+        <div class="mb-4">
+            <input type="text" id="province-search" placeholder="ค้นหาจังหวัด..." 
+                   class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
+        
+        <!-- Stats List -->
+        <div id="province-list" class="space-y-2 max-h-[550px] overflow-y-auto">
+            <!-- Will be populated by JavaScript -->
+        </div>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+    <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-blue-500">
+        <div class="text-sm text-gray-500">จังหวัดที่มีช่าง</div>
+        <div id="total-provinces" class="text-2xl font-bold text-blue-600">-</div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-green-500">
+        <div class="text-sm text-gray-500">ช่างทั้งหมด</div>
+        <div id="total-technicians" class="text-2xl font-bold text-green-600">-</div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-yellow-500">
+        <div class="text-sm text-gray-500">จังหวัดที่มีมากที่สุด</div>
+        <div id="top-province" class="text-xl font-bold text-yellow-600">-</div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-purple-500">
+        <div class="text-sm text-gray-500">อัตราสำเร็จเฉลี่ย</div>
+        <div id="avg-success-rate" class="text-2xl font-bold text-purple-600">-</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Province name mapping English to Thai
+    const provinceNameThai = {
+        'Amnat Charoen': 'อำนาจเจริญ',
+        'Ang Thong': 'อ่างทอง',
+        'Bangkok Metropolis': 'กรุงเทพมหานคร',
+        'Bueng Kan': 'บึงกาฬ',
+        'Buri Ram': 'บุรีรัมย์',
+        'Chachoengsao': 'ฉะเชิงเทรา',
+        'Chai Nat': 'ชัยนาท',
+        'Chaiyaphum': 'ชัยภูมิ',
+        'Chanthaburi': 'จันทบุรี',
+        'Chiang Mai': 'เชียงใหม่',
+        'Chiang Rai': 'เชียงราย',
+        'Chon Buri': 'ชลบุรี',
+        'Chumphon': 'ชุมพร',
+        'Kalasin': 'กาฬสินธุ์',
+        'Kamphaeng Phet': 'กำแพงเพชร',
+        'Kanchanaburi': 'กาญจนบุรี',
+        'Khon Kaen': 'ขอนแก่น',
+        'Krabi': 'กระบี่',
+        'Lampang': 'ลำปาง',
+        'Lamphun': 'ลำพูน',
+        'Loei': 'เลย',
+        'Lop Buri': 'ลพบุรี',
+        'Mae Hong Son': 'แม่ฮ่องสอน',
+        'Maha Sarakham': 'มหาสารคาม',
+        'Mukdahan': 'มุกดาหาร',
+        'Nakhon Nayok': 'นครนายก',
+        'Nakhon Pathom': 'นครปฐม',
+        'Nakhon Phanom': 'นครพนม',
+        'Nakhon Ratchasima': 'นครราชสีมา',
+        'Nakhon Sawan': 'นครสวรรค์',
+        'Nakhon Si Thammarat': 'นครศรีธรรมราช',
+        'Nan': 'น่าน',
+        'Narathiwat': 'นราธิวาส',
+        'Nong Bua Lam Phu': 'หนองบัวลำภู',
+        'Nong Khai': 'หนองคาย',
+        'Nonthaburi': 'นนทบุรี',
+        'Pathum Thani': 'ปทุมธานี',
+        'Pattani': 'ปัตตานี',
+        'Phangnga': 'พังงา',
+        'Phatthalung': 'พัทลุง',
+        'Phayao': 'พะเยา',
+        'Phetchabun': 'เพชรบูรณ์',
+        'Phetchaburi': 'เพชรบุรี',
+        'Phichit': 'พิจิตร',
+        'Phitsanulok': 'พิษณุโลก',
+        'Phra Nakhon Si Ayutthaya': 'พระนครศรีอยุธยา',
+        'Phrae': 'แพร่',
+        'Phuket': 'ภูเก็ต',
+        'Prachin Buri': 'ปราจีนบุรี',
+        'Prachuap Khiri Khan': 'ประจวบคีรีขันธ์',
+        'Ranong': 'ระนอง',
+        'Ratchaburi': 'ราชบุรี',
+        'Rayong': 'ระยอง',
+        'Roi Et': 'ร้อยเอ็ด',
+        'Sa Kaeo': 'สระแก้ว',
+        'Sakon Nakhon': 'สกลนคร',
+        'Samut Prakan': 'สมุทรปราการ',
+        'Samut Sakhon': 'สมุทรสาคร',
+        'Samut Songkhram': 'สมุทรสงคราม',
+        'Saraburi': 'สระบุรี',
+        'Satun': 'สตูล',
+        'Si Sa Ket': 'ศรีสะเกษ',
+        'Sing Buri': 'สิงห์บุรี',
+        'Songkhla': 'สงขลา',
+        'Sukhothai': 'สุโขทัย',
+        'Suphan Buri': 'สุพรรณบุรี',
+        'Surat Thani': 'สุราษฎร์ธานี',
+        'Surin': 'สุรินทร์',
+        'Tak': 'ตาก',
+        'Trang': 'ตรัง',
+        'Trat': 'ตราด',
+        'Ubon Ratchathani': 'อุบลราชธานี',
+        'Udon Thani': 'อุดรธานี',
+        'Uthai Thani': 'อุทัยธานี',
+        'Uttaradit': 'อุตรดิตถ์',
+        'Yala': 'ยะลา',
+        'Yasothon': 'ยโสธร'
+    };
+    
+    // Function to get Thai province name
+    function getThaiProvinceName(englishName) {
+        return provinceNameThai[englishName] || englishName;
+    }
+    
+    // Initialize map centered on Thailand
+    const map = L.map('map', {
+        zoomControl: true,
+        scrollWheelZoom: true
+    }).setView([13.0, 101.5], 6);
+    
+    // Add Google Maps style tile layer
+    L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        attribution: '&copy; Google Maps',
+        maxZoom: 10,
+        minZoom: 5,
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+    }).addTo(map);
+    
+    let geojsonLayer;
+    let provinceData = {};
+    let info;
+    let legend;
+    let labelsLayer;
+    
+    // Color scale based on technician count
+    function getColor(count) {
+        return count > 30 ? '#B45309' :
+               count > 20 ? '#D97706' :
+               count > 10 ? '#F59E0B' :
+               count > 5  ? '#FCD34D' :
+               count > 0  ? '#FEF3C7' :
+                            '#E5E7EB';
+    }
+    
+    // Style for each province
+    function style(feature) {
+        const provinceName = feature.properties.NAME_1 || feature.properties.name;
+        const data = findProvinceData(provinceName);
+        const count = data ? data.total : 0;
+        
+        return {
+            fillColor: getColor(count),
+            weight: 1,
+            opacity: 1,
+            color: '#666',
+            fillOpacity: 0.8
+        };
+    }
+    
+    // Find province data with flexible matching
+    function findProvinceData(provinceName) {
+        if (!provinceName) return null;
+        
+        // Direct match
+        if (provinceData[provinceName]) {
+            return provinceData[provinceName];
+        }
+        
+        // Try matching without prefix
+        const cleanName = provinceName.replace(/^(จังหวัด|changwat\s*)/i, '').trim();
+        
+        for (let key in provinceData) {
+            const cleanKey = key.replace(/^(จังหวัด|changwat\s*)/i, '').trim();
+            if (cleanKey === cleanName || 
+                key.includes(cleanName) || 
+                cleanName.includes(key) ||
+                cleanKey.includes(provinceName) ||
+                provinceName.includes(cleanKey)) {
+                return provinceData[key];
+            }
+        }
+        
+        return null;
+    }
+    
+    // Highlight feature on hover
+    function highlightFeature(e) {
+        const layer = e.target;
+        
+        layer.setStyle({
+            weight: 3,
+            color: '#2563EB',
+            fillOpacity: 0.9
+        });
+        
+        layer.bringToFront();
+        info.update(layer.feature.properties);
+    }
+    
+    // Reset highlight
+    function resetHighlight(e) {
+        geojsonLayer.resetStyle(e.target);
+        info.update();
+    }
+    
+    // Zoom to feature on click
+    function zoomToFeature(e) {
+        map.fitBounds(e.target.getBounds());
+        const provinceName = e.target.feature.properties.NAME_1 || e.target.feature.properties.name;
+        highlightProvinceInList(provinceName);
+    }
+    
+    // Add interactions to each feature
+    function onEachFeature(feature, layer) {
+        layer.on({
+            mouseover: highlightFeature,
+            mouseout: resetHighlight,
+            click: zoomToFeature
+        });
+    }
+    
+    // Info control
+    info = L.control({position: 'topright'});
+    
+    info.onAdd = function(map) {
+        this._div = L.DomUtil.create('div', 'info');
+        this.update();
+        return this._div;
+    };
+    
+    info.update = function(props) {
+        if (props) {
+            const englishName = props.NAME_1 || props.name || 'ไม่ทราบ';
+            const thaiName = getThaiProvinceName(englishName);
+            const data = findProvinceData(englishName) || findProvinceData(thaiName);
+            
+            this._div.innerHTML = `
+                <div class="info-content">
+                    <div class="province-name">${thaiName}</div>
+                    <div class="stat-row">
+                        <span>ช่างทั้งหมด:</span>
+                        <span class="font-bold">${data ? data.total : 0} คน</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>สำเร็จ:</span>
+                        <span class="text-green-600 font-bold">${data ? data.completed : 0} คน</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>อัตราสำเร็จ:</span>
+                        <span class="text-blue-600 font-bold">${data ? data.success_rate : 0}%</span>
+                    </div>
+                </div>
+            `;
+        } else {
+            this._div.innerHTML = '<h4>เลื่อนเมาส์ไปที่จังหวัด</h4>';
+        }
+    };
+    
+    info.addTo(map);
+    
+    // Legend control
+    legend = L.control({position: 'bottomright'});
+    
+    legend.onAdd = function(map) {
+        const div = L.DomUtil.create('div', 'info legend');
+        const grades = [0, 1, 6, 11, 21, 31];
+        const labels = ['ไม่มีข้อมูล', '1-5 คน', '6-10 คน', '11-20 คน', '21-30 คน', '>30 คน'];
+        
+        div.innerHTML = '<h4 style="margin-bottom:8px"><strong>จำนวนช่าง</strong></h4>';
+        
+        for (let i = 0; i < grades.length; i++) {
+            div.innerHTML +=
+                '<i style="background:' + getColor(grades[i]) + '"></i> ' +
+                labels[i] + '<br>';
+        }
+        
+        return div;
+    };
+    
+    legend.addTo(map);
+    
+    // Update province list
+    function updateProvinceList(data) {
+        const container = document.getElementById('province-list');
+        const sorted = data.sort((a, b) => b.total - a.total);
+        
+        container.innerHTML = sorted.map(p => `
+            <div class="province-item p-3 rounded-lg border" data-province="${p.province.trim()}">
+                <div class="flex justify-between items-center">
+                    <span class="font-medium text-gray-800">${p.province}</span>
+                    <span class="text-sm px-2 py-1 rounded-full ${p.total > 10 ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'}">
+                        ${p.total} คน
+                    </span>
+                </div>
+                <div class="flex justify-between text-xs text-gray-500 mt-1">
+                    <span class="text-green-600">สำเร็จ: ${p.completed}</span>
+                    <span class="text-blue-600">${p.success_rate}%</span>
+                </div>
+            </div>
+        `).join('');
+        
+        // Add click handlers
+        container.querySelectorAll('.province-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const provinceName = item.dataset.province;
+                zoomToProvinceOnMap(provinceName);
+            });
+        });
+    }
+    
+    // Add province labels on map
+    function addProvinceLabels(geoData) {
+        labelsLayer = L.layerGroup();
+        
+        geoData.features.forEach(feature => {
+            const englishName = feature.properties.NAME_1 || feature.properties.name;
+            const thaiName = getThaiProvinceName(englishName);
+            const data = findProvinceData(englishName) || findProvinceData(thaiName);
+            const count = data ? data.total : 0;
+            
+            // Get center of polygon
+            const bounds = L.geoJSON(feature).getBounds();
+            const center = bounds.getCenter();
+            
+            // Create label content with Thai name and count
+            const labelClass = count > 0 ? 'has-data' : 'no-data';
+            const labelContent = count > 0 
+                ? `<div class="province-label-content ${labelClass}">${thaiName}<span class="count">${count}</span></div>`
+                : `<div class="province-label-content ${labelClass}">${thaiName}</div>`;
+            
+            // Create divIcon for label
+            const labelIcon = L.divIcon({
+                className: 'province-label',
+                html: labelContent,
+                iconSize: [80, 30],
+                iconAnchor: [40, 15]
+            });
+            
+            // Add marker with label
+            const marker = L.marker(center, { icon: labelIcon });
+            labelsLayer.addLayer(marker);
+        });
+        
+        labelsLayer.addTo(map);
+    }
+    
+    // Highlight province in list
+    function highlightProvinceInList(provinceName) {
+        document.querySelectorAll('.province-item').forEach(item => {
+            item.classList.remove('active');
+            if (item.dataset.province.includes(provinceName) || provinceName.includes(item.dataset.province)) {
+                item.classList.add('active');
+                item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    }
+    
+    // Zoom to province on map from list click
+    function zoomToProvinceOnMap(provinceName) {
+        if (!geojsonLayer) return;
+        
+        geojsonLayer.eachLayer(function(layer) {
+            const name = layer.feature.properties.NAME_1 || layer.feature.properties.name;
+            if (name && (name.includes(provinceName) || provinceName.includes(name))) {
+                map.fitBounds(layer.getBounds());
+                highlightFeature({ target: layer });
+                highlightProvinceInList(provinceName);
+            }
+        });
+    }
+    
+    // Update summary cards
+    function updateSummaryCards(data) {
+        const provincesWithData = data.filter(p => p.total > 0);
+        const totalTechnicians = data.reduce((sum, p) => sum + p.total, 0);
+        const topProvince = data.length > 0 ? data.sort((a, b) => b.total - a.total)[0] : null;
+        const avgRate = provincesWithData.length > 0 
+            ? (provincesWithData.reduce((sum, p) => sum + p.success_rate, 0) / provincesWithData.length).toFixed(1)
+            : 0;
+        
+        document.getElementById('total-provinces').textContent = `${provincesWithData.length} จังหวัด`;
+        document.getElementById('total-technicians').textContent = `${totalTechnicians} คน`;
+        document.getElementById('top-province').textContent = topProvince 
+            ? `${topProvince.province} (${topProvince.total})` 
+            : '-';
+        document.getElementById('avg-success-rate').textContent = `${avgRate}%`;
+    }
+    
+    // Search functionality
+    document.getElementById('province-search').addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        document.querySelectorAll('.province-item').forEach(item => {
+            const name = item.dataset.province.toLowerCase();
+            item.style.display = name.includes(query) ? 'block' : 'none';
+        });
+    });
+    
+    // Load data and GeoJSON
+    async function loadData() {
+        try {
+            // Load province statistics
+            const statsResponse = await fetch('/api/provinces-map');
+            const statsData = await statsResponse.json();
+            
+            statsData.forEach(p => {
+                provinceData[p.province.trim()] = p;
+            });
+            
+            updateProvinceList(statsData);
+            updateSummaryCards(statsData);
+            
+            // Load Thailand GeoJSON
+            const geoResponse = await fetch('https://raw.githubusercontent.com/apisit/thailand.json/master/thailand.json');
+            const geoData = await geoResponse.json();
+            
+            // Add GeoJSON layer
+            geojsonLayer = L.geoJSON(geoData, {
+                style: style,
+                onEachFeature: onEachFeature
+            }).addTo(map);
+            
+            // Add province labels
+            addProvinceLabels(geoData);
+            
+            // Fit map to Thailand bounds
+            map.fitBounds(geojsonLayer.getBounds());
+            
+            // Update labels visibility on zoom
+            map.on('zoomend', function() {
+                const zoom = map.getZoom();
+                if (labelsLayer) {
+                    if (zoom >= 6) {
+                        labelsLayer.addTo(map);
+                    } else {
+                        map.removeLayer(labelsLayer);
+                    }
+                }
+            });
+            
+        } catch (error) {
+            console.error('Error loading data:', error);
+            document.getElementById('map').innerHTML = `
+                <div class="flex items-center justify-center h-full">
+                    <div class="text-center text-red-500">
+                        <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+                        <p>ไม่สามารถโหลดแผนที่ได้</p>
+                        <p class="text-sm text-gray-500">${error.message}</p>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    // Initialize
+    loadData();
+});
+</script>
+{% endblock %}

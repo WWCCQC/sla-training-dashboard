@@ -1,0 +1,262 @@
+{% extends "layout.html" %}
+
+{% block title %}รายชื่อช่าง - SLA Training{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">รายชื่อช่างลงทะเบียน</h1>
+    <p class="text-gray-600">รายละเอียดช่างและ SLA แต่ละขั้นตอน</p>
+</div>
+
+<!-- Filters -->
+<div class="bg-white rounded-xl shadow-sm p-4 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- Status Filter -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">สถานะ</label>
+            <select id="statusFilter" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="all">ทั้งหมด</option>
+                <option value="Completed">ขึ้นทะเบียนเรียบร้อย</option>
+                <option value="Onprocess">อยู่ระหว่างดำเนินการ</option>
+                <option value="Closed">ปิดงาน/ไม่ผ่าน</option>
+            </select>
+        </div>
+        
+        <!-- Area Filter -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">พื้นที่ (Area)</label>
+            <select id="areaFilter" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="all">ทั้งหมด</option>
+                {% for area in area_list %}
+                <option value="{{ area }}">{{ area }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <!-- Province Filter -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">จังหวัด</label>
+            <select id="provinceFilter" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="all">ทั้งหมด</option>
+                {% for province in province_list %}
+                <option value="{{ province }}">{{ province }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <!-- Search Button -->
+        <div class="flex items-end">
+            <button id="searchBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                <i class="fas fa-search mr-2"></i>ค้นหา
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Summary -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-lg shadow-sm p-4 text-center" id="stat-total">
+        <p class="text-sm text-gray-500">ทั้งหมด</p>
+        <p class="text-2xl font-bold text-gray-800">-</p>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm p-4 text-center" id="stat-completed">
+        <p class="text-sm text-gray-500">ขึ้นทะเบียนแล้ว</p>
+        <p class="text-2xl font-bold text-green-600">-</p>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm p-4 text-center" id="stat-onprocess">
+        <p class="text-sm text-gray-500">กำลังดำเนินการ</p>
+        <p class="text-2xl font-bold text-yellow-600">-</p>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm p-4 text-center" id="stat-closed">
+        <p class="text-sm text-gray-500">ปิดงาน/ไม่ผ่าน</p>
+        <p class="text-2xl font-bold text-red-600">-</p>
+    </div>
+</div>
+
+<!-- Technicians Table -->
+<div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-3 py-3 text-left font-medium text-gray-600 sticky left-0 bg-gray-50">#</th>
+                    <th class="px-3 py-3 text-left font-medium text-gray-600 min-w-[180px]">ชื่อ-นามสกุล</th>
+                    <th class="px-3 py-3 text-left font-medium text-gray-600 min-w-[200px]">Depot</th>
+                    <th class="px-3 py-3 text-left font-medium text-gray-600">จังหวัด</th>
+                    <th class="px-3 py-3 text-center font-medium text-gray-600">ทฤษฎี</th>
+                    <th class="px-3 py-3 text-center font-medium text-gray-600">OJT</th>
+                    <th class="px-3 py-3 text-center font-medium text-gray-600">Status</th>
+                    <th class="px-3 py-3 text-center font-medium text-gray-600">SLA รวม</th>
+                    <!-- SLA Steps -->
+                    <th class="px-2 py-3 text-center font-medium text-gray-600 bg-blue-50" title="SLA อบรม">อบรม</th>
+                    <th class="px-2 py-3 text-center font-medium text-gray-600 bg-blue-50" title="SLA OJT">OJT</th>
+                    <th class="px-2 py-3 text-center font-medium text-gray-600 bg-blue-50" title="SLA เอกสาร">เอกสาร</th>
+                    <th class="px-2 py-3 text-center font-medium text-gray-600 bg-blue-50" title="SLA ทำบัตร">บัตร</th>
+                    <th class="px-2 py-3 text-center font-medium text-gray-600 bg-blue-50" title="SLA ตรวจความพร้อม">ตรวจ</th>
+                    <th class="px-2 py-3 text-center font-medium text-gray-600 bg-blue-50" title="SLA DFlow">DFlow</th>
+                    <th class="px-2 py-3 text-center font-medium text-gray-600 bg-blue-50" title="SLA ขึ้นทะเบียน">ลงทะเบียน</th>
+                    <th class="px-3 py-3 text-left font-medium text-gray-600">รอบอบรม</th>
+                </tr>
+            </thead>
+            <tbody id="technicianTableBody" class="divide-y divide-gray-200">
+                <tr>
+                    <td colspan="16" class="px-4 py-8 text-center text-gray-500">
+                        <i class="fas fa-spinner fa-spin mr-2"></i>กำลังโหลดข้อมูล...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Pagination Info -->
+<div class="mt-4 text-sm text-gray-500" id="paginationInfo">
+    แสดง 100 รายการแรก
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Load technicians on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadTechnicians();
+});
+
+// Search button click
+document.getElementById('searchBtn').addEventListener('click', loadTechnicians);
+
+// Enter key on filters
+['statusFilter', 'areaFilter', 'provinceFilter'].forEach(id => {
+    document.getElementById(id).addEventListener('change', loadTechnicians);
+});
+
+function loadTechnicians() {
+    const status = document.getElementById('statusFilter').value;
+    const area = document.getElementById('areaFilter').value;
+    const province = document.getElementById('provinceFilter').value;
+    
+    const tbody = document.getElementById('technicianTableBody');
+    tbody.innerHTML = '<tr><td colspan="16" class="px-4 py-8 text-center text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>กำลังโหลดข้อมูล...</td></tr>';
+    
+    fetch(`/api/technicians?status=${status}&area=${area}&province=${encodeURIComponent(province)}`)
+        .then(response => response.json())
+        .then(data => {
+            renderTable(data);
+            updateStats(data);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            tbody.innerHTML = '<tr><td colspan="16" class="px-4 py-8 text-center text-red-500"><i class="fas fa-exclamation-circle mr-2"></i>เกิดข้อผิดพลาด</td></tr>';
+        });
+}
+
+function renderTable(data) {
+    const tbody = document.getElementById('technicianTableBody');
+    
+    if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="16" class="px-4 py-8 text-center text-gray-500"><i class="fas fa-inbox mr-2"></i>ไม่พบข้อมูล</td></tr>';
+        return;
+    }
+    
+    let html = '';
+    data.forEach((tech, index) => {
+        const statusClass = getStatusClass(tech.status, tech.result);
+        const resultClass = tech.theory_result === 'ผ่าน' ? 'text-green-600' : (tech.theory_result === 'ไม่ผ่าน' ? 'text-red-600' : 'text-gray-400');
+        const ojtClass = tech.ojt_result === 'ผ่าน' ? 'text-green-600' : (tech.ojt_result === 'ไม่ผ่าน' ? 'text-red-600' : 'text-gray-400');
+        
+        html += `
+            <tr class="hover:bg-gray-50">
+                <td class="px-3 py-2 text-gray-500 sticky left-0 bg-white">${index + 1}</td>
+                <td class="px-3 py-2">
+                    <div class="font-medium text-gray-800">${tech.name || '-'}</div>
+                    <div class="text-xs text-gray-400">${tech.name_en || ''}</div>
+                </td>
+                <td class="px-3 py-2">
+                    <div class="text-gray-800">${tech.depot || '-'}</div>
+                    <div class="text-xs text-gray-400">${tech.depot_code || ''}</div>
+                </td>
+                <td class="px-3 py-2 text-gray-600">${tech.province || '-'}</td>
+                <td class="px-3 py-2 text-center ${resultClass} font-medium">${tech.theory_result || '-'}</td>
+                <td class="px-3 py-2 text-center ${ojtClass} font-medium">${tech.ojt_result || '-'}</td>
+                <td class="px-3 py-2 text-center">
+                    <span class="px-2 py-1 rounded-full text-xs font-medium ${statusClass}">
+                        ${tech.status || '-'}
+                    </span>
+                </td>
+                <td class="px-3 py-2 text-center font-bold ${getSlaClass(tech.sla_total)}">${tech.sla_total || '-'}</td>
+                <td class="px-2 py-2 text-center text-xs bg-blue-50 ${getSlaStepClass(tech.sla_training)}">${tech.sla_training || '-'}</td>
+                <td class="px-2 py-2 text-center text-xs bg-blue-50 ${getSlaStepClass(tech.sla_ojt)}">${tech.sla_ojt || '-'}</td>
+                <td class="px-2 py-2 text-center text-xs bg-blue-50 ${getSlaStepClass(tech.sla_doc)}">${tech.sla_doc || '-'}</td>
+                <td class="px-2 py-2 text-center text-xs bg-blue-50 ${getSlaStepClass(tech.sla_genid)}">${tech.sla_genid || '-'}</td>
+                <td class="px-2 py-2 text-center text-xs bg-blue-50 ${getSlaStepClass(tech.sla_inspection)}">${tech.sla_inspection || '-'}</td>
+                <td class="px-2 py-2 text-center text-xs bg-blue-50 ${getSlaStepClass(tech.sla_dflow)}">${tech.sla_dflow || '-'}</td>
+                <td class="px-2 py-2 text-center text-xs bg-blue-50 ${getSlaStepClass(tech.sla_registration)}">${tech.sla_registration || '-'}</td>
+                <td class="px-3 py-2 text-gray-600 text-sm">${tech.training_round || '-'}</td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+    document.getElementById('paginationInfo').textContent = `แสดง ${data.length} รายการ`;
+}
+
+function updateStats(data) {
+    const total = data.length;
+    // Status ที่ถือว่า Completed
+    const completedStatuses = ['ขึ้นทะเบียนเรียบร้อย'];
+    // Status ที่ถือว่า Onprocess (ไม่รวม ตัวแทนยังไม่ส่งขึ้นทะเบียน ที่ result=Closed)
+    const onprocessStatuses = ['อบรม', 'OJT', 'ขออนุมัติDflow ขึ้นทะเบียนช่าง', 'ขอ User', 'Genid/ปริ้นบัตร/ส่งบัตร'];
+    // Status ที่ถือว่า Closed
+    const closedStatuses = ['ช่างลาออก', 'ไม่ผ่านคุณสมบัติ', 'ไม่เข้าอบรม', 'ไม่ผ่านอบรม'];
+    
+    const completed = data.filter(t => completedStatuses.includes(t.status)).length;
+    // Onprocess = status ใน onprocessStatuses หรือ (ตัวแทนยังไม่ส่งขึ้นทะเบียน และ result != Closed)
+    const onprocess = data.filter(t => 
+        onprocessStatuses.includes(t.status) || 
+        (t.status === 'ตัวแทนยังไม่ส่งขึ้นทะเบียน' && t.result !== 'Closed')
+    ).length;
+    // Closed = status ใน closedStatuses หรือ (ตัวแทนยังไม่ส่งขึ้นทะเบียน และ result = Closed)
+    const closed = data.filter(t => 
+        closedStatuses.includes(t.status) || 
+        (t.status === 'ตัวแทนยังไม่ส่งขึ้นทะเบียน' && t.result === 'Closed')
+    ).length;
+    
+    document.querySelector('#stat-total p:last-child').textContent = total;
+    document.querySelector('#stat-completed p:last-child').textContent = completed;
+    document.querySelector('#stat-onprocess p:last-child').textContent = onprocess;
+    document.querySelector('#stat-closed p:last-child').textContent = closed;
+}
+
+function getStatusClass(status, result) {
+    // Status ที่ถือว่า Completed
+    const completedStatuses = ['ขึ้นทะเบียนเรียบร้อย'];
+    // Status ที่ถือว่า Onprocess
+    const onprocessStatuses = ['อบรม', 'OJT', 'ขออนุมัติDflow ขึ้นทะเบียนช่าง', 'ขอ User', 'Genid/ปริ้นบัตร/ส่งบัตร'];
+    // Status ที่ถือว่า Closed
+    const closedStatuses = ['ช่างลาออก', 'ไม่ผ่านคุณสมบัติ', 'ไม่เข้าอบรม', 'ไม่ผ่านอบรม'];
+    
+    if (completedStatuses.includes(status)) return 'bg-green-100 text-green-800';
+    if (onprocessStatuses.includes(status)) return 'bg-yellow-100 text-yellow-800';
+    if (status === 'ตัวแทนยังไม่ส่งขึ้นทะเบียน' && result !== 'Closed') return 'bg-yellow-100 text-yellow-800';
+    if (closedStatuses.includes(status)) return 'bg-red-100 text-red-800';
+    if (status === 'ตัวแทนยังไม่ส่งขึ้นทะเบียน' && result === 'Closed') return 'bg-red-100 text-red-800';
+    return 'bg-gray-100 text-gray-800';
+}
+
+function getSlaClass(sla) {
+    if (!sla || sla === 0 || sla < 0) return 'text-gray-400';
+    if (sla <= 45) return 'text-green-600';
+    if (sla <= 60) return 'text-yellow-600';
+    return 'text-red-600';
+}
+
+function getSlaStepClass(sla) {
+    if (!sla || sla === 0 || sla < 0) return 'text-gray-400';
+    if (sla <= 7) return 'text-green-600 font-medium';
+    if (sla <= 14) return 'text-yellow-600 font-medium';
+    return 'text-red-600 font-medium';
+}
+</script>
+{% endblock %}
