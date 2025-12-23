@@ -327,18 +327,19 @@ def get_area_step_summary(df):
             avg_sla = 0
         steps_data['dflow'] = {'count': dflow_count, 'avg_sla': round(avg_sla, 1) if not np.isnan(avg_sla) else 0}
         
-        # 6. ตัวแทนยังไม่ส่งขึ้นทะเบียน (ที่ไม่ใช่ Closed)
-        if 'result' in area_df.columns:
-            pending_count = len(area_df[(area_df['status'] == 'ตัวแทนยังไม่ส่งขึ้นทะเบียน') & (area_df['result'] != 'Closed')])
+        # 6. ขึ้นทะเบียน - นับจาก status_registration = 'OnProcess'
+        if 'status_registration' in area_df.columns:
+            reg_count = len(area_df[area_df['status_registration'] == 'OnProcess'])
+            reg_df = area_df[area_df['status_registration'] == 'OnProcess']
         else:
-            pending_count = len(area_df[area_df['status'] == 'ตัวแทนยังไม่ส่งขึ้นทะเบียน'])
-        pending_df = area_df[area_df['status'] == 'ตัวแทนยังไม่ส่งขึ้นทะเบียน']
-        if 'sla_registration' in pending_df.columns and len(pending_df) > 0:
-            valid = pending_df[pending_df['sla_registration'].notna() & (pending_df['sla_registration'] >= 0)]
+            reg_count = 0
+            reg_df = pd.DataFrame()
+        if 'sla_registration' in reg_df.columns and len(reg_df) > 0:
+            valid = reg_df[reg_df['sla_registration'].notna() & (reg_df['sla_registration'] >= 0)]
             avg_sla = valid['sla_registration'].mean() if len(valid) > 0 else 0
         else:
             avg_sla = 0
-        steps_data['registration'] = {'count': pending_count, 'avg_sla': round(avg_sla, 1) if not np.isnan(avg_sla) else 0}
+        steps_data['registration'] = {'count': reg_count, 'avg_sla': round(avg_sla, 1) if not np.isnan(avg_sla) else 0}
         
         # 7. เสร็จสิ้น (ขึ้นทะเบียนเรียบร้อย)
         completed = len(area_df[area_df['status'] == 'ขึ้นทะเบียนเรียบร้อย'])
