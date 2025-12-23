@@ -231,43 +231,287 @@
                     <td class="px-2 py-3 text-center text-gray-400">-</td>
                 </tr>
                 {% for item in area_step_summary %}
-                <tr class="hover:bg-gray-50">
+                <tr class="hover:bg-gray-50 area-step-row" data-area-idx="{{ loop.index0 }}">
                     <td class="px-3 py-3 font-medium text-gray-800">{{ item.area }}</td>
                     <td class="px-3 py-3 text-center font-medium">{{ item.total }}</td>
                     <td class="px-3 py-3 text-center text-green-600 font-medium">{{ item.completed }}</td>
                     <td class="px-3 py-3 text-center text-red-600 font-medium">{{ item.closed }}</td>
                     <td class="px-3 py-3 text-center text-yellow-600 font-medium">{{ item.onprocess }}</td>
                     <!-- อบรม -->
-                    <td class="px-2 py-3 text-center">{{ item.steps.training.count }}</td>
+                    <td class="px-2 py-3 text-center">
+                        {% if item.steps.training.count > 0 %}
+                        <button class="toggle-step-details text-blue-600 font-medium hover:bg-blue-100 px-2 py-1 rounded cursor-pointer" 
+                                data-target="training-{{ loop.index0 }}">
+                            <i class="fas fa-plus-circle mr-1 toggle-icon"></i>{{ item.steps.training.count }}
+                        </button>
+                        {% else %}
+                        <span class="text-gray-400">0</span>
+                        {% endif %}
+                    </td>
                     <td class="px-2 py-3 text-center {% if item.steps.training.avg_sla > 14 %}text-red-600 font-medium{% elif item.steps.training.avg_sla > 7 %}text-yellow-600{% else %}text-gray-600{% endif %}">
                         {% if item.steps.training.avg_sla > 0 %}{{ item.steps.training.avg_sla }}{% else %}-{% endif %}
                     </td>
                     <!-- OJT -->
-                    <td class="px-2 py-3 text-center">{{ item.steps.ojt.count }}</td>
+                    <td class="px-2 py-3 text-center">
+                        {% if item.steps.ojt.count > 0 %}
+                        <button class="toggle-step-details text-purple-600 font-medium hover:bg-purple-100 px-2 py-1 rounded cursor-pointer" 
+                                data-target="ojt-{{ loop.index0 }}">
+                            <i class="fas fa-plus-circle mr-1 toggle-icon"></i>{{ item.steps.ojt.count }}
+                        </button>
+                        {% else %}
+                        <span class="text-gray-400">0</span>
+                        {% endif %}
+                    </td>
                     <td class="px-2 py-3 text-center {% if item.steps.ojt.avg_sla > 14 %}text-red-600 font-medium{% elif item.steps.ojt.avg_sla > 7 %}text-yellow-600{% else %}text-gray-600{% endif %}">
                         {% if item.steps.ojt.avg_sla > 0 %}{{ item.steps.ojt.avg_sla }}{% else %}-{% endif %}
                     </td>
-                    <!-- GenID -->
-                    <td class="px-2 py-3 text-center">{{ item.steps.genid.count }}</td>
+                    <!-- ทำบัตร -->
+                    <td class="px-2 py-3 text-center">
+                        {% if item.steps.genid.count > 0 %}
+                        <button class="toggle-step-details text-indigo-600 font-medium hover:bg-indigo-100 px-2 py-1 rounded cursor-pointer" 
+                                data-target="genid-{{ loop.index0 }}">
+                            <i class="fas fa-plus-circle mr-1 toggle-icon"></i>{{ item.steps.genid.count }}
+                        </button>
+                        {% else %}
+                        <span class="text-gray-400">0</span>
+                        {% endif %}
+                    </td>
                     <td class="px-2 py-3 text-center {% if item.steps.genid.avg_sla > 14 %}text-red-600 font-medium{% elif item.steps.genid.avg_sla > 7 %}text-yellow-600{% else %}text-gray-600{% endif %}">
                         {% if item.steps.genid.avg_sla > 0 %}{{ item.steps.genid.avg_sla }}{% else %}-{% endif %}
                     </td>
                     <!-- ตรวจความพร้อม -->
-                    <td class="px-2 py-3 text-center">{{ item.steps.inspection.count }}</td>
+                    <td class="px-2 py-3 text-center">
+                        {% if item.steps.inspection.count > 0 %}
+                        <button class="toggle-step-details text-cyan-600 font-medium hover:bg-cyan-100 px-2 py-1 rounded cursor-pointer" 
+                                data-target="inspection-{{ loop.index0 }}">
+                            <i class="fas fa-plus-circle mr-1 toggle-icon"></i>{{ item.steps.inspection.count }}
+                        </button>
+                        {% else %}
+                        <span class="text-gray-400">0</span>
+                        {% endif %}
+                    </td>
                     <td class="px-2 py-3 text-center {% if item.steps.inspection.avg_sla > 14 %}text-red-600 font-medium{% elif item.steps.inspection.avg_sla > 7 %}text-yellow-600{% else %}text-gray-600{% endif %}">
                         {% if item.steps.inspection.avg_sla > 0 %}{{ item.steps.inspection.avg_sla }}{% else %}-{% endif %}
                     </td>
                     <!-- DFlow -->
-                    <td class="px-2 py-3 text-center">{{ item.steps.dflow.count }}</td>
+                    <td class="px-2 py-3 text-center">
+                        {% if item.steps.dflow.count > 0 %}
+                        <button class="toggle-step-details text-teal-600 font-medium hover:bg-teal-100 px-2 py-1 rounded cursor-pointer" 
+                                data-target="dflow-{{ loop.index0 }}">
+                            <i class="fas fa-plus-circle mr-1 toggle-icon"></i>{{ item.steps.dflow.count }}
+                        </button>
+                        {% else %}
+                        <span class="text-gray-400">0</span>
+                        {% endif %}
+                    </td>
                     <td class="px-2 py-3 text-center {% if item.steps.dflow.avg_sla > 14 %}text-red-600 font-medium{% elif item.steps.dflow.avg_sla > 7 %}text-yellow-600{% else %}text-gray-600{% endif %}">
                         {% if item.steps.dflow.avg_sla > 0 %}{{ item.steps.dflow.avg_sla }}{% else %}-{% endif %}
                     </td>
                     <!-- ขึ้นทะเบียน -->
-                    <td class="px-2 py-3 text-center">{{ item.steps.registration.count }}</td>
+                    <td class="px-2 py-3 text-center">
+                        {% if item.steps.registration.count > 0 %}
+                        <button class="toggle-step-details text-orange-600 font-medium hover:bg-orange-100 px-2 py-1 rounded cursor-pointer" 
+                                data-target="registration-{{ loop.index0 }}">
+                            <i class="fas fa-plus-circle mr-1 toggle-icon"></i>{{ item.steps.registration.count }}
+                        </button>
+                        {% else %}
+                        <span class="text-gray-400">0</span>
+                        {% endif %}
+                    </td>
                     <td class="px-2 py-3 text-center {% if item.steps.registration.avg_sla > 14 %}text-red-600 font-medium{% elif item.steps.registration.avg_sla > 7 %}text-yellow-600{% else %}text-gray-600{% endif %}">
                         {% if item.steps.registration.avg_sla > 0 %}{{ item.steps.registration.avg_sla }}{% else %}-{% endif %}
                     </td>
                 </tr>
+                
+                <!-- Detail rows for each step -->
+                {% set area_idx = loop.index0 %}
+                
+                <!-- Training Details -->
+                {% if item.steps.training.details|length > 0 %}
+                <tr class="step-detail-row bg-blue-50 hidden" id="training-{{ area_idx }}">
+                    <td colspan="17" class="px-8 py-3">
+                        <div class="text-sm">
+                            <div class="font-medium text-blue-800 mb-2">รายชื่อช่าง - อบรม ({{ item.steps.training.details|length }} คน)</div>
+                            <table class="min-w-full bg-white rounded border">
+                                <thead class="bg-blue-100">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-blue-800">#</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-blue-800">รหัส Depot</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-blue-800">ชื่อ Depot</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-blue-800">ชื่อช่าง</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    {% for tech in item.steps.training.details %}
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+                
+                <!-- OJT Details -->
+                {% if item.steps.ojt.details|length > 0 %}
+                <tr class="step-detail-row bg-purple-50 hidden" id="ojt-{{ area_idx }}">
+                    <td colspan="17" class="px-8 py-3">
+                        <div class="text-sm">
+                            <div class="font-medium text-purple-800 mb-2">รายชื่อช่าง - OJT ({{ item.steps.ojt.details|length }} คน)</div>
+                            <table class="min-w-full bg-white rounded border">
+                                <thead class="bg-purple-100">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-purple-800">#</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-purple-800">รหัส Depot</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-purple-800">ชื่อ Depot</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-purple-800">ชื่อช่าง</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    {% for tech in item.steps.ojt.details %}
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+                
+                <!-- GenID Details -->
+                {% if item.steps.genid.details|length > 0 %}
+                <tr class="step-detail-row bg-indigo-50 hidden" id="genid-{{ area_idx }}">
+                    <td colspan="17" class="px-8 py-3">
+                        <div class="text-sm">
+                            <div class="font-medium text-indigo-800 mb-2">รายชื่อช่าง - ทำบัตร ({{ item.steps.genid.details|length }} คน)</div>
+                            <table class="min-w-full bg-white rounded border">
+                                <thead class="bg-indigo-100">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-indigo-800">#</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-indigo-800">รหัส Depot</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-indigo-800">ชื่อ Depot</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-indigo-800">ชื่อช่าง</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    {% for tech in item.steps.genid.details %}
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+                
+                <!-- Inspection Details -->
+                {% if item.steps.inspection.details|length > 0 %}
+                <tr class="step-detail-row bg-cyan-50 hidden" id="inspection-{{ area_idx }}">
+                    <td colspan="17" class="px-8 py-3">
+                        <div class="text-sm">
+                            <div class="font-medium text-cyan-800 mb-2">รายชื่อช่าง - ตรวจความพร้อม ({{ item.steps.inspection.details|length }} คน)</div>
+                            <table class="min-w-full bg-white rounded border">
+                                <thead class="bg-cyan-100">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-cyan-800">#</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-cyan-800">รหัส Depot</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-cyan-800">ชื่อ Depot</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-cyan-800">ชื่อช่าง</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    {% for tech in item.steps.inspection.details %}
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+                
+                <!-- DFlow Details -->
+                {% if item.steps.dflow.details|length > 0 %}
+                <tr class="step-detail-row bg-teal-50 hidden" id="dflow-{{ area_idx }}">
+                    <td colspan="17" class="px-8 py-3">
+                        <div class="text-sm">
+                            <div class="font-medium text-teal-800 mb-2">รายชื่อช่าง - DFlow ({{ item.steps.dflow.details|length }} คน)</div>
+                            <table class="min-w-full bg-white rounded border">
+                                <thead class="bg-teal-100">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-teal-800">#</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-teal-800">รหัส Depot</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-teal-800">ชื่อ Depot</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-teal-800">ชื่อช่าง</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    {% for tech in item.steps.dflow.details %}
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+                
+                <!-- Registration Details -->
+                {% if item.steps.registration.details|length > 0 %}
+                <tr class="step-detail-row bg-orange-50 hidden" id="registration-{{ area_idx }}">
+                    <td colspan="17" class="px-8 py-3">
+                        <div class="text-sm">
+                            <div class="font-medium text-orange-800 mb-2">รายชื่อช่าง - ขึ้นทะเบียน ({{ item.steps.registration.details|length }} คน)</div>
+                            <table class="min-w-full bg-white rounded border">
+                                <thead class="bg-orange-100">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-orange-800">#</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-orange-800">รหัส Depot</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-orange-800">ชื่อ Depot</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-orange-800">ชื่อช่าง</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    {% for tech in item.steps.registration.details %}
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+                
                 {% endfor %}
             </tbody>
         </table>
@@ -420,6 +664,30 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // ===== Area Step Summary Table Expand/Collapse =====
+    document.querySelectorAll('.toggle-step-details').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetId = this.getAttribute('data-target');
+            const targetRow = document.getElementById(targetId);
+            const icon = this.querySelector('.toggle-icon');
+            
+            if (targetRow) {
+                if (targetRow.classList.contains('hidden')) {
+                    // Expand
+                    targetRow.classList.remove('hidden');
+                    icon.classList.remove('fa-plus-circle');
+                    icon.classList.add('fa-minus-circle');
+                } else {
+                    // Collapse
+                    targetRow.classList.add('hidden');
+                    icon.classList.remove('fa-minus-circle');
+                    icon.classList.add('fa-plus-circle');
+                }
+            }
+        });
+    });
+
     // ===== Area Table Expand/Collapse =====
     document.querySelectorAll('.toggle-breakdown').forEach(function(btn) {
         btn.addEventListener('click', function(e) {
