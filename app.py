@@ -251,6 +251,121 @@ def get_sla_by_step_stats(df):
     
     return step_stats
 
+def get_area_step_summary(df):
+    """สรุปจำนวนช่างและ SLA เฉลี่ยแยกตามพื้นที่และขั้นตอน"""
+    if df.empty or 'area' not in df.columns:
+        return []
+    
+    import re
+    
+    # Status ที่ปิดงาน/ไม่ผ่าน
+    closed_statuses = ['ไม่ผ่านคุณสมบัติ', 'ไม่ผ่านอบรม', 'ไม่เข้าอบรม', 'ช่างลาออก']
+    
+    area_summary = []
+    
+    for area in df['area'].dropna().unique():
+        area_df = df[df['area'] == area]
+        
+        # จำนวนช่างทั้งหมดที่ลงทะเบียน
+        total = len(area_df)
+        
+        # จำนวน Closed (รวม "ตัวแทนยังไม่ส่งขึ้นทะเบียน" ที่ result = "Closed")
+        closed = len(area_df[area_df['status'].isin(closed_statuses)])
+        if 'result' in area_df.columns:
+            closed += len(area_df[(area_df['status'] == 'ตัวแทนยังไม่ส่งขึ้นทะเบียน') & (area_df['result'] == 'Closed')])
+        
+        # คำนวณแต่ละขั้นตอน
+        steps_data = {}
+        
+        # 1. อบรม - นับคนที่ status = 'อบรม'
+        training_count = len(area_df[area_df['status'] == 'อบรม'])
+        training_df = area_df[area_df['status'] == 'อบรม']
+        if 'sla_training' in training_df.columns and len(training_df) > 0:
+            valid = training_df[training_df['sla_training'].notna() & (training_df['sla_training'] >= 0)]
+            avg_sla = valid['sla_training'].mean() if len(valid) > 0 else 0
+        else:
+            avg_sla = 0
+        steps_data['training'] = {'count': training_count, 'avg_sla': round(avg_sla, 1) if not np.isnan(avg_sla) else 0}
+        
+        # 2. OJT - นับคนที่ status = 'OJT'
+        ojt_count = len(area_df[area_df['status'] == 'OJT'])
+        ojt_df = area_df[area_df['status'] == 'OJT']
+        if 'sla_ojt' in ojt_df.columns and len(ojt_df) > 0:
+            valid = ojt_df[ojt_df['sla_ojt'].notna() & (ojt_df['sla_ojt'] >= 0)]
+            avg_sla = valid['sla_ojt'].mean() if len(valid) > 0 else 0
+        else:
+            avg_sla = 0
+        steps_data['ojt'] = {'count': ojt_count, 'avg_sla': round(avg_sla, 1) if not np.isnan(avg_sla) else 0}
+        
+        # 3. GenID - นับคนที่ status = 'Genid/ปริ้นบัตร/ส่งบัตร'
+        genid_count = len(area_df[area_df['status'] == 'Genid/ปริ้นบัตร/ส่งบัตร'])
+        genid_df = area_df[area_df['status'] == 'Genid/ปริ้นบัตร/ส่งบัตร']
+        if 'sla_genid_card' in genid_df.columns and len(genid_df) > 0:
+            valid = genid_df[genid_df['sla_genid_card'].notna() & (genid_df['sla_genid_card'] >= 0)]
+            avg_sla = valid['sla_genid_card'].mean() if len(valid) > 0 else 0
+        else:
+            avg_sla = 0
+        steps_data['genid'] = {'count': genid_count, 'avg_sla': round(avg_sla, 1) if not np.isnan(avg_sla) else 0}
+        
+        # 4. ตรวจความพร้อม - นับคนที่ status มี inspection
+        inspection_count = len(area_df[area_df['status'] == 'ขอ User'])
+        inspection_df = area_df[area_df['status'] == 'ขอ User']
+        if 'sla_inspection' in inspection_df.columns and len(inspection_df) > 0:
+            valid = inspection_df[inspection_df['sla_inspection'].notna() & (inspection_df['sla_inspection'] >= 0)]
+            avg_sla = valid['sla_inspection'].mean() if len(valid) > 0 else 0
+        else:
+            avg_sla = 0
+        steps_data['inspection'] = {'count': inspection_count, 'avg_sla': round(avg_sla, 1) if not np.isnan(avg_sla) else 0}
+        
+        # 5. DFlow - นับคนที่ status = 'ขออนุมัติDflow ขึ้นทะเบียนช่าง'
+        dflow_count = len(area_df[area_df['status'] == 'ขออนุมัติDflow ขึ้นทะเบียนช่าง'])
+        dflow_df = area_df[area_df['status'] == 'ขออนุมัติDflow ขึ้นทะเบียนช่าง']
+        if 'sla_dflow' in dflow_df.columns and len(dflow_df) > 0:
+            valid = dflow_df[dflow_df['sla_dflow'].notna() & (dflow_df['sla_dflow'] >= 0)]
+            avg_sla = valid['sla_dflow'].mean() if len(valid) > 0 else 0
+        else:
+            avg_sla = 0
+        steps_data['dflow'] = {'count': dflow_count, 'avg_sla': round(avg_sla, 1) if not np.isnan(avg_sla) else 0}
+        
+        # 6. ตัวแทนยังไม่ส่งขึ้นทะเบียน (ที่ไม่ใช่ Closed)
+        if 'result' in area_df.columns:
+            pending_count = len(area_df[(area_df['status'] == 'ตัวแทนยังไม่ส่งขึ้นทะเบียน') & (area_df['result'] != 'Closed')])
+        else:
+            pending_count = len(area_df[area_df['status'] == 'ตัวแทนยังไม่ส่งขึ้นทะเบียน'])
+        pending_df = area_df[area_df['status'] == 'ตัวแทนยังไม่ส่งขึ้นทะเบียน']
+        if 'sla_registration' in pending_df.columns and len(pending_df) > 0:
+            valid = pending_df[pending_df['sla_registration'].notna() & (pending_df['sla_registration'] >= 0)]
+            avg_sla = valid['sla_registration'].mean() if len(valid) > 0 else 0
+        else:
+            avg_sla = 0
+        steps_data['registration'] = {'count': pending_count, 'avg_sla': round(avg_sla, 1) if not np.isnan(avg_sla) else 0}
+        
+        # 7. เสร็จสิ้น (ขึ้นทะเบียนเรียบร้อย)
+        completed = len(area_df[area_df['status'] == 'ขึ้นทะเบียนเรียบร้อย'])
+        
+        # คำนวณ onprocess = รวมทุก step ที่ยังไม่เสร็จ
+        onprocess = (steps_data['training']['count'] + steps_data['ojt']['count'] + 
+                     steps_data['genid']['count'] + steps_data['inspection']['count'] + 
+                     steps_data['dflow']['count'] + steps_data['registration']['count'])
+        
+        area_summary.append({
+            'area': area,
+            'total': total,
+            'closed': closed,
+            'onprocess': onprocess,
+            'completed': completed,
+            'steps': steps_data
+        })
+    
+    # เรียงตามชื่อ area (RSM1, RSM2, RSM3...)
+    def get_area_sort_key(item):
+        match = re.search(r'RSM(\d+)', item.get('area', ''))
+        if match:
+            return int(match.group(1))
+        return 999
+    
+    return sorted(area_summary, key=get_area_sort_key)
+
 def get_area_stats(df):
     """สรุปสถิติตามพื้นที่ (area)
     เงื่อนไขใหม่: รวมค่า >= 0 ที่มี start_date และ end_date จริง
@@ -689,6 +804,7 @@ def dashboard():
     
     sla_steps = get_sla_by_step_stats(df)
     areas = get_area_stats(df)
+    area_step_summary = get_area_step_summary(df)
     provinces = get_province_stats(df)
     monthly = get_monthly_stats(df)
     trainers = get_trainer_stats(df)
@@ -705,6 +821,7 @@ def dashboard():
                          summary=summary,
                          sla_steps=sla_steps,
                          areas=areas,
+                         area_step_summary=area_step_summary,
                          provinces=provinces,
                          monthly=monthly,
                          trainers=trainers,

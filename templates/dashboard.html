@@ -167,6 +167,87 @@
     </div>
 </div>
 
+<!-- Area Step Summary Table -->
+<div class="bg-white rounded-xl shadow-sm p-5 mb-6">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+        <i class="fas fa-table text-indigo-500 mr-2"></i>ตารางสรุป: จำนวนช่างและระยะเวลารอ (SLA) แยกตามพื้นที่
+    </h3>
+    <div class="overflow-x-auto">
+        <table class="min-w-full text-sm" id="areaStepSummaryTable">
+            <thead class="bg-gray-800 text-white">
+                <tr>
+                    <th class="px-3 py-3 text-left font-medium" rowspan="2">พื้นที่ (Area)</th>
+                    <th class="px-3 py-3 text-center font-medium" rowspan="2">ลงทะเบียน<br>(คน)</th>
+                    <th class="px-3 py-3 text-center font-medium bg-green-700" rowspan="2">เสร็จสิ้น<br>(คน)</th>
+                    <th class="px-3 py-3 text-center font-medium" rowspan="2">Closed<br>(คน)</th>
+                    <th class="px-3 py-3 text-center font-medium bg-yellow-600" rowspan="2">อยู่ระหว่าง<br>ดำเนินการ</th>
+                    <th class="px-3 py-3 text-center font-medium bg-blue-700" colspan="2">อบรม</th>
+                    <th class="px-3 py-3 text-center font-medium bg-purple-700" colspan="2">OJT</th>
+                    <th class="px-3 py-3 text-center font-medium bg-indigo-700" colspan="2">ทำบัตร</th>
+                    <th class="px-3 py-3 text-center font-medium bg-cyan-700" colspan="2">ตรวจความพร้อม</th>
+                    <th class="px-3 py-3 text-center font-medium bg-teal-700" colspan="2">DFlow</th>
+                    <th class="px-3 py-3 text-center font-medium bg-orange-700" colspan="2">ขึ้นทะเบียน</th>
+                </tr>
+                <tr class="bg-gray-700 text-white">
+                    <th class="px-2 py-2 text-center font-medium text-xs bg-blue-600">คน</th>
+                    <th class="px-2 py-2 text-center font-medium text-xs bg-blue-600">วัน</th>
+                    <th class="px-2 py-2 text-center font-medium text-xs bg-purple-600">คน</th>
+                    <th class="px-2 py-2 text-center font-medium text-xs bg-purple-600">วัน</th>
+                    <th class="px-2 py-2 text-center font-medium text-xs bg-indigo-600">คน</th>
+                    <th class="px-2 py-2 text-center font-medium text-xs bg-indigo-600">วัน</th>
+                    <th class="px-2 py-2 text-center font-medium text-xs bg-cyan-600">คน</th>
+                    <th class="px-2 py-2 text-center font-medium text-xs bg-cyan-600">วัน</th>
+                    <th class="px-2 py-2 text-center font-medium text-xs bg-teal-600">คน</th>
+                    <th class="px-2 py-2 text-center font-medium text-xs bg-teal-600">วัน</th>
+                    <th class="px-2 py-2 text-center font-medium text-xs bg-orange-600">คน</th>
+                    <th class="px-2 py-2 text-center font-medium text-xs bg-orange-600">วัน</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for item in area_step_summary %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-3 py-3 font-medium text-gray-800">{{ item.area }}</td>
+                    <td class="px-3 py-3 text-center font-medium">{{ item.total }}</td>
+                    <td class="px-3 py-3 text-center text-green-600 font-medium">{{ item.completed }}</td>
+                    <td class="px-3 py-3 text-center text-red-600 font-medium">{{ item.closed }}</td>
+                    <td class="px-3 py-3 text-center text-yellow-600 font-medium">{{ item.onprocess }}</td>
+                    <!-- อบรม -->
+                    <td class="px-2 py-3 text-center">{{ item.steps.training.count }}</td>
+                    <td class="px-2 py-3 text-center {% if item.steps.training.avg_sla > 14 %}text-red-600 font-medium{% elif item.steps.training.avg_sla > 7 %}text-yellow-600{% else %}text-gray-600{% endif %}">
+                        {% if item.steps.training.avg_sla > 0 %}{{ item.steps.training.avg_sla }}{% else %}-{% endif %}
+                    </td>
+                    <!-- OJT -->
+                    <td class="px-2 py-3 text-center">{{ item.steps.ojt.count }}</td>
+                    <td class="px-2 py-3 text-center {% if item.steps.ojt.avg_sla > 14 %}text-red-600 font-medium{% elif item.steps.ojt.avg_sla > 7 %}text-yellow-600{% else %}text-gray-600{% endif %}">
+                        {% if item.steps.ojt.avg_sla > 0 %}{{ item.steps.ojt.avg_sla }}{% else %}-{% endif %}
+                    </td>
+                    <!-- GenID -->
+                    <td class="px-2 py-3 text-center">{{ item.steps.genid.count }}</td>
+                    <td class="px-2 py-3 text-center {% if item.steps.genid.avg_sla > 14 %}text-red-600 font-medium{% elif item.steps.genid.avg_sla > 7 %}text-yellow-600{% else %}text-gray-600{% endif %}">
+                        {% if item.steps.genid.avg_sla > 0 %}{{ item.steps.genid.avg_sla }}{% else %}-{% endif %}
+                    </td>
+                    <!-- ตรวจความพร้อม -->
+                    <td class="px-2 py-3 text-center">{{ item.steps.inspection.count }}</td>
+                    <td class="px-2 py-3 text-center {% if item.steps.inspection.avg_sla > 14 %}text-red-600 font-medium{% elif item.steps.inspection.avg_sla > 7 %}text-yellow-600{% else %}text-gray-600{% endif %}">
+                        {% if item.steps.inspection.avg_sla > 0 %}{{ item.steps.inspection.avg_sla }}{% else %}-{% endif %}
+                    </td>
+                    <!-- DFlow -->
+                    <td class="px-2 py-3 text-center">{{ item.steps.dflow.count }}</td>
+                    <td class="px-2 py-3 text-center {% if item.steps.dflow.avg_sla > 14 %}text-red-600 font-medium{% elif item.steps.dflow.avg_sla > 7 %}text-yellow-600{% else %}text-gray-600{% endif %}">
+                        {% if item.steps.dflow.avg_sla > 0 %}{{ item.steps.dflow.avg_sla }}{% else %}-{% endif %}
+                    </td>
+                    <!-- ขึ้นทะเบียน -->
+                    <td class="px-2 py-3 text-center">{{ item.steps.registration.count }}</td>
+                    <td class="px-2 py-3 text-center {% if item.steps.registration.avg_sla > 14 %}text-red-600 font-medium{% elif item.steps.registration.avg_sla > 7 %}text-yellow-600{% else %}text-gray-600{% endif %}">
+                        {% if item.steps.registration.avg_sla > 0 %}{{ item.steps.registration.avg_sla }}{% else %}-{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
 <!-- Area Statistics Table with Hierarchy -->
 <div class="bg-white rounded-xl shadow-sm p-5 mb-6">
     <h3 class="text-lg font-semibold text-gray-800 mb-4">
