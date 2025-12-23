@@ -297,9 +297,13 @@ def get_area_step_summary(df):
             avg_sla = 0
         steps_data['ojt'] = {'count': ojt_count, 'avg_sla': round(avg_sla, 1) if not np.isnan(avg_sla) else 0}
         
-        # 3. GenID - นับคนที่ status = 'Genid/ปริ้นบัตร/ส่งบัตร'
-        genid_count = len(area_df[area_df['status'] == 'Genid/ปริ้นบัตร/ส่งบัตร'])
-        genid_df = area_df[area_df['status'] == 'Genid/ปริ้นบัตร/ส่งบัตร']
+        # 3. ทำบัตร - นับจาก status_genid_card_card = 'OnProcess'
+        if 'status_genid_card_card' in area_df.columns:
+            genid_count = len(area_df[area_df['status_genid_card_card'] == 'OnProcess'])
+            genid_df = area_df[area_df['status_genid_card_card'] == 'OnProcess']
+        else:
+            genid_count = 0
+            genid_df = pd.DataFrame()
         if 'sla_genid_card' in genid_df.columns and len(genid_df) > 0:
             valid = genid_df[genid_df['sla_genid_card'].notna() & (genid_df['sla_genid_card'] >= 0)]
             avg_sla = valid['sla_genid_card'].mean() if len(valid) > 0 else 0
