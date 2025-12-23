@@ -288,9 +288,9 @@ def get_area_step_summary(df):
         # คำนวณแต่ละขั้นตอน
         steps_data = {}
         
-        # 1. อบรม - นับจาก status_result_round = 'OnProcess'
+        # 1. อบรม - นับจาก status_result_round = 'Onprocess'
         if 'status_result_round' in area_df.columns:
-            training_df = area_df[area_df['status_result_round'] == 'OnProcess']
+            training_df = area_df[area_df['status_result_round'] == 'Onprocess']
             training_count = len(training_df)
         else:
             training_count = 0
@@ -306,9 +306,9 @@ def get_area_step_summary(df):
             'details': get_technician_details(training_df) if len(training_df) > 0 else []
         }
         
-        # 2. OJT - นับจาก status_result_ojt = 'OnProcess'
+        # 2. OJT - นับจาก status_result_ojt = 'Onprocess'
         if 'status_result_ojt' in area_df.columns:
-            ojt_df = area_df[area_df['status_result_ojt'] == 'OnProcess']
+            ojt_df = area_df[area_df['status_result_ojt'] == 'Onprocess']
             ojt_count = len(ojt_df)
         else:
             ojt_count = 0
@@ -324,9 +324,9 @@ def get_area_step_summary(df):
             'details': get_technician_details(ojt_df) if len(ojt_df) > 0 else []
         }
         
-        # 3. ทำบัตร - นับจาก status_genid_card_card = 'OnProcess'
+        # 3. ทำบัตร - นับจาก status_genid_card_card = 'Onprocess'
         if 'status_genid_card_card' in area_df.columns:
-            genid_df = area_df[area_df['status_genid_card_card'] == 'OnProcess']
+            genid_df = area_df[area_df['status_genid_card_card'] == 'Onprocess']
             genid_count = len(genid_df)
         else:
             genid_count = 0
@@ -342,9 +342,9 @@ def get_area_step_summary(df):
             'details': get_technician_details(genid_df) if len(genid_df) > 0 else []
         }
         
-        # 4. ตรวจความพร้อม - นับจาก status_inspection = 'OnProcess'
+        # 4. ตรวจความพร้อม - นับจาก status_inspection = 'Onprocess'
         if 'status_inspection' in area_df.columns:
-            inspection_df = area_df[area_df['status_inspection'] == 'OnProcess']
+            inspection_df = area_df[area_df['status_inspection'] == 'Onprocess']
             inspection_count = len(inspection_df)
         else:
             inspection_count = 0
@@ -378,9 +378,9 @@ def get_area_step_summary(df):
             'details': get_technician_details(dflow_df) if len(dflow_df) > 0 else []
         }
         
-        # 6. ขึ้นทะเบียน - นับจาก status_registration = 'OnProcess'
+        # 6. ขึ้นทะเบียน - นับจาก status_registration = 'Onprocess'
         if 'status_registration' in area_df.columns:
-            reg_df = area_df[area_df['status_registration'] == 'OnProcess']
+            reg_df = area_df[area_df['status_registration'] == 'Onprocess']
             reg_count = len(reg_df)
         else:
             reg_count = 0
