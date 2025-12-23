@@ -329,7 +329,16 @@ def get_area_stats(df):
             'success_rate': round((completed / len(area_df) * 100), 1) if len(area_df) > 0 else 0
         })
     
-    return sorted(area_stats, key=lambda x: x['total'], reverse=True)
+    # เรียงตามชื่อ area (RSM1, RSM2, RSM3...)
+    # ดึงตัวเลขจากชื่อ area เช่น RSM3_UPC-East -> 3
+    def get_area_sort_key(area):
+        import re
+        match = re.search(r'RSM(\d+)', area.get('area', ''))
+        if match:
+            return int(match.group(1))
+        return 999  # ถ้าไม่มีตัวเลข ให้ไปท้ายสุด
+    
+    return sorted(area_stats, key=get_area_sort_key)
 
 def get_province_stats(df):
     """สรุปสถิติตามจังหวัด - นับจำนวนลงทะเบียนและขึ้นทะเบียนเรียบร้อย"""
