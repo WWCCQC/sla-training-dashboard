@@ -11,7 +11,7 @@
 
 <!-- Filters -->
 <div class="bg-white rounded-xl shadow-sm p-4 mb-6">
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <!-- Status Filter -->
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">สถานะ</label>
@@ -43,6 +43,20 @@
                 <option value="{{ province }}">{{ province }}</option>
                 {% endfor %}
             </select>
+        </div>
+        
+        <!-- Depot Code Search -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">รหัส Depot</label>
+            <input type="text" id="depotCodeSearch" placeholder="พิมพ์รหัส Depot..." 
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        </div>
+        
+        <!-- Depot Name Search -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ Depot</label>
+            <input type="text" id="depotNameSearch" placeholder="พิมพ์ชื่อ Depot..." 
+                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
         </div>
         
         <!-- Search Button -->
@@ -126,20 +140,35 @@ document.addEventListener('DOMContentLoaded', function() {
 // Search button click
 document.getElementById('searchBtn').addEventListener('click', loadTechnicians);
 
-// Enter key on filters
+// Enter key on filters (dropdowns)
 ['statusFilter', 'areaFilter', 'provinceFilter'].forEach(id => {
     document.getElementById(id).addEventListener('change', loadTechnicians);
+});
+
+// Enter key on text inputs
+['depotCodeSearch', 'depotNameSearch'].forEach(id => {
+    document.getElementById(id).addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            loadTechnicians();
+        }
+    });
 });
 
 function loadTechnicians() {
     const status = document.getElementById('statusFilter').value;
     const area = document.getElementById('areaFilter').value;
     const province = document.getElementById('provinceFilter').value;
+    const depotCode = document.getElementById('depotCodeSearch').value.trim();
+    const depotName = document.getElementById('depotNameSearch').value.trim();
     
     const tbody = document.getElementById('technicianTableBody');
     tbody.innerHTML = '<tr><td colspan="15" class="px-4 py-8 text-center text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>กำลังโหลดข้อมูล...</td></tr>';
     
-    fetch(`/api/technicians?status=${status}&area=${area}&province=${encodeURIComponent(province)}`)
+    let url = `/api/technicians?status=${status}&area=${area}&province=${encodeURIComponent(province)}`;
+    if (depotCode) url += `&depot_code=${encodeURIComponent(depotCode)}`;
+    if (depotName) url += `&depot_name=${encodeURIComponent(depotName)}`;
+    
+    fetch(url)
         .then(response => response.json())
         .then(data => {
             renderTable(data);

@@ -734,7 +734,7 @@ def safe_str(val, default=''):
     except:
         return default
 
-def get_technician_list(df, status_filter=None, area_filter=None, province_filter=None, limit=None):
+def get_technician_list(df, status_filter=None, area_filter=None, province_filter=None, depot_code_filter=None, depot_name_filter=None, limit=None):
     """รายชื่อช่างพร้อมข้อมูล"""
     if df.empty:
         return []
@@ -770,6 +770,14 @@ def get_technician_list(df, status_filter=None, area_filter=None, province_filte
     
     if province_filter and province_filter != 'all':
         filtered_df = filtered_df[filtered_df['province'] == province_filter]
+    
+    # กรองตาม depot_code (ค้นหาแบบ contains, case-insensitive)
+    if depot_code_filter and depot_code_filter.strip():
+        filtered_df = filtered_df[filtered_df['depot_code'].astype(str).str.lower().str.contains(depot_code_filter.lower(), na=False)]
+    
+    # กรองตาม depot_name (ค้นหาแบบ contains, case-insensitive)
+    if depot_name_filter and depot_name_filter.strip():
+        filtered_df = filtered_df[filtered_df['depot_name'].astype(str).str.lower().str.contains(depot_name_filter.lower(), na=False)]
     
     # ถ้าไม่กำหนด limit ให้ดึงทั้งหมด
     if limit:
@@ -992,8 +1000,10 @@ def api_technicians():
     status_filter = request.args.get('status', 'all')
     area_filter = request.args.get('area', 'all')
     province_filter = request.args.get('province', 'all')
+    depot_code_filter = request.args.get('depot_code', '')
+    depot_name_filter = request.args.get('depot_name', '')
     
-    return jsonify(get_technician_list(df, status_filter, area_filter, province_filter))
+    return jsonify(get_technician_list(df, status_filter, area_filter, province_filter, depot_code_filter, depot_name_filter))
 
 @app.route('/api/pending')
 def api_pending():
