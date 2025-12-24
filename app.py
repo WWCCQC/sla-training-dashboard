@@ -43,6 +43,19 @@ SLA_STEPS = [
 ]
 
 # ===============================
+# CONTEXT PROCESSOR
+# ===============================
+
+@app.context_processor
+def inject_current_date():
+    """ส่งวันที่ปัจจุบันไปทุก template"""
+    from datetime import datetime
+    # แสดงวันที่แบบ "24 December 2025"
+    now = datetime.now()
+    current_date = now.strftime("%d %B %Y")
+    return {'current_date': current_date}
+
+# ===============================
 # DATA LOADING & PROCESSING
 # ===============================
 
