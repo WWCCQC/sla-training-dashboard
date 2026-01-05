@@ -234,7 +234,7 @@ function updateStats(data) {
     // Status ที่ถือว่า Completed
     const completedStatuses = ['ขึ้นทะเบียนเรียบร้อย'];
     // Status ที่ถือว่า Onprocess (ไม่รวม ตัวแทนยังไม่ส่งขึ้นทะเบียน ที่ result=Closed)
-    const onprocessStatuses = ['อบรม', 'OJT', 'ขออนุมัติDflow ขึ้นทะเบียนช่าง', 'ขอ User', 'Genid/ปริ้นบัตร/ส่งบัตร'];
+    const onprocessStatuses = ['อบรม', 'OJT', 'ขออนุมัติDflow ขึ้นทะเบียนช่าง', 'ขอ User', 'Genid/ปริ้นบัตร/ส่งบัตร', 'ขึ้นทะเบียน'];
     // Status ที่ถือว่า Closed
     const closedStatuses = ['ช่างลาออก', 'ไม่ผ่านคุณสมบัติ', 'ไม่เข้าอบรม', 'ไม่ผ่านอบรม'];
     
@@ -260,7 +260,7 @@ function getStatusClass(status, result) {
     // Status ที่ถือว่า Completed
     const completedStatuses = ['ขึ้นทะเบียนเรียบร้อย'];
     // Status ที่ถือว่า Onprocess
-    const onprocessStatuses = ['อบรม', 'OJT', 'ขออนุมัติDflow ขึ้นทะเบียนช่าง', 'ขอ User', 'Genid/ปริ้นบัตร/ส่งบัตร'];
+    const onprocessStatuses = ['อบรม', 'OJT', 'ขออนุมัติDflow ขึ้นทะเบียนช่าง', 'ขอ User', 'Genid/ปริ้นบัตร/ส่งบัตร', 'ขึ้นทะเบียน'];
     // Status ที่ถือว่า Closed
     const closedStatuses = ['ช่างลาออก', 'ไม่ผ่านคุณสมบัติ', 'ไม่เข้าอบรม', 'ไม่ผ่านอบรม'];
     

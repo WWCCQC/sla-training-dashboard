@@ -140,7 +140,7 @@ def get_summary_stats(df):
         closed += len(df[(df['status'] == 'ตัวแทนยังไม่ส่งขึ้นทะเบียน') & (df['result'] == 'Closed')])
     
     # Status ที่อยู่ระหว่างดำเนินการ (ไม่รวม "ตัวแทนยังไม่ส่งขึ้นทะเบียน" ที่ result=Closed)
-    onprocess_statuses = ['OJT', 'อบรม', 'ขออนุมัติDflow ขึ้นทะเบียนช่าง', 'Genid/ปริ้นบัตร/ส่งบัตร', 'ขอ User']
+    onprocess_statuses = ['OJT', 'อบรม', 'ขออนุมัติDflow ขึ้นทะเบียนช่าง', 'Genid/ปริ้นบัตร/ส่งบัตร', 'ขอ User', 'ขึ้นทะเบียน']
     onprocess = sum(status_counts.get(s, 0) for s in onprocess_statuses)
     
     # เพิ่ม "ตัวแทนยังไม่ส่งขึ้นทะเบียน" ที่ result != "Closed" เข้า onprocess
@@ -446,7 +446,7 @@ def get_area_stats(df):
     # Status ที่ปิดงาน/ไม่ผ่าน
     closed_statuses = ['ไม่ผ่านคุณสมบัติ', 'ไม่ผ่านอบรม', 'ไม่เข้าอบรม', 'ช่างลาออก']
     # Status ที่อยู่ระหว่างดำเนินการ
-    onprocess_statuses = ['OJT', 'อบรม', 'ขออนุมัติDflow ขึ้นทะเบียนช่าง', 'Genid/ปริ้นบัตร/ส่งบัตร', 'ขอ User', 'ตัวแทนยังไม่ส่งขึ้นทะเบียน']
+    onprocess_statuses = ['OJT', 'อบรม', 'ขออนุมัติDflow ขึ้นทะเบียนช่าง', 'Genid/ปริ้นบัตร/ส่งบัตร', 'ขอ User', 'ตัวแทนยังไม่ส่งขึ้นทะเบียน', 'ขึ้นทะเบียน']
     
     area_stats = []
     for area in df['area'].dropna().unique():
@@ -586,7 +586,7 @@ def get_monthly_stats(df):
             closed += len(month_df[(month_df['status'] == 'ตัวแทนยังไม่ส่งขึ้นทะเบียน') & (month_df['result'] == 'Closed')])
         
         # อยู่ระหว่างดำเนินการ
-        onprocess_statuses = ['OJT', 'อบรม', 'ขออนุมัติDflow ขึ้นทะเบียนช่าง', 'Genid/ปริ้นบัตร/ส่งบัตร', 'ขอ User']
+        onprocess_statuses = ['OJT', 'อบรม', 'ขออนุมัติDflow ขึ้นทะเบียนช่าง', 'Genid/ปริ้นบัตร/ส่งบัตร', 'ขอ User', 'ขึ้นทะเบียน']
         onprocess = len(month_df[month_df['status'].isin(onprocess_statuses)])
         # เพิ่ม "ตัวแทนยังไม่ส่งขึ้นทะเบียน" ที่ result != 'Closed'
         if 'result' in month_df.columns:
@@ -757,7 +757,7 @@ def get_technician_list(df, status_filter=None, area_filter=None, province_filte
     # Status ที่ถือว่า Completed
     completed_statuses = ['ขึ้นทะเบียนเรียบร้อย']
     # Status ที่ถือว่า Onprocess
-    onprocess_statuses = ['อบรม', 'OJT', 'ขออนุมัติDflow ขึ้นทะเบียนช่าง', 'ขอ User', 'Genid/ปริ้นบัตร/ส่งบัตร']
+    onprocess_statuses = ['อบรม', 'OJT', 'ขออนุมัติDflow ขึ้นทะเบียนช่าง', 'ขอ User', 'Genid/ปริ้นบัตร/ส่งบัตร', 'ขึ้นทะเบียน']
     # Status ที่ถือว่า Closed
     closed_statuses = ['ช่างลาออก', 'ไม่ผ่านคุณสมบัติ', 'ไม่เข้าอบรม', 'ไม่ผ่านอบรม']
     
@@ -838,7 +838,7 @@ def get_pending_technicians(df):
         return []
     
     # Status ที่ถือว่าอยู่ระหว่างดำเนินการ
-    onprocess_statuses = ['OJT', 'อบรม', 'ขออนุมัติDflow ขึ้นทะเบียนช่าง', 'Genid/ปริ้นบัตร/ส่งบัตร', 'ขอ User']
+    onprocess_statuses = ['OJT', 'อบรม', 'ขออนุมัติDflow ขึ้นทะเบียนช่าง', 'Genid/ปริ้นบัตร/ส่งบัตร', 'ขอ User', 'ขึ้นทะเบียน']
     
     # กรอง status อยู่ระหว่างดำเนินการ หรือ (ตัวแทนยังไม่ส่งขึ้นทะเบียน และ result != Closed)
     pending_df = df[
