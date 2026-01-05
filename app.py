@@ -412,6 +412,27 @@ def get_area_step_summary(df):
         # 7. เสร็จสิ้น (ขึ้นทะเบียนเรียบร้อย)
         completed = len(area_df[area_df['status'] == 'ขึ้นทะเบียนเรียบร้อย'])
         
+        # 8. Provider-ไม่ส่งขึ้นทะเบียน (status = 'ตัวแทนยังไม่ส่งขึ้นทะเบียน' และ result = 'Onprocess')
+        if 'status' in area_df.columns and 'result' in area_df.columns:
+            provider_pending_df = area_df[(area_df['status'] == 'ตัวแทนยังไม่ส่งขึ้นทะเบียน') & (area_df['result'] == 'Onprocess')]
+            provider_pending_count = len(provider_pending_df)
+        else:
+            provider_pending_count = 0
+            provider_pending_df = pd.DataFrame()
+        
+        # คำนวณ SLA เฉลี่ยสำหรับ provider_pending (ใช้ sla_total)
+        if 'sla_total' in provider_pending_df.columns and len(provider_pending_df) > 0:
+            valid = provider_pending_df[provider_pending_df['sla_total'].notna() & (provider_pending_df['sla_total'] >= 0)]
+            avg_sla_provider = valid['sla_total'].mean() if len(valid) > 0 else 0
+        else:
+            avg_sla_provider = 0
+        
+        steps_data['provider_pending'] = {
+            'count': provider_pending_count,
+            'avg_sla': round(avg_sla_provider, 1) if not np.isnan(avg_sla_provider) else 0,
+            'details': get_technician_details(provider_pending_df) if len(provider_pending_df) > 0 else []
+        }
+        
         # คำนวณ onprocess = รวมทุก step ที่ยังไม่เสร็จ
         onprocess = (steps_data['training']['count'] + steps_data['ojt']['count'] + 
                      steps_data['genid']['count'] + steps_data['inspection']['count'] + 
