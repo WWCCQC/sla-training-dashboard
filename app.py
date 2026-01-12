@@ -127,29 +127,19 @@ def get_summary_stats(df):
     
     total = len(df)
     
-    # นับสถานะหลัก (status) - ใช้ค่าภาษาไทยตามข้อมูลจริง
+    # นับจากคอลัมน์ result โดยตรง
+    result_col = 'result'
+    result_counts = df[result_col].value_counts().to_dict() if result_col in df.columns else {}
+    
+    # นับตาม result: Completed, Closed, Cancel, Onprocess
+    completed = result_counts.get('Completed', 0)
+    closed = result_counts.get('Closed', 0)
+    cancel = result_counts.get('Cancel', 0)
+    onprocess = result_counts.get('Onprocess', 0)
+    
+    # เก็บ status_counts สำหรับแสดงรายละเอียด
     status_col = 'status'
     status_counts = df[status_col].value_counts().to_dict() if status_col in df.columns else {}
-    
-    completed = status_counts.get('ขึ้นทะเบียนเรียบร้อย', 0)
-    
-    # Status ที่ปิดงาน/ไม่ผ่าน (Closed)
-    closed_statuses = ['ไม่ผ่านอบรม', 'ไม่ผ่านคุณสมบัติ']
-    closed = sum(status_counts.get(s, 0) for s in closed_statuses)
-    
-    # Status ที่ยกเลิก (Cancel)
-    cancel_statuses = ['ช่างลาออก', 'ติดประวัติอาชญากรรม', 'ไม่เข้าอบรม']
-    cancel = sum(status_counts.get(s, 0) for s in cancel_statuses)
-    
-    # Status ที่อยู่ระหว่างดำเนินการ (Onprocess)
-    onprocess_statuses = [
-        'ตัวแทนยังไม่ส่งขึ้นทะเบียน', 'เอกสารยังไม่ครบ',
-        'อยู่ระหว่างอบรมทฤษฎี/ปฏิบัติ', 'อยู่ระหว่างOJT/สอบประเมินความพร้อม',
-        'ส่ง Gen ID', 'Print/ส่งบัตร',
-        'อยู่ระหว่างตรวจกองงาน', 'อยู่ระหว่างขอ User',
-        'อยู่ระหว่างขออนุมัติDflow ขึ้นทะเบียนช่าง'
-    ]
-    onprocess = sum(status_counts.get(s, 0) for s in onprocess_statuses)
     
     # ผลอบรมทฤษฎี
     theory_pass = len(df[df['result_round'] == 'ผ่าน']) if 'result_round' in df.columns else 0
