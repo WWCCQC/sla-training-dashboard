@@ -597,7 +597,7 @@ def get_province_stats_all(df):
     return sorted(province_stats, key=lambda x: x['total'], reverse=True)
 
 def get_monthly_stats(df):
-    """สรุปสถิติรายเดือน"""
+    """สรุปสถิติรายเดือน - นับจากคอลัมน์ result"""
     if df.empty or 'training_month' not in df.columns:
         return []
     
@@ -605,26 +605,13 @@ def get_monthly_stats(df):
     for month in df['training_month'].dropna().unique():
         month_df = df[df['training_month'] == month]
         
-        # ขึ้นทะเบียนเรียบร้อย
-        completed = len(month_df[month_df['status'] == 'ขึ้นทะเบียนเรียบร้อย'])
+        # นับจากคอลัมน์ result โดยตรง
+        result_counts = month_df['result'].value_counts().to_dict() if 'result' in month_df.columns else {}
         
-        # ปิดงาน (Closed)
-        closed_statuses = ['ไม่ผ่านอบรม', 'ไม่ผ่านคุณสมบัติ']
-        closed = len(month_df[month_df['status'].isin(closed_statuses)])
-        
-        # ยกเลิก (Cancel)
-        cancel_statuses = ['ช่างลาออก', 'ติดประวัติอาชญากรรม', 'ไม่เข้าอบรม']
-        cancel = len(month_df[month_df['status'].isin(cancel_statuses)])
-        
-        # อยู่ระหว่างดำเนินการ
-        onprocess_statuses = [
-            'ตัวแทนยังไม่ส่งขึ้นทะเบียน', 'เอกสารยังไม่ครบ',
-            'อยู่ระหว่างอบรมทฤษฎี/ปฏิบัติ', 'อยู่ระหว่างOJT/สอบประเมินความพร้อม',
-            'ส่ง Gen ID', 'Print/ส่งบัตร',
-            'อยู่ระหว่างตรวจกองงาน', 'อยู่ระหว่างขอ User',
-            'อยู่ระหว่างขออนุมัติDflow ขึ้นทะเบียนช่าง'
-        ]
-        onprocess = len(month_df[month_df['status'].isin(onprocess_statuses)])
+        completed = result_counts.get('Completed', 0)
+        closed = result_counts.get('Closed', 0)
+        cancel = result_counts.get('Cancel', 0)
+        onprocess = result_counts.get('Onprocess', 0)
         
         monthly_stats.append({
             'month': month,
