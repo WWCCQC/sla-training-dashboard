@@ -10,7 +10,7 @@
 </div>
 
 <!-- KPI Cards Row 1 -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
     <!-- Total Technicians -->
     <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-blue-500">
         <div class="flex items-center justify-between">
@@ -28,12 +28,26 @@
     <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-red-500">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-sm text-gray-500 mb-1">ปิดงาน/ไม่ผ่าน</p>
+                <p class="text-sm text-gray-500 mb-1">ปิดงาน</p>
                 <h3 class="text-3xl font-bold text-red-600">{{ summary.closed }}</h3>
                 <p class="text-xs text-red-600 mt-1">{{ summary.closed_rate }}%</p>
             </div>
             <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
                 <i class="fas fa-times-circle text-red-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Cancel -->
+    <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-gray-500">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500 mb-1">ยกเลิก</p>
+                <h3 class="text-3xl font-bold text-gray-600">{{ summary.cancel }}</h3>
+                <p class="text-xs text-gray-600 mt-1">{{ summary.cancel_rate }}%</p>
+            </div>
+            <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-ban text-gray-500 text-xl"></i>
             </div>
         </div>
     </div>
@@ -122,7 +136,7 @@
 <!-- SLA by Step Section -->
 <div class="bg-white rounded-xl shadow-sm p-5 mb-6">
     <h3 class="text-lg font-semibold text-gray-800 mb-4">
-        <i class="fas fa-list-ol text-blue-500 mr-2"></i>SLA แต่ละขั้นตอน (6 ขั้นตอน)
+        <i class="fas fa-list-ol text-blue-500 mr-2"></i>SLA แต่ละขั้นตอน (8 ขั้นตอน)
     </h3>
     <div class="overflow-x-auto">
         <div class="flex gap-3 pb-2">
@@ -179,7 +193,8 @@
                     <th class="px-3 py-3 text-left font-medium" rowspan="2">พื้นที่ (Area)</th>
                     <th class="px-3 py-3 text-center font-medium" rowspan="2">ลงทะเบียน<br>(คน)</th>
                     <th class="px-3 py-3 text-center font-medium bg-green-700" rowspan="2">เสร็จสิ้น<br>(คน)</th>
-                    <th class="px-3 py-3 text-center font-medium" rowspan="2">ปิดงาน<br>(คน)</th>
+                    <th class="px-3 py-3 text-center font-medium bg-red-700" rowspan="2">ปิดงาน<br>(คน)</th>
+                    <th class="px-3 py-3 text-center font-medium bg-gray-600" rowspan="2">ยกเลิก<br>(คน)</th>
                     <th class="px-3 py-3 text-center font-medium bg-pink-700" colspan="2">ไม่ส่งขึ้นทะเบียน</th>
                     <th class="px-3 py-3 text-center font-medium bg-yellow-600" rowspan="2">อยู่ระหว่าง<br>ดำเนินการ</th>
                     <th class="px-3 py-3 text-center font-medium bg-blue-700" colspan="2">อบรม</th>
@@ -213,6 +228,7 @@
                     <td class="px-3 py-3 text-center">{{ area_step_summary|sum(attribute='total') }}</td>
                     <td class="px-3 py-3 text-center text-green-600">{{ area_step_summary|sum(attribute='completed') }}</td>
                     <td class="px-3 py-3 text-center text-red-600">{{ area_step_summary|sum(attribute='closed') }}</td>
+                    <td class="px-3 py-3 text-center text-gray-600">{{ area_step_summary|sum(attribute='cancel') }}</td>
                     <!-- Provider-ไม่ส่ง -->
                     <td class="px-2 py-3 text-center text-pink-600">{{ area_step_summary|sum(attribute='steps.provider_pending.count') }}</td>
                     <td class="px-2 py-3 text-center text-gray-400">-</td>
@@ -242,6 +258,7 @@
                     <td class="px-3 py-3 text-center font-medium">{{ item.total }}</td>
                     <td class="px-3 py-3 text-center text-green-600 font-medium">{{ item.completed }}</td>
                     <td class="px-3 py-3 text-center text-red-600 font-medium">{{ item.closed }}</td>
+                    <td class="px-3 py-3 text-center text-gray-600 font-medium">{{ item.cancel }}</td>
                     <!-- Provider-ไม่ส่ง -->
                     <td class="px-2 py-3 text-center">
                         {% if item.steps.provider_pending.count > 0 %}
@@ -692,6 +709,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const areaCompleted = [{% for a in areas %}{{ a.completed }}{% if not loop.last %},{% endif %}{% endfor %}];
     const areaOnprocess = [{% for a in areas %}{{ a.onprocess }}{% if not loop.last %},{% endif %}{% endfor %}];
     const areaClosed = [{% for a in areas %}{{ a.closed }}{% if not loop.last %},{% endif %}{% endfor %}];
+    const areaCancel = [{% for a in areas %}{{ a.cancel }}{% if not loop.last %},{% endif %}{% endfor %}];
     const areaTotals = [{% for a in areas %}{{ a.total }}{% if not loop.last %},{% endif %}{% endfor %}];
     
     // Custom plugin สำหรับแสดง total บน top ของ stack
@@ -756,9 +774,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 },
                 {
-                    label: 'ปิดงาน/ไม่ผ่าน',
+                    label: 'ปิดงาน',
                     data: areaClosed,
                     backgroundColor: '#EF4444',
+                    datalabels: {
+                        color: '#fff',
+                        font: { weight: 'bold', size: 11 },
+                        formatter: function(value) { return value > 0 ? value : ''; }
+                    }
+                },
+                {
+                    label: 'ยกเลิก',
+                    data: areaCancel,
+                    backgroundColor: '#6B7280',
                     datalabels: {
                         color: '#fff',
                         font: { weight: 'bold', size: 11 },
@@ -793,6 +821,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const monthlyCompleted = [{% for m in monthly %}{{ m.completed }}{% if not loop.last %},{% endif %}{% endfor %}];
     const monthlyOnprocess = [{% for m in monthly %}{{ m.onprocess }}{% if not loop.last %},{% endif %}{% endfor %}];
     const monthlyClosed = [{% for m in monthly %}{{ m.closed }}{% if not loop.last %},{% endif %}{% endfor %}];
+    const monthlyCancel = [{% for m in monthly %}{{ m.cancel }}{% if not loop.last %},{% endif %}{% endfor %}];
     
     createChart('monthlyChart', {
         type: 'bar',
@@ -820,9 +849,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 },
                 {
-                    label: 'ปิดงาน/ไม่ผ่าน',
+                    label: 'ปิดงาน',
                     data: monthlyClosed,
                     backgroundColor: '#EF4444',
+                    datalabels: {
+                        color: '#fff',
+                        font: { weight: 'bold', size: 11 },
+                        formatter: function(value) { return value > 0 ? value : ''; }
+                    }
+                },
+                {
+                    label: 'ยกเลิก',
+                    data: monthlyCancel,
+                    backgroundColor: '#6B7280',
                     datalabels: {
                         color: '#fff',
                         font: { weight: 'bold', size: 11 },

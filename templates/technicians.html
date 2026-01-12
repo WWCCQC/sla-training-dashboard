@@ -233,22 +233,23 @@ function updateStats(data) {
     const total = data.length;
     // Status ที่ถือว่า Completed
     const completedStatuses = ['ขึ้นทะเบียนเรียบร้อย'];
-    // Status ที่ถือว่า Onprocess (ไม่รวม ตัวแทนยังไม่ส่งขึ้นทะเบียน ที่ result=Closed)
-    const onprocessStatuses = ['อบรม', 'OJT', 'ขออนุมัติDflow ขึ้นทะเบียนช่าง', 'ขอ User', 'Genid/ปริ้นบัตร/ส่งบัตร', 'ขึ้นทะเบียน'];
+    // Status ที่ถือว่า Onprocess
+    const onprocessStatuses = [
+        'ตัวแทนยังไม่ส่งขึ้นทะเบียน', 'เอกสารยังไม่ครบ',
+        'อยู่ระหว่างอบรมทฤษฎี/ปฏิบัติ', 'อยู่ระหว่างOJT/สอบประเมินความพร้อม',
+        'ส่ง Gen ID', 'Print/ส่งบัตร',
+        'อยู่ระหว่างตรวจกองงาน', 'อยู่ระหว่างขอ User',
+        'อยู่ระหว่างขออนุมัติDflow ขึ้นทะเบียนช่าง'
+    ];
     // Status ที่ถือว่า Closed
-    const closedStatuses = ['ช่างลาออก', 'ไม่ผ่านคุณสมบัติ', 'ไม่เข้าอบรม', 'ไม่ผ่านอบรม'];
+    const closedStatuses = ['ไม่ผ่านอบรม', 'ไม่ผ่านคุณสมบัติ'];
+    // Status ที่ถือว่า Cancel
+    const cancelStatuses = ['ช่างลาออก', 'ติดประวัติอาชญากรรม', 'ไม่เข้าอบรม'];
     
     const completed = data.filter(t => completedStatuses.includes(t.status)).length;
-    // Onprocess = status ใน onprocessStatuses หรือ (ตัวแทนยังไม่ส่งขึ้นทะเบียน และ result != Closed)
-    const onprocess = data.filter(t => 
-        onprocessStatuses.includes(t.status) || 
-        (t.status === 'ตัวแทนยังไม่ส่งขึ้นทะเบียน' && t.result !== 'Closed')
-    ).length;
-    // Closed = status ใน closedStatuses หรือ (ตัวแทนยังไม่ส่งขึ้นทะเบียน และ result = Closed)
-    const closed = data.filter(t => 
-        closedStatuses.includes(t.status) || 
-        (t.status === 'ตัวแทนยังไม่ส่งขึ้นทะเบียน' && t.result === 'Closed')
-    ).length;
+    const onprocess = data.filter(t => onprocessStatuses.includes(t.status)).length;
+    const closed = data.filter(t => closedStatuses.includes(t.status)).length;
+    const cancel = data.filter(t => cancelStatuses.includes(t.status)).length;
     
     document.querySelector('#stat-total p:last-child').textContent = total;
     document.querySelector('#stat-completed p:last-child').textContent = completed;
@@ -260,15 +261,22 @@ function getStatusClass(status, result) {
     // Status ที่ถือว่า Completed
     const completedStatuses = ['ขึ้นทะเบียนเรียบร้อย'];
     // Status ที่ถือว่า Onprocess
-    const onprocessStatuses = ['อบรม', 'OJT', 'ขออนุมัติDflow ขึ้นทะเบียนช่าง', 'ขอ User', 'Genid/ปริ้นบัตร/ส่งบัตร', 'ขึ้นทะเบียน'];
+    const onprocessStatuses = [
+        'ตัวแทนยังไม่ส่งขึ้นทะเบียน', 'เอกสารยังไม่ครบ',
+        'อยู่ระหว่างอบรมทฤษฎี/ปฏิบัติ', 'อยู่ระหว่างOJT/สอบประเมินความพร้อม',
+        'ส่ง Gen ID', 'Print/ส่งบัตร',
+        'อยู่ระหว่างตรวจกองงาน', 'อยู่ระหว่างขอ User',
+        'อยู่ระหว่างขออนุมัติDflow ขึ้นทะเบียนช่าง'
+    ];
     // Status ที่ถือว่า Closed
-    const closedStatuses = ['ช่างลาออก', 'ไม่ผ่านคุณสมบัติ', 'ไม่เข้าอบรม', 'ไม่ผ่านอบรม'];
+    const closedStatuses = ['ไม่ผ่านอบรม', 'ไม่ผ่านคุณสมบัติ'];
+    // Status ที่ถือว่า Cancel
+    const cancelStatuses = ['ช่างลาออก', 'ติดประวัติอาชญากรรม', 'ไม่เข้าอบรม'];
     
     if (completedStatuses.includes(status)) return 'bg-green-100 text-green-800';
     if (onprocessStatuses.includes(status)) return 'bg-yellow-100 text-yellow-800';
-    if (status === 'ตัวแทนยังไม่ส่งขึ้นทะเบียน' && result !== 'Closed') return 'bg-yellow-100 text-yellow-800';
     if (closedStatuses.includes(status)) return 'bg-red-100 text-red-800';
-    if (status === 'ตัวแทนยังไม่ส่งขึ้นทะเบียน' && result === 'Closed') return 'bg-red-100 text-red-800';
+    if (cancelStatuses.includes(status)) return 'bg-gray-100 text-gray-800';
     return 'bg-gray-100 text-gray-800';
 }
 

@@ -31,12 +31,14 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 # COLUMN MAPPINGS
 # ===============================
 
-# SLA Steps - 6 ขั้นตอนหลัก (ไม่รวมเอกสาร)
+# SLA Steps - 8 ขั้นตอนหลัก
 # เพิ่ม start_col และ end_col สำหรับตรวจสอบว่ามีการดำเนินการจริง
 SLA_STEPS = [
-    {'key': 'training', 'name': 'อบรม', 'sla_col': 'sla_training', 'status_col': 'status_result_round', 'result_col': 'result_round', 'start_col': 'training_start', 'end_col': 'training_end'},
+    {'key': 'training', 'name': 'อบรมทฤษฎี', 'sla_col': 'sla_training', 'status_col': 'status_result_round', 'result_col': 'result_round', 'start_col': 'training_start', 'end_col': 'training_end'},
     {'key': 'ojt', 'name': 'OJT', 'sla_col': 'sla_ojt', 'status_col': 'status_result_ojt', 'result_col': 'result_round_ojt', 'start_col': 'ojt_start', 'end_col': 'ojt_end'},
-    {'key': 'genid', 'name': 'ทำบัตร', 'sla_col': 'sla_genid_card', 'status_col': 'status_genid_card_card', 'result_col': 'result_genid_card_card', 'start_col': 'genid_card_start', 'end_col': 'genid_card_end'},
+    {'key': 'doc', 'name': 'เอกสาร', 'sla_col': 'sla_doc', 'status_col': 'status_doc', 'result_col': 'result_doc', 'start_col': 'doc_start', 'end_col': 'doc_end'},
+    {'key': 'genid', 'name': 'Gen ID', 'sla_col': 'sla_genid', 'status_col': 'status_genid', 'result_col': 'result_genid', 'start_col': 'genid_start', 'end_col': 'genid_end'},
+    {'key': 'printcard', 'name': 'Print Card', 'sla_col': 'sla_printcard', 'status_col': 'status_printcard', 'result_col': 'result_printcard', 'start_col': 'printcard_start', 'end_col': 'printcard_end'},
     {'key': 'inspection', 'name': 'ตรวจความพร้อม', 'sla_col': 'sla_inspection', 'status_col': 'status_inspection', 'result_col': 'result_inspection', 'start_col': 'inspection_start', 'end_col': 'inspection_end'},
     {'key': 'dflow', 'name': 'DFlow', 'sla_col': 'sla_dflow', 'status_col': 'status_dflow', 'result_col': 'result_dflow', 'start_col': 'dflow_start', 'end_col': 'dflow_end'},
     {'key': 'registration', 'name': 'ขึ้นทะเบียน', 'sla_col': 'sla_registration', 'status_col': 'status_registration', 'result_col': 'result_registration', 'start_col': 'registration_start', 'end_col': 'registration_end'}
@@ -131,21 +133,23 @@ def get_summary_stats(df):
     
     completed = status_counts.get('ขึ้นทะเบียนเรียบร้อย', 0)
     
-    # Status ที่ปิดงาน/ไม่ผ่าน
-    closed_statuses = ['ไม่ผ่านคุณสมบัติ', 'ไม่ผ่านอบรม', 'ไม่เข้าอบรม', 'ช่างลาออก']
+    # Status ที่ปิดงาน/ไม่ผ่าน (Closed)
+    closed_statuses = ['ไม่ผ่านอบรม', 'ไม่ผ่านคุณสมบัติ']
     closed = sum(status_counts.get(s, 0) for s in closed_statuses)
     
-    # เพิ่ม "ตัวแทนยังไม่ส่งขึ้นทะเบียน" ที่ result = "Closed" เข้า closed
-    if 'status' in df.columns and 'result' in df.columns:
-        closed += len(df[(df['status'] == 'ตัวแทนยังไม่ส่งขึ้นทะเบียน') & (df['result'] == 'Closed')])
+    # Status ที่ยกเลิก (Cancel)
+    cancel_statuses = ['ช่างลาออก', 'ติดประวัติอาชญากรรม', 'ไม่เข้าอบรม']
+    cancel = sum(status_counts.get(s, 0) for s in cancel_statuses)
     
-    # Status ที่อยู่ระหว่างดำเนินการ (ไม่รวม "ตัวแทนยังไม่ส่งขึ้นทะเบียน" ที่ result=Closed)
-    onprocess_statuses = ['OJT', 'อบรม', 'ขออนุมัติDflow ขึ้นทะเบียนช่าง', 'Genid/ปริ้นบัตร/ส่งบัตร', 'ขอ User', 'ขึ้นทะเบียน']
+    # Status ที่อยู่ระหว่างดำเนินการ (Onprocess)
+    onprocess_statuses = [
+        'ตัวแทนยังไม่ส่งขึ้นทะเบียน', 'เอกสารยังไม่ครบ',
+        'อยู่ระหว่างอบรมทฤษฎี/ปฏิบัติ', 'อยู่ระหว่างOJT/สอบประเมินความพร้อม',
+        'ส่ง Gen ID', 'Print/ส่งบัตร',
+        'อยู่ระหว่างตรวจกองงาน', 'อยู่ระหว่างขอ User',
+        'อยู่ระหว่างขออนุมัติDflow ขึ้นทะเบียนช่าง'
+    ]
     onprocess = sum(status_counts.get(s, 0) for s in onprocess_statuses)
-    
-    # เพิ่ม "ตัวแทนยังไม่ส่งขึ้นทะเบียน" ที่ result != "Closed" เข้า onprocess
-    if 'status' in df.columns and 'result' in df.columns:
-        onprocess += len(df[(df['status'] == 'ตัวแทนยังไม่ส่งขึ้นทะเบียน') & (df['result'] != 'Closed')])
     
     # ผลอบรมทฤษฎี
     theory_pass = len(df[df['result_round'] == 'ผ่าน']) if 'result_round' in df.columns else 0
@@ -201,9 +205,11 @@ def get_summary_stats(df):
         'completed': completed,
         'onprocess': onprocess,
         'closed': closed,
+        'cancel': cancel,
         'completed_rate': round((completed / total * 100), 1) if total > 0 else 0,
         'onprocess_rate': round((onprocess / total * 100), 1) if total > 0 else 0,
         'closed_rate': round((closed / total * 100), 1) if total > 0 else 0,
+        'cancel_rate': round((cancel / total * 100), 1) if total > 0 else 0,
         'theory_pass': theory_pass,
         'theory_fail': theory_fail,
         'theory_rate': round((theory_pass / (theory_pass + theory_fail) * 100), 1) if (theory_pass + theory_fail) > 0 else 0,
@@ -242,14 +248,9 @@ def get_sla_by_step_stats(df):
             max_sla = valid_df[sla_col].max() if total > 0 else 0
             min_sla = valid_df[sla_col].min() if total > 0 else 0
             
-            # นับ Complete
+            # นับ Complete จาก status_col = 'Complete'
             complete_count = 0
-            result_col = step.get('result_col', '')
-            
-            # DFlow: นับจาก result_dflow = 'Approve' หรือ 'Reject' หรือ 'Resend'
-            if step['key'] == 'dflow' and 'result_dflow' in df.columns:
-                complete_count = len(df[df['result_dflow'].isin(['Approve', 'Reject', 'Resend'])])
-            elif status_col in df.columns:
+            if status_col in df.columns:
                 complete_count = len(df[df[status_col] == 'Complete'])
             
             step_stats.append({
@@ -261,6 +262,17 @@ def get_sla_by_step_stats(df):
                 'max_sla': int(max_sla) if not np.isnan(max_sla) else 0,
                 'min_sla': int(min_sla) if not np.isnan(min_sla) else 0
             })
+        else:
+            # ถ้าไม่มี columns ให้ใส่ค่าเป็น 0
+            step_stats.append({
+                'key': step['key'],
+                'name': step['name'],
+                'total': 0,
+                'complete': 0,
+                'avg_sla': 0,
+                'max_sla': 0,
+                'min_sla': 0
+            })
     
     return step_stats
 
@@ -271,8 +283,10 @@ def get_area_step_summary(df):
     
     import re
     
-    # Status ที่ปิดงาน/ไม่ผ่าน
-    closed_statuses = ['ไม่ผ่านคุณสมบัติ', 'ไม่ผ่านอบรม', 'ไม่เข้าอบรม', 'ช่างลาออก']
+    # Status ที่ปิดงาน (Closed)
+    closed_statuses = ['ไม่ผ่านอบรม', 'ไม่ผ่านคุณสมบัติ']
+    # Status ที่ยกเลิก (Cancel)
+    cancel_statuses = ['ช่างลาออก', 'ติดประวัติอาชญากรรม', 'ไม่เข้าอบรม']
     
     area_summary = []
     
@@ -282,10 +296,11 @@ def get_area_step_summary(df):
         # จำนวนช่างทั้งหมดที่ลงทะเบียน
         total = len(area_df)
         
-        # จำนวน Closed (รวม "ตัวแทนยังไม่ส่งขึ้นทะเบียน" ที่ result = "Closed")
+        # จำนวน Closed
         closed = len(area_df[area_df['status'].isin(closed_statuses)])
-        if 'result' in area_df.columns:
-            closed += len(area_df[(area_df['status'] == 'ตัวแทนยังไม่ส่งขึ้นทะเบียน') & (area_df['result'] == 'Closed')])
+        
+        # จำนวน Cancel
+        cancel = len(area_df[area_df['status'].isin(cancel_statuses)])
         
         # Helper function สำหรับดึงข้อมูลช่าง
         def get_technician_details(df_subset):
@@ -442,6 +457,7 @@ def get_area_step_summary(df):
             'area': area,
             'total': total,
             'closed': closed,
+            'cancel': cancel,
             'onprocess': onprocess,
             'completed': completed,
             'steps': steps_data
@@ -464,10 +480,18 @@ def get_area_stats(df):
     if df.empty or 'area' not in df.columns:
         return []
     
-    # Status ที่ปิดงาน/ไม่ผ่าน
-    closed_statuses = ['ไม่ผ่านคุณสมบัติ', 'ไม่ผ่านอบรม', 'ไม่เข้าอบรม', 'ช่างลาออก']
-    # Status ที่อยู่ระหว่างดำเนินการ
-    onprocess_statuses = ['OJT', 'อบรม', 'ขออนุมัติDflow ขึ้นทะเบียนช่าง', 'Genid/ปริ้นบัตร/ส่งบัตร', 'ขอ User', 'ตัวแทนยังไม่ส่งขึ้นทะเบียน', 'ขึ้นทะเบียน']
+    # Status ที่ปิดงาน (Closed)
+    closed_statuses = ['ไม่ผ่านอบรม', 'ไม่ผ่านคุณสมบัติ']
+    # Status ที่ยกเลิก (Cancel)
+    cancel_statuses = ['ช่างลาออก', 'ติดประวัติอาชญากรรม', 'ไม่เข้าอบรม']
+    # Status ที่อยู่ระหว่างดำเนินการ (Onprocess)
+    onprocess_statuses = [
+        'ตัวแทนยังไม่ส่งขึ้นทะเบียน', 'เอกสารยังไม่ครบ',
+        'อยู่ระหว่างอบรมทฤษฎี/ปฏิบัติ', 'อยู่ระหว่างOJT/สอบประเมินความพร้อม',
+        'ส่ง Gen ID', 'Print/ส่งบัตร',
+        'อยู่ระหว่างตรวจกองงาน', 'อยู่ระหว่างขอ User',
+        'อยู่ระหว่างขออนุมัติDflow ขึ้นทะเบียนช่าง'
+    ]
     
     area_stats = []
     for area in df['area'].dropna().unique():
@@ -476,7 +500,7 @@ def get_area_stats(df):
         # นับ completed
         completed = len(area_df[area_df['status'] == 'ขึ้นทะเบียนเรียบร้อย'])
         
-        # นับ closed พร้อม breakdown (รวม "ตัวแทนยังไม่ส่งขึ้นทะเบียน" ที่ result = "Closed")
+        # นับ closed พร้อม breakdown
         closed = 0
         closed_breakdown = []
         for s in closed_statuses:
@@ -485,30 +509,23 @@ def get_area_stats(df):
                 closed += count
                 closed_breakdown.append({'status': s, 'count': count})
         
-        # เพิ่ม "ตัวแทนยังไม่ส่งขึ้นทะเบียน" ที่ result = "Closed"
-        if 'result' in area_df.columns:
-            agent_closed = len(area_df[(area_df['status'] == 'ตัวแทนยังไม่ส่งขึ้นทะเบียน') & (area_df['result'] == 'Closed')])
-            if agent_closed > 0:
-                closed += agent_closed
-                closed_breakdown.append({'status': 'ตัวแทนยังไม่ส่งขึ้นทะเบียน (Closed)', 'count': agent_closed})
+        # นับ cancel พร้อม breakdown
+        cancel = 0
+        cancel_breakdown = []
+        for s in cancel_statuses:
+            count = len(area_df[area_df['status'] == s])
+            if count > 0:
+                cancel += count
+                cancel_breakdown.append({'status': s, 'count': count})
         
-        # นับ onprocess พร้อม breakdown (ไม่รวม "ตัวแทนยังไม่ส่งขึ้นทะเบียน" ที่ result = "Closed")
+        # นับ onprocess พร้อม breakdown
         onprocess = 0
         onprocess_breakdown = []
         for s in onprocess_statuses:
-            if s == 'ตัวแทนยังไม่ส่งขึ้นทะเบียน':
-                continue
             count = len(area_df[area_df['status'] == s])
             if count > 0:
                 onprocess += count
                 onprocess_breakdown.append({'status': s, 'count': count})
-        
-        # เพิ่ม "ตัวแทนยังไม่ส่งขึ้นทะเบียน" ที่ result != "Closed"
-        if 'result' in area_df.columns:
-            agent_onprocess = len(area_df[(area_df['status'] == 'ตัวแทนยังไม่ส่งขึ้นทะเบียน') & (area_df['result'] != 'Closed')])
-            if agent_onprocess > 0:
-                onprocess += agent_onprocess
-                onprocess_breakdown.append({'status': 'ตัวแทนยังไม่ส่งขึ้นทะเบียน', 'count': agent_onprocess})
         
         # คำนวณ avg_sla เฉพาะที่มี sla_total >= 0 และมี start/end date
         if 'sla_total' in area_df.columns and 'start_date' in area_df.columns and 'end_date' in area_df.columns:
@@ -530,6 +547,8 @@ def get_area_stats(df):
             'onprocess_breakdown': onprocess_breakdown,
             'closed': closed,
             'closed_breakdown': closed_breakdown,
+            'cancel': cancel,
+            'cancel_breakdown': cancel_breakdown,
             'avg_sla': round(avg_sla, 1) if not np.isnan(avg_sla) else 0,
             'success_rate': round((completed / len(area_df) * 100), 1) if len(area_df) > 0 else 0
         })
@@ -599,26 +618,31 @@ def get_monthly_stats(df):
         # ขึ้นทะเบียนเรียบร้อย
         completed = len(month_df[month_df['status'] == 'ขึ้นทะเบียนเรียบร้อย'])
         
-        # ปิดงาน/ไม่ผ่าน
-        closed_statuses = ['ไม่ผ่านคุณสมบัติ', 'ไม่ผ่านอบรม', 'ไม่เข้าอบรม', 'ช่างลาออก']
+        # ปิดงาน (Closed)
+        closed_statuses = ['ไม่ผ่านอบรม', 'ไม่ผ่านคุณสมบัติ']
         closed = len(month_df[month_df['status'].isin(closed_statuses)])
-        # เพิ่ม "ตัวแทนยังไม่ส่งขึ้นทะเบียน" ที่ result = 'Closed'
-        if 'result' in month_df.columns:
-            closed += len(month_df[(month_df['status'] == 'ตัวแทนยังไม่ส่งขึ้นทะเบียน') & (month_df['result'] == 'Closed')])
+        
+        # ยกเลิก (Cancel)
+        cancel_statuses = ['ช่างลาออก', 'ติดประวัติอาชญากรรม', 'ไม่เข้าอบรม']
+        cancel = len(month_df[month_df['status'].isin(cancel_statuses)])
         
         # อยู่ระหว่างดำเนินการ
-        onprocess_statuses = ['OJT', 'อบรม', 'ขออนุมัติDflow ขึ้นทะเบียนช่าง', 'Genid/ปริ้นบัตร/ส่งบัตร', 'ขอ User', 'ขึ้นทะเบียน']
+        onprocess_statuses = [
+            'ตัวแทนยังไม่ส่งขึ้นทะเบียน', 'เอกสารยังไม่ครบ',
+            'อยู่ระหว่างอบรมทฤษฎี/ปฏิบัติ', 'อยู่ระหว่างOJT/สอบประเมินความพร้อม',
+            'ส่ง Gen ID', 'Print/ส่งบัตร',
+            'อยู่ระหว่างตรวจกองงาน', 'อยู่ระหว่างขอ User',
+            'อยู่ระหว่างขออนุมัติDflow ขึ้นทะเบียนช่าง'
+        ]
         onprocess = len(month_df[month_df['status'].isin(onprocess_statuses)])
-        # เพิ่ม "ตัวแทนยังไม่ส่งขึ้นทะเบียน" ที่ result != 'Closed'
-        if 'result' in month_df.columns:
-            onprocess += len(month_df[(month_df['status'] == 'ตัวแทนยังไม่ส่งขึ้นทะเบียน') & (month_df['result'] != 'Closed')])
         
         monthly_stats.append({
             'month': month,
             'total': len(month_df),
             'completed': completed,
             'onprocess': onprocess,
-            'closed': closed
+            'closed': closed,
+            'cancel': cancel
         })
     
     # เรียงตามลำดับเดือน
@@ -778,23 +802,27 @@ def get_technician_list(df, status_filter=None, area_filter=None, province_filte
     # Status ที่ถือว่า Completed
     completed_statuses = ['ขึ้นทะเบียนเรียบร้อย']
     # Status ที่ถือว่า Onprocess
-    onprocess_statuses = ['อบรม', 'OJT', 'ขออนุมัติDflow ขึ้นทะเบียนช่าง', 'ขอ User', 'Genid/ปริ้นบัตร/ส่งบัตร', 'ขึ้นทะเบียน']
+    onprocess_statuses = [
+        'ตัวแทนยังไม่ส่งขึ้นทะเบียน', 'เอกสารยังไม่ครบ',
+        'อยู่ระหว่างอบรมทฤษฎี/ปฏิบัติ', 'อยู่ระหว่างOJT/สอบประเมินความพร้อม',
+        'ส่ง Gen ID', 'Print/ส่งบัตร',
+        'อยู่ระหว่างตรวจกองงาน', 'อยู่ระหว่างขอ User',
+        'อยู่ระหว่างขออนุมัติDflow ขึ้นทะเบียนช่าง'
+    ]
     # Status ที่ถือว่า Closed
-    closed_statuses = ['ช่างลาออก', 'ไม่ผ่านคุณสมบัติ', 'ไม่เข้าอบรม', 'ไม่ผ่านอบรม']
+    closed_statuses = ['ไม่ผ่านอบรม', 'ไม่ผ่านคุณสมบัติ']
+    # Status ที่ถือว่า Cancel
+    cancel_statuses = ['ช่างลาออก', 'ติดประวัติอาชญากรรม', 'ไม่เข้าอบรม']
     
     if status_filter and status_filter != 'all':
         if status_filter == 'Completed':
             filtered_df = filtered_df[filtered_df['status'].isin(completed_statuses)]
         elif status_filter == 'Onprocess':
-            # Onprocess = status ใน onprocess_statuses หรือ (ตัวแทนยังไม่ส่งขึ้นทะเบียน และ result != Closed)
-            mask_onprocess = filtered_df['status'].isin(onprocess_statuses)
-            mask_agent_onprocess = (filtered_df['status'] == 'ตัวแทนยังไม่ส่งขึ้นทะเบียน') & (filtered_df['result'] != 'Closed')
-            filtered_df = filtered_df[mask_onprocess | mask_agent_onprocess]
+            filtered_df = filtered_df[filtered_df['status'].isin(onprocess_statuses)]
         elif status_filter == 'Closed':
-            # Closed = status ใน closed_statuses หรือ (ตัวแทนยังไม่ส่งขึ้นทะเบียน และ result = Closed)
-            mask_closed = filtered_df['status'].isin(closed_statuses)
-            mask_agent_closed = (filtered_df['status'] == 'ตัวแทนยังไม่ส่งขึ้นทะเบียน') & (filtered_df['result'] == 'Closed')
-            filtered_df = filtered_df[mask_closed | mask_agent_closed]
+            filtered_df = filtered_df[filtered_df['status'].isin(closed_statuses)]
+        elif status_filter == 'Cancel':
+            filtered_df = filtered_df[filtered_df['status'].isin(cancel_statuses)]
         else:
             # กรองตรงๆ
             filtered_df = filtered_df[filtered_df['status'] == status_filter]
@@ -859,13 +887,16 @@ def get_pending_technicians(df):
         return []
     
     # Status ที่ถือว่าอยู่ระหว่างดำเนินการ
-    onprocess_statuses = ['OJT', 'อบรม', 'ขออนุมัติDflow ขึ้นทะเบียนช่าง', 'Genid/ปริ้นบัตร/ส่งบัตร', 'ขอ User', 'ขึ้นทะเบียน']
+    onprocess_statuses = [
+        'ตัวแทนยังไม่ส่งขึ้นทะเบียน', 'เอกสารยังไม่ครบ',
+        'อยู่ระหว่างอบรมทฤษฎี/ปฏิบัติ', 'อยู่ระหว่างOJT/สอบประเมินความพร้อม',
+        'ส่ง Gen ID', 'Print/ส่งบัตร',
+        'อยู่ระหว่างตรวจกองงาน', 'อยู่ระหว่างขอ User',
+        'อยู่ระหว่างขออนุมัติDflow ขึ้นทะเบียนช่าง'
+    ]
     
-    # กรอง status อยู่ระหว่างดำเนินการ หรือ (ตัวแทนยังไม่ส่งขึ้นทะเบียน และ result != Closed)
-    pending_df = df[
-        (df['status'].isin(onprocess_statuses)) | 
-        ((df['status'] == 'ตัวแทนยังไม่ส่งขึ้นทะเบียน') & (df['result'] != 'Closed'))
-    ].copy()
+    # กรอง status อยู่ระหว่างดำเนินการ
+    pending_df = df[df['status'].isin(onprocess_statuses)].copy()
     
     # เรียงลำดับตาม sla_total มากที่สุดก่อน (เฉพาะที่มีค่า >= 0)
     # ถ้า sla_total เป็น NaN หรือ < 0 ให้ไปท้ายสุด
@@ -890,8 +921,8 @@ def dashboard():
     
     # ตรวจสอบให้แน่ใจว่ามี key ที่จำเป็น
     default_summary = {
-        'total': 0, 'completed': 0, 'onprocess': 0, 'closed': 0,
-        'completed_rate': 0, 'onprocess_rate': 0, 'closed_rate': 0,
+        'total': 0, 'completed': 0, 'onprocess': 0, 'closed': 0, 'cancel': 0,
+        'completed_rate': 0, 'onprocess_rate': 0, 'closed_rate': 0, 'cancel_rate': 0,
         'theory_pass': 0, 'theory_fail': 0, 'theory_rate': 0,
         'ojt_pass': 0, 'ojt_fail': 0, 'ojt_rate': 0,
         'avg_sla_total': 0, 'sla_by_step': {}, 'status_counts': {}
