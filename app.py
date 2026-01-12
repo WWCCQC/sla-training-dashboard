@@ -463,59 +463,21 @@ def get_area_step_summary(df):
     return sorted(area_summary, key=get_area_sort_key)
 
 def get_area_stats(df):
-    """สรุปสถิติตามพื้นที่ (area)
-    เงื่อนไขใหม่: รวมค่า >= 0 ที่มี start_date และ end_date จริง
-    พร้อม breakdown ของ onprocess และ closed status
-    """
+    """สรุปสถิติตามพื้นที่ (area) - นับจากคอลัมน์ result"""
     if df.empty or 'area' not in df.columns:
         return []
-    
-    # Status ที่ปิดงาน (Closed)
-    closed_statuses = ['ไม่ผ่านอบรม', 'ไม่ผ่านคุณสมบัติ']
-    # Status ที่ยกเลิก (Cancel)
-    cancel_statuses = ['ช่างลาออก', 'ติดประวัติอาชญากรรม', 'ไม่เข้าอบรม']
-    # Status ที่อยู่ระหว่างดำเนินการ (Onprocess)
-    onprocess_statuses = [
-        'ตัวแทนยังไม่ส่งขึ้นทะเบียน', 'เอกสารยังไม่ครบ',
-        'อยู่ระหว่างอบรมทฤษฎี/ปฏิบัติ', 'อยู่ระหว่างOJT/สอบประเมินความพร้อม',
-        'ส่ง Gen ID', 'Print/ส่งบัตร',
-        'อยู่ระหว่างตรวจกองงาน', 'อยู่ระหว่างขอ User',
-        'อยู่ระหว่างขออนุมัติDflow ขึ้นทะเบียนช่าง'
-    ]
     
     area_stats = []
     for area in df['area'].dropna().unique():
         area_df = df[df['area'] == area]
         
-        # นับ completed
-        completed = len(area_df[area_df['status'] == 'ขึ้นทะเบียนเรียบร้อย'])
+        # นับจากคอลัมน์ result โดยตรง
+        result_counts = area_df['result'].value_counts().to_dict() if 'result' in area_df.columns else {}
         
-        # นับ closed พร้อม breakdown
-        closed = 0
-        closed_breakdown = []
-        for s in closed_statuses:
-            count = len(area_df[area_df['status'] == s])
-            if count > 0:
-                closed += count
-                closed_breakdown.append({'status': s, 'count': count})
-        
-        # นับ cancel พร้อม breakdown
-        cancel = 0
-        cancel_breakdown = []
-        for s in cancel_statuses:
-            count = len(area_df[area_df['status'] == s])
-            if count > 0:
-                cancel += count
-                cancel_breakdown.append({'status': s, 'count': count})
-        
-        # นับ onprocess พร้อม breakdown
-        onprocess = 0
-        onprocess_breakdown = []
-        for s in onprocess_statuses:
-            count = len(area_df[area_df['status'] == s])
-            if count > 0:
-                onprocess += count
-                onprocess_breakdown.append({'status': s, 'count': count})
+        completed = result_counts.get('Completed', 0)
+        closed = result_counts.get('Closed', 0)
+        cancel = result_counts.get('Cancel', 0)
+        onprocess = result_counts.get('Onprocess', 0)
         
         # คำนวณ avg_sla เฉพาะที่มี sla_total >= 0 และมี start/end date
         if 'sla_total' in area_df.columns and 'start_date' in area_df.columns and 'end_date' in area_df.columns:
@@ -534,11 +496,8 @@ def get_area_stats(df):
             'total': len(area_df),
             'completed': completed,
             'onprocess': onprocess,
-            'onprocess_breakdown': onprocess_breakdown,
             'closed': closed,
-            'closed_breakdown': closed_breakdown,
             'cancel': cancel,
-            'cancel_breakdown': cancel_breakdown,
             'avg_sla': round(avg_sla, 1) if not np.isnan(avg_sla) else 0,
             'success_rate': round((completed / len(area_df) * 100), 1) if len(area_df) > 0 else 0
         })
