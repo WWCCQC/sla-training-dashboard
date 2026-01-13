@@ -267,16 +267,37 @@ def get_sla_by_step_stats(df):
     return step_stats
 
 def get_area_step_summary(df):
-    """สรุปจำนวนช่างและ SLA เฉลี่ยแยกตามพื้นที่และขั้นตอน"""
+    """สรุปจำนวนช่างแยกตามพื้นที่และสถานะใหญ่ (result) พร้อม breakdown สถานะย่อย"""
     if df.empty or 'area' not in df.columns:
         return []
     
     import re
     
-    # Status ที่ปิดงาน (Closed)
-    closed_statuses = ['ไม่ผ่านอบรม', 'ไม่ผ่านคุณสมบัติ', 'ไม่เข้าอบรม']
-    # Status ที่ยกเลิก (Cancel)
-    cancel_statuses = ['ช่างลาออก', 'ติดประวัติอาชญากรรม']
+    # Helper function สำหรับดึงข้อมูลช่าง
+    def get_technician_details(df_subset):
+        details = []
+        for _, row in df_subset.iterrows():
+            details.append({
+                'depot_code': str(row.get('depot_code', '')),
+                'depot_name': str(row.get('depot_name', '')),
+                'full_name_th': str(row.get('full_name_th', '')),
+                'status': str(row.get('status', ''))
+            })
+        return details
+    
+    # Helper function สำหรับ breakdown สถานะย่อย
+    def get_status_breakdown(df_subset):
+        breakdown = []
+        if 'status' in df_subset.columns and len(df_subset) > 0:
+            status_counts = df_subset['status'].value_counts().to_dict()
+            for status, count in status_counts.items():
+                status_df = df_subset[df_subset['status'] == status]
+                breakdown.append({
+                    'status': status,
+                    'count': count,
+                    'details': get_technician_details(status_df)
+                })
+        return breakdown
     
     area_summary = []
     
@@ -286,171 +307,40 @@ def get_area_step_summary(df):
         # จำนวนช่างทั้งหมดที่ลงทะเบียน
         total = len(area_df)
         
-        # จำนวน Closed
-        closed = len(area_df[area_df['status'].isin(closed_statuses)])
+        # นับจากคอลัมน์ result โดยตรง
+        result_counts = area_df['result'].value_counts().to_dict() if 'result' in area_df.columns else {}
         
-        # จำนวน Cancel
-        cancel = len(area_df[area_df['status'].isin(cancel_statuses)])
+        # Completed
+        completed_count = result_counts.get('Completed', 0)
+        completed_df = area_df[area_df['result'] == 'Completed'] if 'result' in area_df.columns else pd.DataFrame()
+        completed_breakdown = get_status_breakdown(completed_df)
         
-        # Helper function สำหรับดึงข้อมูลช่าง
-        def get_technician_details(df_subset):
-            details = []
-            for _, row in df_subset.iterrows():
-                details.append({
-                    'depot_code': str(row.get('depot_code', '')),
-                    'depot_name': str(row.get('depot_name', '')),
-                    'full_name_th': str(row.get('full_name_th', ''))
-                })
-            return details
+        # Cancel
+        cancel_count = result_counts.get('Cancel', 0)
+        cancel_df = area_df[area_df['result'] == 'Cancel'] if 'result' in area_df.columns else pd.DataFrame()
+        cancel_breakdown = get_status_breakdown(cancel_df)
         
-        # คำนวณแต่ละขั้นตอน
-        steps_data = {}
+        # Closed
+        closed_count = result_counts.get('Closed', 0)
+        closed_df = area_df[area_df['result'] == 'Closed'] if 'result' in area_df.columns else pd.DataFrame()
+        closed_breakdown = get_status_breakdown(closed_df)
         
-        # 1. อบรม - นับจาก status_result_round = 'Onprocess'
-        if 'status_result_round' in area_df.columns:
-            training_df = area_df[area_df['status_result_round'] == 'Onprocess']
-            training_count = len(training_df)
-        else:
-            training_count = 0
-            training_df = pd.DataFrame()
-        if 'sla_training' in training_df.columns and len(training_df) > 0:
-            valid = training_df[training_df['sla_training'].notna() & (training_df['sla_training'] >= 0)]
-            avg_sla = valid['sla_training'].mean() if len(valid) > 0 else 0
-        else:
-            avg_sla = 0
-        steps_data['training'] = {
-            'count': training_count, 
-            'avg_sla': round(avg_sla, 1) if not np.isnan(avg_sla) else 0,
-            'details': get_technician_details(training_df) if len(training_df) > 0 else []
-        }
-        
-        # 2. OJT - นับจาก status_result_ojt = 'Onprocess'
-        if 'status_result_ojt' in area_df.columns:
-            ojt_df = area_df[area_df['status_result_ojt'] == 'Onprocess']
-            ojt_count = len(ojt_df)
-        else:
-            ojt_count = 0
-            ojt_df = pd.DataFrame()
-        if 'sla_ojt' in ojt_df.columns and len(ojt_df) > 0:
-            valid = ojt_df[ojt_df['sla_ojt'].notna() & (ojt_df['sla_ojt'] >= 0)]
-            avg_sla = valid['sla_ojt'].mean() if len(valid) > 0 else 0
-        else:
-            avg_sla = 0
-        steps_data['ojt'] = {
-            'count': ojt_count, 
-            'avg_sla': round(avg_sla, 1) if not np.isnan(avg_sla) else 0,
-            'details': get_technician_details(ojt_df) if len(ojt_df) > 0 else []
-        }
-        
-        # 3. ทำบัตร - นับจาก status_genid_card_card = 'Onprocess'
-        if 'status_genid_card_card' in area_df.columns:
-            genid_df = area_df[area_df['status_genid_card_card'] == 'Onprocess']
-            genid_count = len(genid_df)
-        else:
-            genid_count = 0
-            genid_df = pd.DataFrame()
-        if 'sla_genid_card' in genid_df.columns and len(genid_df) > 0:
-            valid = genid_df[genid_df['sla_genid_card'].notna() & (genid_df['sla_genid_card'] >= 0)]
-            avg_sla = valid['sla_genid_card'].mean() if len(valid) > 0 else 0
-        else:
-            avg_sla = 0
-        steps_data['genid'] = {
-            'count': genid_count, 
-            'avg_sla': round(avg_sla, 1) if not np.isnan(avg_sla) else 0,
-            'details': get_technician_details(genid_df) if len(genid_df) > 0 else []
-        }
-        
-        # 4. ตรวจความพร้อม - นับจาก status_inspection = 'Onprocess'
-        if 'status_inspection' in area_df.columns:
-            inspection_df = area_df[area_df['status_inspection'] == 'Onprocess']
-            inspection_count = len(inspection_df)
-        else:
-            inspection_count = 0
-            inspection_df = pd.DataFrame()
-        if 'sla_inspection' in inspection_df.columns and len(inspection_df) > 0:
-            valid = inspection_df[inspection_df['sla_inspection'].notna() & (inspection_df['sla_inspection'] >= 0)]
-            avg_sla = valid['sla_inspection'].mean() if len(valid) > 0 else 0
-        else:
-            avg_sla = 0
-        steps_data['inspection'] = {
-            'count': inspection_count, 
-            'avg_sla': round(avg_sla, 1) if not np.isnan(avg_sla) else 0,
-            'details': get_technician_details(inspection_df) if len(inspection_df) > 0 else []
-        }
-        
-        # 5. DFlow - นับจาก result_dflow = 'Onprocess'
-        if 'result_dflow' in area_df.columns:
-            dflow_df = area_df[area_df['result_dflow'] == 'Onprocess']
-            dflow_count = len(dflow_df)
-        else:
-            dflow_count = 0
-            dflow_df = pd.DataFrame()
-        if 'sla_dflow' in dflow_df.columns and len(dflow_df) > 0:
-            valid = dflow_df[dflow_df['sla_dflow'].notna() & (dflow_df['sla_dflow'] >= 0)]
-            avg_sla = valid['sla_dflow'].mean() if len(valid) > 0 else 0
-        else:
-            avg_sla = 0
-        steps_data['dflow'] = {
-            'count': dflow_count, 
-            'avg_sla': round(avg_sla, 1) if not np.isnan(avg_sla) else 0,
-            'details': get_technician_details(dflow_df) if len(dflow_df) > 0 else []
-        }
-        
-        # 6. ขึ้นทะเบียน - นับจาก status_registration = 'Onprocess'
-        if 'status_registration' in area_df.columns:
-            reg_df = area_df[area_df['status_registration'] == 'Onprocess']
-            reg_count = len(reg_df)
-        else:
-            reg_count = 0
-            reg_df = pd.DataFrame()
-        if 'sla_registration' in reg_df.columns and len(reg_df) > 0:
-            valid = reg_df[reg_df['sla_registration'].notna() & (reg_df['sla_registration'] >= 0)]
-            avg_sla = valid['sla_registration'].mean() if len(valid) > 0 else 0
-        else:
-            avg_sla = 0
-        steps_data['registration'] = {
-            'count': reg_count, 
-            'avg_sla': round(avg_sla, 1) if not np.isnan(avg_sla) else 0,
-            'details': get_technician_details(reg_df) if len(reg_df) > 0 else []
-        }
-        
-        # 7. เสร็จสิ้น (ขึ้นทะเบียนเรียบร้อย)
-        completed = len(area_df[area_df['status'] == 'ขึ้นทะเบียนเรียบร้อย'])
-        
-        # 8. Provider-ไม่ส่งขึ้นทะเบียน (status = 'ตัวแทนยังไม่ส่งขึ้นทะเบียน' และ result = 'Onprocess')
-        if 'status' in area_df.columns and 'result' in area_df.columns:
-            provider_pending_df = area_df[(area_df['status'] == 'ตัวแทนยังไม่ส่งขึ้นทะเบียน') & (area_df['result'] == 'Onprocess')]
-            provider_pending_count = len(provider_pending_df)
-        else:
-            provider_pending_count = 0
-            provider_pending_df = pd.DataFrame()
-        
-        # คำนวณ SLA เฉลี่ยสำหรับ provider_pending (ใช้ sla_total)
-        if 'sla_total' in provider_pending_df.columns and len(provider_pending_df) > 0:
-            valid = provider_pending_df[provider_pending_df['sla_total'].notna() & (provider_pending_df['sla_total'] >= 0)]
-            avg_sla_provider = valid['sla_total'].mean() if len(valid) > 0 else 0
-        else:
-            avg_sla_provider = 0
-        
-        steps_data['provider_pending'] = {
-            'count': provider_pending_count,
-            'avg_sla': round(avg_sla_provider, 1) if not np.isnan(avg_sla_provider) else 0,
-            'details': get_technician_details(provider_pending_df) if len(provider_pending_df) > 0 else []
-        }
-        
-        # คำนวณ onprocess = รวมทุก step ที่ยังไม่เสร็จ
-        onprocess = (steps_data['training']['count'] + steps_data['ojt']['count'] + 
-                     steps_data['genid']['count'] + steps_data['inspection']['count'] + 
-                     steps_data['dflow']['count'] + steps_data['registration']['count'])
+        # Onprocess
+        onprocess_count = result_counts.get('Onprocess', 0)
+        onprocess_df = area_df[area_df['result'] == 'Onprocess'] if 'result' in area_df.columns else pd.DataFrame()
+        onprocess_breakdown = get_status_breakdown(onprocess_df)
         
         area_summary.append({
             'area': area,
             'total': total,
-            'closed': closed,
-            'cancel': cancel,
-            'onprocess': onprocess,
-            'completed': completed,
-            'steps': steps_data
+            'completed': completed_count,
+            'completed_breakdown': completed_breakdown,
+            'cancel': cancel_count,
+            'cancel_breakdown': cancel_breakdown,
+            'closed': closed_count,
+            'closed_breakdown': closed_breakdown,
+            'onprocess': onprocess_count,
+            'onprocess_breakdown': onprocess_breakdown
         })
     
     # เรียงตามชื่อ area (RSM1, RSM2, RSM3...)

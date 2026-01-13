@@ -184,397 +184,274 @@
 <!-- Area Step Summary Table -->
 <div class="bg-white rounded-xl shadow-sm p-5 mb-6">
     <h3 class="text-lg font-semibold text-gray-800 mb-4">
-        <i class="fas fa-table text-indigo-500 mr-2"></i>ตารางสรุป: จำนวนช่างและระยะเวลารอ (SLA) แยกตามพื้นที่
+        <i class="fas fa-table text-indigo-500 mr-2"></i>ตารางสรุป: จำนวนช่างแยกตามพื้นที่และสถานะ
     </h3>
     <div class="overflow-x-auto">
         <table class="min-w-full text-sm" id="areaStepSummaryTable">
             <thead class="bg-gray-800 text-white">
                 <tr>
-                    <th class="px-3 py-3 text-left font-medium" rowspan="2">พื้นที่ (Area)</th>
-                    <th class="px-3 py-3 text-center font-medium" rowspan="2">ลงทะเบียน<br>(คน)</th>
-                    <th class="px-3 py-3 text-center font-medium bg-green-700" rowspan="2">เสร็จสิ้น<br>(คน)</th>
-                    <th class="px-3 py-3 text-center font-medium bg-red-700" rowspan="2">ปิดงาน<br>(คน)</th>
-                    <th class="px-3 py-3 text-center font-medium bg-gray-600" rowspan="2">ยกเลิก<br>(คน)</th>
-                    <th class="px-3 py-3 text-center font-medium bg-pink-700" colspan="2">ไม่ส่งขึ้นทะเบียน</th>
-                    <th class="px-3 py-3 text-center font-medium bg-yellow-600" rowspan="2">อยู่ระหว่าง<br>ดำเนินการ</th>
-                    <th class="px-3 py-3 text-center font-medium bg-blue-700" colspan="2">อบรม</th>
-                    <th class="px-3 py-3 text-center font-medium bg-purple-700" colspan="2">OJT</th>
-                    <th class="px-3 py-3 text-center font-medium bg-indigo-700" colspan="2">ทำบัตร</th>
-                    <th class="px-3 py-3 text-center font-medium bg-cyan-700" colspan="2">ตรวจความพร้อม</th>
-                    <th class="px-3 py-3 text-center font-medium bg-teal-700" colspan="2">DFlow</th>
-                    <th class="px-3 py-3 text-center font-medium bg-orange-700" colspan="2">ขึ้นทะเบียน</th>
-                </tr>
-                <tr class="bg-gray-700 text-white">
-                    <th class="px-2 py-2 text-center font-medium text-xs bg-pink-600">คน</th>
-                    <th class="px-2 py-2 text-center font-medium text-xs bg-pink-600">วัน</th>
-                    <th class="px-2 py-2 text-center font-medium text-xs bg-blue-600">คน</th>
-                    <th class="px-2 py-2 text-center font-medium text-xs bg-blue-600">วัน</th>
-                    <th class="px-2 py-2 text-center font-medium text-xs bg-purple-600">คน</th>
-                    <th class="px-2 py-2 text-center font-medium text-xs bg-purple-600">วัน</th>
-                    <th class="px-2 py-2 text-center font-medium text-xs bg-indigo-600">คน</th>
-                    <th class="px-2 py-2 text-center font-medium text-xs bg-indigo-600">วัน</th>
-                    <th class="px-2 py-2 text-center font-medium text-xs bg-cyan-600">คน</th>
-                    <th class="px-2 py-2 text-center font-medium text-xs bg-cyan-600">วัน</th>
-                    <th class="px-2 py-2 text-center font-medium text-xs bg-teal-600">คน</th>
-                    <th class="px-2 py-2 text-center font-medium text-xs bg-teal-600">วัน</th>
-                    <th class="px-2 py-2 text-center font-medium text-xs bg-orange-600">คน</th>
-                    <th class="px-2 py-2 text-center font-medium text-xs bg-orange-600">วัน</th>
+                    <th class="px-4 py-3 text-left font-medium">พื้นที่ (Area)</th>
+                    <th class="px-4 py-3 text-center font-medium">ลงทะเบียน<br>(คน)</th>
+                    <th class="px-4 py-3 text-center font-medium bg-green-700">Completed<br>(เสร็จสิ้น)</th>
+                    <th class="px-4 py-3 text-center font-medium bg-gray-600">Cancel<br>(ยกเลิก)</th>
+                    <th class="px-4 py-3 text-center font-medium bg-red-700">Closed<br>(ปิดงาน)</th>
+                    <th class="px-4 py-3 text-center font-medium bg-yellow-600">Onprocess<br>(ดำเนินการ)</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
                 <!-- Total Row -->
                 <tr class="bg-gray-100 font-bold border-b-2 border-gray-400">
-                    <td class="px-3 py-3 text-gray-800">Total</td>
-                    <td class="px-3 py-3 text-center">{{ area_step_summary|sum(attribute='total') }}</td>
-                    <td class="px-3 py-3 text-center text-green-600">{{ area_step_summary|sum(attribute='completed') }}</td>
-                    <td class="px-3 py-3 text-center text-red-600">{{ area_step_summary|sum(attribute='closed') }}</td>
-                    <td class="px-3 py-3 text-center text-gray-600">{{ area_step_summary|sum(attribute='cancel') }}</td>
-                    <!-- Provider-ไม่ส่ง -->
-                    <td class="px-2 py-3 text-center text-pink-600">{{ area_step_summary|sum(attribute='steps.provider_pending.count') }}</td>
-                    <td class="px-2 py-3 text-center text-gray-400">-</td>
-                    <td class="px-3 py-3 text-center text-yellow-600">{{ area_step_summary|sum(attribute='onprocess') }}</td>
-                    <!-- อบรม -->
-                    <td class="px-2 py-3 text-center">{{ area_step_summary|sum(attribute='steps.training.count') }}</td>
-                    <td class="px-2 py-3 text-center text-gray-400">-</td>
-                    <!-- OJT -->
-                    <td class="px-2 py-3 text-center">{{ area_step_summary|sum(attribute='steps.ojt.count') }}</td>
-                    <td class="px-2 py-3 text-center text-gray-400">-</td>
-                    <!-- ทำบัตร -->
-                    <td class="px-2 py-3 text-center">{{ area_step_summary|sum(attribute='steps.genid.count') }}</td>
-                    <td class="px-2 py-3 text-center text-gray-400">-</td>
-                    <!-- ตรวจความพร้อม -->
-                    <td class="px-2 py-3 text-center">{{ area_step_summary|sum(attribute='steps.inspection.count') }}</td>
-                    <td class="px-2 py-3 text-center text-gray-400">-</td>
-                    <!-- DFlow -->
-                    <td class="px-2 py-3 text-center">{{ area_step_summary|sum(attribute='steps.dflow.count') }}</td>
-                    <td class="px-2 py-3 text-center text-gray-400">-</td>
-                    <!-- ขึ้นทะเบียน -->
-                    <td class="px-2 py-3 text-center">{{ area_step_summary|sum(attribute='steps.registration.count') }}</td>
-                    <td class="px-2 py-3 text-center text-gray-400">-</td>
+                    <td class="px-4 py-3 text-gray-800">Total</td>
+                    <td class="px-4 py-3 text-center">{{ area_step_summary|sum(attribute='total') }}</td>
+                    <td class="px-4 py-3 text-center text-green-600">{{ area_step_summary|sum(attribute='completed') }}</td>
+                    <td class="px-4 py-3 text-center text-gray-600">{{ area_step_summary|sum(attribute='cancel') }}</td>
+                    <td class="px-4 py-3 text-center text-red-600">{{ area_step_summary|sum(attribute='closed') }}</td>
+                    <td class="px-4 py-3 text-center text-yellow-600">{{ area_step_summary|sum(attribute='onprocess') }}</td>
                 </tr>
                 {% for item in area_step_summary %}
-                <tr class="hover:bg-gray-50 area-step-row" data-area-idx="{{ loop.index0 }}">
-                    <td class="px-3 py-3 font-medium text-gray-800">{{ item.area }}</td>
-                    <td class="px-3 py-3 text-center font-medium">{{ item.total }}</td>
-                    <td class="px-3 py-3 text-center text-green-600 font-medium">{{ item.completed }}</td>
-                    <td class="px-3 py-3 text-center text-red-600 font-medium">{{ item.closed }}</td>
-                    <td class="px-3 py-3 text-center text-gray-600 font-medium">{{ item.cancel }}</td>
-                    <!-- Provider-ไม่ส่ง -->
-                    <td class="px-2 py-3 text-center">
-                        {% if item.steps.provider_pending.count > 0 %}
-                        <button class="toggle-step-details text-pink-600 font-medium hover:bg-pink-100 px-2 py-1 rounded cursor-pointer" 
-                                data-target="provider_pending-{{ loop.index0 }}">
-                            <i class="fas fa-plus-circle mr-1 toggle-icon"></i>{{ item.steps.provider_pending.count }}
+                <tr class="hover:bg-gray-50 area-main-row" data-area-idx="{{ loop.index0 }}">
+                    <td class="px-4 py-3 font-medium text-gray-800">{{ item.area }}</td>
+                    <td class="px-4 py-3 text-center font-medium">{{ item.total }}</td>
+                    <!-- Completed -->
+                    <td class="px-4 py-3 text-center">
+                        {% if item.completed > 0 %}
+                        <button class="toggle-status-details text-green-600 font-medium hover:bg-green-100 px-2 py-1 rounded cursor-pointer" 
+                                data-target="completed-{{ loop.index0 }}">
+                            <i class="fas fa-plus-circle mr-1 toggle-icon"></i>{{ item.completed }}
                         </button>
                         {% else %}
                         <span class="text-gray-400">0</span>
                         {% endif %}
                     </td>
-                    <td class="px-2 py-3 text-center {% if item.steps.provider_pending.avg_sla > 14 %}text-red-600 font-medium{% elif item.steps.provider_pending.avg_sla > 7 %}text-yellow-600{% else %}text-gray-600{% endif %}">
-                        {% if item.steps.provider_pending.avg_sla > 0 %}{{ item.steps.provider_pending.avg_sla }}{% else %}-{% endif %}
-                    </td>
-                    <td class="px-3 py-3 text-center text-yellow-600 font-medium">{{ item.onprocess }}</td>
-                    <!-- อบรม -->
-                    <td class="px-2 py-3 text-center">
-                        {% if item.steps.training.count > 0 %}
-                        <button class="toggle-step-details text-blue-600 font-medium hover:bg-blue-100 px-2 py-1 rounded cursor-pointer" 
-                                data-target="training-{{ loop.index0 }}">
-                            <i class="fas fa-plus-circle mr-1 toggle-icon"></i>{{ item.steps.training.count }}
+                    <!-- Cancel -->
+                    <td class="px-4 py-3 text-center">
+                        {% if item.cancel > 0 %}
+                        <button class="toggle-status-details text-gray-600 font-medium hover:bg-gray-200 px-2 py-1 rounded cursor-pointer" 
+                                data-target="cancel-{{ loop.index0 }}">
+                            <i class="fas fa-plus-circle mr-1 toggle-icon"></i>{{ item.cancel }}
                         </button>
                         {% else %}
                         <span class="text-gray-400">0</span>
                         {% endif %}
                     </td>
-                    <td class="px-2 py-3 text-center {% if item.steps.training.avg_sla > 14 %}text-red-600 font-medium{% elif item.steps.training.avg_sla > 7 %}text-yellow-600{% else %}text-gray-600{% endif %}">
-                        {% if item.steps.training.avg_sla > 0 %}{{ item.steps.training.avg_sla }}{% else %}-{% endif %}
-                    </td>
-                    <!-- OJT -->
-                    <td class="px-2 py-3 text-center">
-                        {% if item.steps.ojt.count > 0 %}
-                        <button class="toggle-step-details text-purple-600 font-medium hover:bg-purple-100 px-2 py-1 rounded cursor-pointer" 
-                                data-target="ojt-{{ loop.index0 }}">
-                            <i class="fas fa-plus-circle mr-1 toggle-icon"></i>{{ item.steps.ojt.count }}
+                    <!-- Closed -->
+                    <td class="px-4 py-3 text-center">
+                        {% if item.closed > 0 %}
+                        <button class="toggle-status-details text-red-600 font-medium hover:bg-red-100 px-2 py-1 rounded cursor-pointer" 
+                                data-target="closed-{{ loop.index0 }}">
+                            <i class="fas fa-plus-circle mr-1 toggle-icon"></i>{{ item.closed }}
                         </button>
                         {% else %}
                         <span class="text-gray-400">0</span>
                         {% endif %}
                     </td>
-                    <td class="px-2 py-3 text-center {% if item.steps.ojt.avg_sla > 14 %}text-red-600 font-medium{% elif item.steps.ojt.avg_sla > 7 %}text-yellow-600{% else %}text-gray-600{% endif %}">
-                        {% if item.steps.ojt.avg_sla > 0 %}{{ item.steps.ojt.avg_sla }}{% else %}-{% endif %}
-                    </td>
-                    <!-- ทำบัตร -->
-                    <td class="px-2 py-3 text-center">
-                        {% if item.steps.genid.count > 0 %}
-                        <button class="toggle-step-details text-indigo-600 font-medium hover:bg-indigo-100 px-2 py-1 rounded cursor-pointer" 
-                                data-target="genid-{{ loop.index0 }}">
-                            <i class="fas fa-plus-circle mr-1 toggle-icon"></i>{{ item.steps.genid.count }}
+                    <!-- Onprocess -->
+                    <td class="px-4 py-3 text-center">
+                        {% if item.onprocess > 0 %}
+                        <button class="toggle-status-details text-yellow-600 font-medium hover:bg-yellow-100 px-2 py-1 rounded cursor-pointer" 
+                                data-target="onprocess-{{ loop.index0 }}">
+                            <i class="fas fa-plus-circle mr-1 toggle-icon"></i>{{ item.onprocess }}
                         </button>
                         {% else %}
                         <span class="text-gray-400">0</span>
                         {% endif %}
-                    </td>
-                    <td class="px-2 py-3 text-center {% if item.steps.genid.avg_sla > 14 %}text-red-600 font-medium{% elif item.steps.genid.avg_sla > 7 %}text-yellow-600{% else %}text-gray-600{% endif %}">
-                        {% if item.steps.genid.avg_sla > 0 %}{{ item.steps.genid.avg_sla }}{% else %}-{% endif %}
-                    </td>
-                    <!-- ตรวจความพร้อม -->
-                    <td class="px-2 py-3 text-center">
-                        {% if item.steps.inspection.count > 0 %}
-                        <button class="toggle-step-details text-cyan-600 font-medium hover:bg-cyan-100 px-2 py-1 rounded cursor-pointer" 
-                                data-target="inspection-{{ loop.index0 }}">
-                            <i class="fas fa-plus-circle mr-1 toggle-icon"></i>{{ item.steps.inspection.count }}
-                        </button>
-                        {% else %}
-                        <span class="text-gray-400">0</span>
-                        {% endif %}
-                    </td>
-                    <td class="px-2 py-3 text-center {% if item.steps.inspection.avg_sla > 14 %}text-red-600 font-medium{% elif item.steps.inspection.avg_sla > 7 %}text-yellow-600{% else %}text-gray-600{% endif %}">
-                        {% if item.steps.inspection.avg_sla > 0 %}{{ item.steps.inspection.avg_sla }}{% else %}-{% endif %}
-                    </td>
-                    <!-- DFlow -->
-                    <td class="px-2 py-3 text-center">
-                        {% if item.steps.dflow.count > 0 %}
-                        <button class="toggle-step-details text-teal-600 font-medium hover:bg-teal-100 px-2 py-1 rounded cursor-pointer" 
-                                data-target="dflow-{{ loop.index0 }}">
-                            <i class="fas fa-plus-circle mr-1 toggle-icon"></i>{{ item.steps.dflow.count }}
-                        </button>
-                        {% else %}
-                        <span class="text-gray-400">0</span>
-                        {% endif %}
-                    </td>
-                    <td class="px-2 py-3 text-center {% if item.steps.dflow.avg_sla > 14 %}text-red-600 font-medium{% elif item.steps.dflow.avg_sla > 7 %}text-yellow-600{% else %}text-gray-600{% endif %}">
-                        {% if item.steps.dflow.avg_sla > 0 %}{{ item.steps.dflow.avg_sla }}{% else %}-{% endif %}
-                    </td>
-                    <!-- ขึ้นทะเบียน -->
-                    <td class="px-2 py-3 text-center">
-                        {% if item.steps.registration.count > 0 %}
-                        <button class="toggle-step-details text-orange-600 font-medium hover:bg-orange-100 px-2 py-1 rounded cursor-pointer" 
-                                data-target="registration-{{ loop.index0 }}">
-                            <i class="fas fa-plus-circle mr-1 toggle-icon"></i>{{ item.steps.registration.count }}
-                        </button>
-                        {% else %}
-                        <span class="text-gray-400">0</span>
-                        {% endif %}
-                    </td>
-                    <td class="px-2 py-3 text-center {% if item.steps.registration.avg_sla > 14 %}text-red-600 font-medium{% elif item.steps.registration.avg_sla > 7 %}text-yellow-600{% else %}text-gray-600{% endif %}">
-                        {% if item.steps.registration.avg_sla > 0 %}{{ item.steps.registration.avg_sla }}{% else %}-{% endif %}
                     </td>
                 </tr>
                 
-                <!-- Detail rows for each step -->
+                <!-- Detail rows for each status -->
                 {% set area_idx = loop.index0 %}
                 
-                <!-- Training Details -->
-                {% if item.steps.training.details|length > 0 %}
-                <tr class="step-detail-row bg-blue-50 hidden" id="training-{{ area_idx }}">
-                    <td colspan="19" class="px-8 py-3">
+                <!-- Completed Breakdown -->
+                {% if item.completed_breakdown|length > 0 %}
+                <tr class="status-detail-row bg-green-50 hidden" id="completed-{{ area_idx }}">
+                    <td colspan="6" class="px-6 py-3">
                         <div class="text-sm">
-                            <div class="font-medium text-blue-800 mb-2">รายชื่อช่าง - อบรม ({{ item.steps.training.details|length }} คน)</div>
-                            <table class="min-w-full bg-white rounded border">
-                                <thead class="bg-blue-100">
-                                    <tr>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-blue-800">#</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-blue-800">รหัส Depot</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-blue-800">ชื่อ Depot</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-blue-800">ชื่อช่าง</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-200">
-                                    {% for tech in item.steps.training.details %}
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
-                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
-                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
-                                        <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                            <div class="font-medium text-green-800 mb-3">
+                                <i class="fas fa-check-circle mr-2"></i>Completed - สถานะย่อย ({{ item.completed }} คน)
+                            </div>
+                            <div class="space-y-2">
+                                {% for sub in item.completed_breakdown %}
+                                <div class="border border-green-200 rounded-lg overflow-hidden">
+                                    <button class="toggle-technician-list w-full flex items-center justify-between px-4 py-2 bg-green-100 hover:bg-green-200 transition cursor-pointer"
+                                            data-target="completed-{{ area_idx }}-{{ loop.index0 }}">
+                                        <span class="font-medium text-green-800">{{ sub.status }}</span>
+                                        <span class="flex items-center gap-2">
+                                            <span class="bg-green-600 text-white px-2 py-1 rounded text-xs">{{ sub.count }} คน</span>
+                                            <i class="fas fa-chevron-down toggle-icon-sub text-green-600"></i>
+                                        </span>
+                                    </button>
+                                    <div class="technician-list hidden bg-white" id="completed-{{ area_idx }}-{{ loop.index0 }}">
+                                        <table class="min-w-full">
+                                            <thead class="bg-green-50">
+                                                <tr>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-green-700">#</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-green-700">รหัส Depot</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-green-700">ชื่อ Depot</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-green-700">ชื่อช่าง</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-100">
+                                                {% for tech in sub.details %}
+                                                <tr class="hover:bg-gray-50">
+                                                    <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
                         </div>
                     </td>
                 </tr>
                 {% endif %}
                 
-                <!-- OJT Details -->
-                {% if item.steps.ojt.details|length > 0 %}
-                <tr class="step-detail-row bg-purple-50 hidden" id="ojt-{{ area_idx }}">
-                    <td colspan="19" class="px-8 py-3">
+                <!-- Cancel Breakdown -->
+                {% if item.cancel_breakdown|length > 0 %}
+                <tr class="status-detail-row bg-gray-100 hidden" id="cancel-{{ area_idx }}">
+                    <td colspan="6" class="px-6 py-3">
                         <div class="text-sm">
-                            <div class="font-medium text-purple-800 mb-2">รายชื่อช่าง - OJT ({{ item.steps.ojt.details|length }} คน)</div>
-                            <table class="min-w-full bg-white rounded border">
-                                <thead class="bg-purple-100">
-                                    <tr>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-purple-800">#</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-purple-800">รหัส Depot</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-purple-800">ชื่อ Depot</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-purple-800">ชื่อช่าง</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-200">
-                                    {% for tech in item.steps.ojt.details %}
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
-                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
-                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
-                                        <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                            <div class="font-medium text-gray-700 mb-3">
+                                <i class="fas fa-ban mr-2"></i>Cancel - สถานะย่อย ({{ item.cancel }} คน)
+                            </div>
+                            <div class="space-y-2">
+                                {% for sub in item.cancel_breakdown %}
+                                <div class="border border-gray-300 rounded-lg overflow-hidden">
+                                    <button class="toggle-technician-list w-full flex items-center justify-between px-4 py-2 bg-gray-200 hover:bg-gray-300 transition cursor-pointer"
+                                            data-target="cancel-{{ area_idx }}-{{ loop.index0 }}">
+                                        <span class="font-medium text-gray-700">{{ sub.status }}</span>
+                                        <span class="flex items-center gap-2">
+                                            <span class="bg-gray-600 text-white px-2 py-1 rounded text-xs">{{ sub.count }} คน</span>
+                                            <i class="fas fa-chevron-down toggle-icon-sub text-gray-600"></i>
+                                        </span>
+                                    </button>
+                                    <div class="technician-list hidden bg-white" id="cancel-{{ area_idx }}-{{ loop.index0 }}">
+                                        <table class="min-w-full">
+                                            <thead class="bg-gray-50">
+                                                <tr>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">#</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">รหัส Depot</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">ชื่อ Depot</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">ชื่อช่าง</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-100">
+                                                {% for tech in sub.details %}
+                                                <tr class="hover:bg-gray-50">
+                                                    <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
                         </div>
                     </td>
                 </tr>
                 {% endif %}
                 
-                <!-- GenID Details -->
-                {% if item.steps.genid.details|length > 0 %}
-                <tr class="step-detail-row bg-indigo-50 hidden" id="genid-{{ area_idx }}">
-                    <td colspan="19" class="px-8 py-3">
+                <!-- Closed Breakdown -->
+                {% if item.closed_breakdown|length > 0 %}
+                <tr class="status-detail-row bg-red-50 hidden" id="closed-{{ area_idx }}">
+                    <td colspan="6" class="px-6 py-3">
                         <div class="text-sm">
-                            <div class="font-medium text-indigo-800 mb-2">รายชื่อช่าง - ทำบัตร ({{ item.steps.genid.details|length }} คน)</div>
-                            <table class="min-w-full bg-white rounded border">
-                                <thead class="bg-indigo-100">
-                                    <tr>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-indigo-800">#</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-indigo-800">รหัส Depot</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-indigo-800">ชื่อ Depot</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-indigo-800">ชื่อช่าง</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-200">
-                                    {% for tech in item.steps.genid.details %}
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
-                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
-                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
-                                        <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                            <div class="font-medium text-red-800 mb-3">
+                                <i class="fas fa-times-circle mr-2"></i>Closed - สถานะย่อย ({{ item.closed }} คน)
+                            </div>
+                            <div class="space-y-2">
+                                {% for sub in item.closed_breakdown %}
+                                <div class="border border-red-200 rounded-lg overflow-hidden">
+                                    <button class="toggle-technician-list w-full flex items-center justify-between px-4 py-2 bg-red-100 hover:bg-red-200 transition cursor-pointer"
+                                            data-target="closed-{{ area_idx }}-{{ loop.index0 }}">
+                                        <span class="font-medium text-red-800">{{ sub.status }}</span>
+                                        <span class="flex items-center gap-2">
+                                            <span class="bg-red-600 text-white px-2 py-1 rounded text-xs">{{ sub.count }} คน</span>
+                                            <i class="fas fa-chevron-down toggle-icon-sub text-red-600"></i>
+                                        </span>
+                                    </button>
+                                    <div class="technician-list hidden bg-white" id="closed-{{ area_idx }}-{{ loop.index0 }}">
+                                        <table class="min-w-full">
+                                            <thead class="bg-red-50">
+                                                <tr>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-red-700">#</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-red-700">รหัส Depot</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-red-700">ชื่อ Depot</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-red-700">ชื่อช่าง</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-100">
+                                                {% for tech in sub.details %}
+                                                <tr class="hover:bg-gray-50">
+                                                    <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
                         </div>
                     </td>
                 </tr>
                 {% endif %}
                 
-                <!-- Inspection Details -->
-                {% if item.steps.inspection.details|length > 0 %}
-                <tr class="step-detail-row bg-cyan-50 hidden" id="inspection-{{ area_idx }}">
-                    <td colspan="19" class="px-8 py-3">
+                <!-- Onprocess Breakdown -->
+                {% if item.onprocess_breakdown|length > 0 %}
+                <tr class="status-detail-row bg-yellow-50 hidden" id="onprocess-{{ area_idx }}">
+                    <td colspan="6" class="px-6 py-3">
                         <div class="text-sm">
-                            <div class="font-medium text-cyan-800 mb-2">รายชื่อช่าง - ตรวจความพร้อม ({{ item.steps.inspection.details|length }} คน)</div>
-                            <table class="min-w-full bg-white rounded border">
-                                <thead class="bg-cyan-100">
-                                    <tr>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-cyan-800">#</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-cyan-800">รหัส Depot</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-cyan-800">ชื่อ Depot</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-cyan-800">ชื่อช่าง</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-200">
-                                    {% for tech in item.steps.inspection.details %}
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
-                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
-                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
-                                        <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </td>
-                </tr>
-                {% endif %}
-                
-                <!-- DFlow Details -->
-                {% if item.steps.dflow.details|length > 0 %}
-                <tr class="step-detail-row bg-teal-50 hidden" id="dflow-{{ area_idx }}">
-                    <td colspan="19" class="px-8 py-3">
-                        <div class="text-sm">
-                            <div class="font-medium text-teal-800 mb-2">รายชื่อช่าง - DFlow ({{ item.steps.dflow.details|length }} คน)</div>
-                            <table class="min-w-full bg-white rounded border">
-                                <thead class="bg-teal-100">
-                                    <tr>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-teal-800">#</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-teal-800">รหัส Depot</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-teal-800">ชื่อ Depot</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-teal-800">ชื่อช่าง</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-200">
-                                    {% for tech in item.steps.dflow.details %}
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
-                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
-                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
-                                        <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </td>
-                </tr>
-                {% endif %}
-                
-                <!-- Registration Details -->
-                {% if item.steps.registration.details|length > 0 %}
-                <tr class="step-detail-row bg-orange-50 hidden" id="registration-{{ area_idx }}">
-                    <td colspan="19" class="px-8 py-3">
-                        <div class="text-sm">
-                            <div class="font-medium text-orange-800 mb-2">รายชื่อช่าง - ขึ้นทะเบียน ({{ item.steps.registration.details|length }} คน)</div>
-                            <table class="min-w-full bg-white rounded border">
-                                <thead class="bg-orange-100">
-                                    <tr>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-orange-800">#</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-orange-800">รหัส Depot</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-orange-800">ชื่อ Depot</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-orange-800">ชื่อช่าง</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-200">
-                                    {% for tech in item.steps.registration.details %}
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
-                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
-                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
-                                        <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </td>
-                </tr>
-                {% endif %}
-                
-                <!-- Provider-ไม่ส่งขึ้นทะเบียน Details -->
-                {% if item.steps.provider_pending.details|length > 0 %}
-                <tr class="step-detail-row bg-pink-50 hidden" id="provider_pending-{{ area_idx }}">
-                    <td colspan="19" class="px-8 py-3">
-                        <div class="text-sm">
-                            <div class="font-medium text-pink-800 mb-2">รายชื่อช่าง - Provider-ไม่ส่งขึ้นทะเบียน ({{ item.steps.provider_pending.details|length }} คน)</div>
-                            <table class="min-w-full bg-white rounded border">
-                                <thead class="bg-pink-100">
-                                    <tr>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-pink-800">#</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-pink-800">รหัส Depot</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-pink-800">ชื่อ Depot</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-pink-800">ชื่อช่าง</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-200">
-                                    {% for tech in item.steps.provider_pending.details %}
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
-                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
-                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
-                                        <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                            <div class="font-medium text-yellow-800 mb-3">
+                                <i class="fas fa-spinner mr-2"></i>Onprocess - สถานะย่อย ({{ item.onprocess }} คน)
+                            </div>
+                            <div class="space-y-2">
+                                {% for sub in item.onprocess_breakdown %}
+                                <div class="border border-yellow-300 rounded-lg overflow-hidden">
+                                    <button class="toggle-technician-list w-full flex items-center justify-between px-4 py-2 bg-yellow-100 hover:bg-yellow-200 transition cursor-pointer"
+                                            data-target="onprocess-{{ area_idx }}-{{ loop.index0 }}">
+                                        <span class="font-medium text-yellow-800">{{ sub.status }}</span>
+                                        <span class="flex items-center gap-2">
+                                            <span class="bg-yellow-600 text-white px-2 py-1 rounded text-xs">{{ sub.count }} คน</span>
+                                            <i class="fas fa-chevron-down toggle-icon-sub text-yellow-600"></i>
+                                        </span>
+                                    </button>
+                                    <div class="technician-list hidden bg-white" id="onprocess-{{ area_idx }}-{{ loop.index0 }}">
+                                        <table class="min-w-full">
+                                            <thead class="bg-yellow-50">
+                                                <tr>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-yellow-700">#</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-yellow-700">รหัส Depot</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-yellow-700">ชื่อ Depot</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-yellow-700">ชื่อช่าง</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-100">
+                                                {% for tech in sub.details %}
+                                                <tr class="hover:bg-gray-50">
+                                                    <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
                         </div>
                     </td>
                 </tr>
@@ -612,8 +489,8 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // ===== Area Step Summary Table Expand/Collapse =====
-    document.querySelectorAll('.toggle-step-details').forEach(function(btn) {
+    // ===== Status Details Expand/Collapse (สำหรับตารางสรุปใหม่) =====
+    document.querySelectorAll('.toggle-status-details').forEach(function(btn) {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
             const targetId = this.getAttribute('data-target');
@@ -631,6 +508,30 @@ document.addEventListener('DOMContentLoaded', function() {
                     targetRow.classList.add('hidden');
                     icon.classList.remove('fa-minus-circle');
                     icon.classList.add('fa-plus-circle');
+                }
+            }
+        });
+    });
+
+    // ===== Technician List Expand/Collapse (สำหรับสถานะย่อย) =====
+    document.querySelectorAll('.toggle-technician-list').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetId = this.getAttribute('data-target');
+            const targetDiv = document.getElementById(targetId);
+            const icon = this.querySelector('.toggle-icon-sub');
+            
+            if (targetDiv) {
+                if (targetDiv.classList.contains('hidden')) {
+                    // Expand
+                    targetDiv.classList.remove('hidden');
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-up');
+                } else {
+                    // Collapse
+                    targetDiv.classList.add('hidden');
+                    icon.classList.remove('fa-chevron-up');
+                    icon.classList.add('fa-chevron-down');
                 }
             }
         });
