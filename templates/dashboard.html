@@ -15,7 +15,7 @@
     <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-blue-500">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-sm text-gray-500 mb-1">ช่างทั้งหมด</p>
+                <p class="text-sm text-gray-500 mb-1">ลงทะเบียนอบรม</p>
                 <h3 class="text-3xl font-bold text-gray-800">{{ summary.total }}</h3>
             </div>
             <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
@@ -28,7 +28,7 @@
     <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-red-500">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-sm text-gray-500 mb-1">ปิดงาน</p>
+                <p class="text-sm text-gray-500 mb-1">ลาออก</p>
                 <h3 class="text-3xl font-bold text-red-600">{{ summary.closed }}</h3>
                 <p class="text-xs text-red-600 mt-1">{{ summary.closed_rate }}%</p>
             </div>
@@ -196,6 +196,12 @@
                     <th class="px-4 py-3 text-center font-medium bg-gray-600">Cancel<br>(ยกเลิก)</th>
                     <th class="px-4 py-3 text-center font-medium bg-red-700">Closed<br>(ปิดงาน)</th>
                     <th class="px-4 py-3 text-center font-medium bg-yellow-600">Onprocess<br>(ดำเนินการ)</th>
+                    <!-- Dynamic Onprocess sub-status columns from unique statuses -->
+                    {% if area_step_summary|length > 0 %}
+                    {% for status_name in area_step_summary[0].unique_onprocess_statuses %}
+                    <th class="px-3 py-3 text-center font-medium bg-amber-500 onprocess-sub-col hidden text-xs" data-substatus="{{ loop.index0 }}">{{ status_name }}</th>
+                    {% endfor %}
+                    {% endif %}
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
@@ -207,16 +213,22 @@
                     <td class="px-4 py-3 text-center text-gray-600">{{ area_step_summary|sum(attribute='cancel') }}</td>
                     <td class="px-4 py-3 text-center text-red-600">{{ area_step_summary|sum(attribute='closed') }}</td>
                     <td class="px-4 py-3 text-center text-yellow-600">{{ area_step_summary|sum(attribute='onprocess') }}</td>
+                    {% if area_step_summary|length > 0 %}
+                    {% for status_name in area_step_summary[0].unique_onprocess_statuses %}
+                    <td class="px-3 py-3 text-center onprocess-sub-col hidden text-amber-700 font-medium">-</td>
+                    {% endfor %}
+                    {% endif %}
                 </tr>
                 {% for item in area_step_summary %}
-                <tr class="hover:bg-gray-50 area-main-row" data-area-idx="{{ loop.index0 }}">
+                {% set area_idx = loop.index0 %}
+                <tr class="hover:bg-gray-50 area-main-row" data-area-idx="{{ area_idx }}">
                     <td class="px-4 py-3 font-medium text-gray-800">{{ item.area }}</td>
                     <td class="px-4 py-3 text-center font-medium">{{ item.total }}</td>
                     <!-- Completed -->
                     <td class="px-4 py-3 text-center">
                         {% if item.completed > 0 %}
                         <button class="toggle-status-details text-green-600 font-medium hover:bg-green-100 px-2 py-1 rounded cursor-pointer" 
-                                data-target="completed-{{ loop.index0 }}">
+                                data-target="completed-{{ area_idx }}">
                             {{ item.completed }}<i class="fas fa-caret-right ml-2 toggle-icon"></i>
                         </button>
                         {% else %}
@@ -227,7 +239,7 @@
                     <td class="px-4 py-3 text-center">
                         {% if item.cancel > 0 %}
                         <button class="toggle-status-details text-gray-600 font-medium hover:bg-gray-200 px-2 py-1 rounded cursor-pointer" 
-                                data-target="cancel-{{ loop.index0 }}">
+                                data-target="cancel-{{ area_idx }}">
                             {{ item.cancel }}<i class="fas fa-caret-right ml-2 toggle-icon"></i>
                         </button>
                         {% else %}
@@ -238,7 +250,7 @@
                     <td class="px-4 py-3 text-center">
                         {% if item.closed > 0 %}
                         <button class="toggle-status-details text-red-600 font-medium hover:bg-red-100 px-2 py-1 rounded cursor-pointer" 
-                                data-target="closed-{{ loop.index0 }}">
+                                data-target="closed-{{ area_idx }}">
                             {{ item.closed }}<i class="fas fa-caret-right ml-2 toggle-icon"></i>
                         </button>
                         {% else %}
@@ -248,23 +260,73 @@
                     <!-- Onprocess -->
                     <td class="px-4 py-3 text-center">
                         {% if item.onprocess > 0 %}
-                        <button class="toggle-status-details text-yellow-600 font-medium hover:bg-yellow-100 px-2 py-1 rounded cursor-pointer" 
-                                data-target="onprocess-{{ loop.index0 }}">
-                            {{ item.onprocess }}<i class="fas fa-caret-right ml-2 toggle-icon"></i>
+                        <button class="toggle-onprocess-expand text-yellow-600 font-medium hover:bg-yellow-100 px-2 py-1 rounded cursor-pointer" 
+                                data-area-idx="{{ area_idx }}"
+                                data-breakdown='{{ item.onprocess_breakdown | tojson }}'>
+                            {{ item.onprocess }}<i class="fas fa-caret-right ml-2 toggle-icon-onprocess"></i>
                         </button>
                         {% else %}
                         <span class="text-gray-400">0</span>
                         {% endif %}
                     </td>
+                    <!-- Onprocess sub-status cells (using onprocess_columns for consistency) -->
+                    {% for col_idx in range(item.onprocess_columns|length) %}
+                    {% set col = item.onprocess_columns[col_idx] %}
+                    <td class="px-3 py-3 text-center onprocess-sub-col hidden" data-area="{{ area_idx }}">
+                        {% if col.count > 0 %}
+                        <button class="toggle-technician-list text-amber-700 font-medium hover:bg-amber-100 px-2 py-1 rounded cursor-pointer text-xs"
+                                data-target="onprocess-{{ area_idx }}-{{ col_idx }}">
+                            {{ col.count }}<i class="fas fa-caret-right ml-1 toggle-icon-sub"></i>
+                        </button>
+                        {% else %}
+                        <span class="text-gray-400">0</span>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
                 </tr>
                 
-                <!-- Detail rows for each status -->
-                {% set area_idx = loop.index0 %}
+                <!-- Onprocess technician detail rows (hidden) - ใช้ enumerate-style index -->
+                {% for col_idx in range(item.onprocess_columns|length) %}
+                {% set col = item.onprocess_columns[col_idx] %}
+                {% if col.count > 0 %}
+                <tr class="technician-detail-row bg-amber-50 hidden" id="onprocess-{{ area_idx }}-{{ col_idx }}">
+                    <td colspan="20" class="px-6 py-3">
+                        <div class="text-sm">
+                            <div class="font-medium text-amber-800 mb-2">
+                                <i class="fas fa-users mr-2"></i>{{ col.status }} ({{ col.count }} คน)
+                            </div>
+                            <table class="min-w-full bg-white rounded border">
+                                <thead class="bg-amber-100">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-amber-800">#</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-amber-800">รหัส Depot</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-amber-800">ชื่อ Depot</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-amber-800">ชื่อช่าง</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    {% for tech in col.details %}
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+                
+                <!-- Detail rows for other status (Completed, Cancel, Closed) -->
                 
                 <!-- Completed Breakdown -->
                 {% if item.completed_breakdown|length > 0 %}
                 <tr class="status-detail-row bg-green-50 hidden" id="completed-{{ area_idx }}">
-                    <td colspan="6" class="px-6 py-3">
+                    <td colspan="14" class="px-6 py-3">
                         <div class="text-sm">
                             <div class="font-medium text-green-800 mb-3">
                                 <i class="fas fa-check-circle mr-2"></i>Completed - สถานะย่อย ({{ item.completed }} คน)
@@ -313,7 +375,7 @@
                 <!-- Cancel Breakdown -->
                 {% if item.cancel_breakdown|length > 0 %}
                 <tr class="status-detail-row bg-gray-100 hidden" id="cancel-{{ area_idx }}">
-                    <td colspan="6" class="px-6 py-3">
+                    <td colspan="14" class="px-6 py-3">
                         <div class="text-sm">
                             <div class="font-medium text-gray-700 mb-3">
                                 <i class="fas fa-ban mr-2"></i>Cancel - สถานะย่อย ({{ item.cancel }} คน)
@@ -362,7 +424,7 @@
                 <!-- Closed Breakdown -->
                 {% if item.closed_breakdown|length > 0 %}
                 <tr class="status-detail-row bg-red-50 hidden" id="closed-{{ area_idx }}">
-                    <td colspan="6" class="px-6 py-3">
+                    <td colspan="14" class="px-6 py-3">
                         <div class="text-sm">
                             <div class="font-medium text-red-800 mb-3">
                                 <i class="fas fa-times-circle mr-2"></i>Closed - สถานะย่อย ({{ item.closed }} คน)
@@ -386,55 +448,6 @@
                                                     <th class="px-3 py-2 text-left text-xs font-medium text-red-700">รหัส Depot</th>
                                                     <th class="px-3 py-2 text-left text-xs font-medium text-red-700">ชื่อ Depot</th>
                                                     <th class="px-3 py-2 text-left text-xs font-medium text-red-700">ชื่อช่าง</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody class="divide-y divide-gray-100">
-                                                {% for tech in sub.details %}
-                                                <tr class="hover:bg-gray-50">
-                                                    <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
-                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
-                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
-                                                    <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
-                                                </tr>
-                                                {% endfor %}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </td>
-                </tr>
-                {% endif %}
-                
-                <!-- Onprocess Breakdown -->
-                {% if item.onprocess_breakdown|length > 0 %}
-                <tr class="status-detail-row bg-yellow-50 hidden" id="onprocess-{{ area_idx }}">
-                    <td colspan="6" class="px-6 py-3">
-                        <div class="text-sm">
-                            <div class="font-medium text-yellow-800 mb-3">
-                                <i class="fas fa-spinner mr-2"></i>Onprocess - สถานะย่อย ({{ item.onprocess }} คน)
-                            </div>
-                            <div class="space-y-2">
-                                {% for sub in item.onprocess_breakdown %}
-                                <div class="border border-yellow-300 rounded-lg overflow-hidden">
-                                    <button class="toggle-technician-list w-full flex items-center justify-between px-4 py-2 bg-yellow-100 hover:bg-yellow-200 transition cursor-pointer"
-                                            data-target="onprocess-{{ area_idx }}-{{ loop.index0 }}">
-                                        <span class="font-medium text-yellow-800">{{ sub.status }}</span>
-                                        <span class="flex items-center gap-2">
-                                            <span class="bg-yellow-600 text-white px-2 py-1 rounded text-xs">{{ sub.count }} คน</span>
-                                            <i class="fas fa-chevron-down toggle-icon-sub text-yellow-600"></i>
-                                        </span>
-                                    </button>
-                                    <div class="technician-list hidden bg-white" id="onprocess-{{ area_idx }}-{{ loop.index0 }}">
-                                        <table class="min-w-full">
-                                            <thead class="bg-yellow-50">
-                                                <tr>
-                                                    <th class="px-3 py-2 text-left text-xs font-medium text-yellow-700">#</th>
-                                                    <th class="px-3 py-2 text-left text-xs font-medium text-yellow-700">รหัส Depot</th>
-                                                    <th class="px-3 py-2 text-left text-xs font-medium text-yellow-700">ชื่อ Depot</th>
-                                                    <th class="px-3 py-2 text-left text-xs font-medium text-yellow-700">ชื่อช่าง</th>
                                                 </tr>
                                             </thead>
                                             <tbody class="divide-y divide-gray-100">
@@ -489,7 +502,88 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // ===== Status Details Expand/Collapse (สำหรับตารางสรุปใหม่) =====
+    // ===== Onprocess Expand to Right (แสดงสถานะย่อยเป็นคอลัมน์ทางขวา) =====
+    let onprocessExpanded = false;
+    
+    // ไม่ต้อง update header names เพราะมาจาก server แล้ว
+    
+    document.querySelectorAll('.toggle-onprocess-expand').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const icon = this.querySelector('.toggle-icon-onprocess');
+            
+            if (!onprocessExpanded) {
+                // Expand - แสดงคอลัมน์ทางขวาทั้งหมด
+                onprocessExpanded = true;
+                
+                // แสดงทุก sub-columns
+                document.querySelectorAll('.onprocess-sub-col').forEach(function(col) {
+                    col.classList.remove('hidden');
+                });
+                
+                // เปลี่ยน icon ทุกปุ่ม
+                document.querySelectorAll('.toggle-icon-onprocess').forEach(function(ic) {
+                    ic.classList.remove('fa-caret-right');
+                    ic.classList.add('fa-caret-down');
+                });
+            } else {
+                // Collapse - ซ่อนคอลัมน์ทางขวา
+                onprocessExpanded = false;
+                
+                // ซ่อน sub-status columns
+                document.querySelectorAll('.onprocess-sub-col').forEach(function(col) {
+                    col.classList.add('hidden');
+                });
+                
+                // ซ่อน technician detail rows
+                document.querySelectorAll('.technician-detail-row').forEach(function(row) {
+                    row.classList.add('hidden');
+                });
+                
+                // เปลี่ยน icon กลับ
+                document.querySelectorAll('.toggle-icon-onprocess').forEach(function(ic) {
+                    ic.classList.remove('fa-caret-down');
+                    ic.classList.add('fa-caret-right');
+                });
+                
+                // reset sub icons
+                document.querySelectorAll('.onprocess-sub-col .toggle-icon-sub').forEach(function(ic) {
+                    ic.classList.remove('fa-caret-down');
+                    ic.classList.add('fa-caret-right');
+                });
+            }
+        });
+    });
+    
+    // ===== Technician Detail Row Toggle (สำหรับ Onprocess sub-status) - ใช้ Event Delegation =====
+    document.addEventListener('click', function(e) {
+        // ตรวจสอบว่าคลิกที่ปุ่มใน onprocess-sub-col หรือไม่
+        const btn = e.target.closest('.onprocess-sub-col .toggle-technician-list');
+        if (btn) {
+            e.preventDefault();
+            const targetId = btn.getAttribute('data-target');
+            const targetRow = document.getElementById(targetId);
+            const icon = btn.querySelector('.toggle-icon-sub');
+            
+            if (targetRow) {
+                if (targetRow.classList.contains('hidden')) {
+                    targetRow.classList.remove('hidden');
+                    if (icon) {
+                        icon.classList.remove('fa-caret-right');
+                        icon.classList.add('fa-caret-down');
+                    }
+                } else {
+                    targetRow.classList.add('hidden');
+                    if (icon) {
+                        icon.classList.remove('fa-caret-down');
+                        icon.classList.add('fa-caret-right');
+                    }
+                }
+            }
+        }
+    });
+
+    // ===== Status Details Expand/Collapse (สำหรับ Completed, Cancel, Closed) =====
     document.querySelectorAll('.toggle-status-details').forEach(function(btn) {
         btn.addEventListener('click', function(e) {
             e.preventDefault();

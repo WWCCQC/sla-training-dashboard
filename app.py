@@ -34,9 +34,9 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 # SLA Steps - 8 ขั้นตอนหลัก
 # เพิ่ม start_col และ end_col สำหรับตรวจสอบว่ามีการดำเนินการจริง
 SLA_STEPS = [
+    {'key': 'doc', 'name': 'เอกสาร', 'sla_col': 'sla_doc', 'status_col': 'status_doc', 'result_col': 'result_doc', 'start_col': 'doc_start', 'end_col': 'doc_end'},
     {'key': 'training', 'name': 'อบรมทฤษฎี', 'sla_col': 'sla_training', 'status_col': 'status_result_round', 'result_col': 'result_round', 'start_col': 'training_start', 'end_col': 'training_end'},
     {'key': 'ojt', 'name': 'OJT', 'sla_col': 'sla_ojt', 'status_col': 'status_result_ojt', 'result_col': 'result_round_ojt', 'start_col': 'ojt_start', 'end_col': 'ojt_end'},
-    {'key': 'doc', 'name': 'เอกสาร', 'sla_col': 'sla_doc', 'status_col': 'status_doc', 'result_col': 'result_doc', 'start_col': 'doc_start', 'end_col': 'doc_end'},
     {'key': 'genid', 'name': 'Gen ID', 'sla_col': 'sla_genid', 'status_col': 'status_genid', 'result_col': 'result_genid', 'start_col': 'genid_start', 'end_col': 'genid_end'},
     {'key': 'printcard', 'name': 'Print Card', 'sla_col': 'sla_printcard', 'status_col': 'status_printcard', 'result_col': 'result_printcard', 'start_col': 'printcard_start', 'end_col': 'printcard_end'},
     {'key': 'inspection', 'name': 'ตรวจความพร้อม', 'sla_col': 'sla_inspection', 'status_col': 'status_inspection', 'result_col': 'result_inspection', 'start_col': 'inspection_start', 'end_col': 'inspection_end'},
@@ -301,6 +301,20 @@ def get_area_step_summary(df):
     
     area_summary = []
     
+    # กำหนดลำดับสถานะย่อยของ Onprocess ตามที่ต้องการ
+    unique_onprocess_statuses = [
+        'ตัวแทนยังไม่ส่งขึ้นทะเบียน',
+        'เอกสารยังไม่ครบ',
+        'อยู่ระหว่างอบรมทฤษฎี/ปฏิบัติ',
+        'อยู่ระหว่างOJT/สอบประเมินความพร้อม',
+        'ส่ง Gen ID',
+        'Print/ส่งบัตร',
+        'อยู่ระหว่างตรวจกองงาน',
+        'อยู่ระหว่างขอ User',
+        'อยู่ระหว่างขออนุมัติDflow ขึ้นทะเบียนช่าง'
+    ]
+    
+    # สร้าง area_summary พร้อม data ที่จัดเรียงตาม unique statuses
     for area in df['area'].dropna().unique():
         area_df = df[df['area'] == area]
         
@@ -330,6 +344,32 @@ def get_area_step_summary(df):
         onprocess_df = area_df[area_df['result'] == 'Onprocess'] if 'result' in area_df.columns else pd.DataFrame()
         onprocess_breakdown = get_status_breakdown(onprocess_df)
         
+        # สร้าง onprocess_by_status dict
+        onprocess_by_status = {}
+        for sub in onprocess_breakdown:
+            onprocess_by_status[sub['status']] = {
+                'count': sub['count'],
+                'details': sub['details']
+            }
+        
+        # สร้าง onprocess_columns list ที่เรียงตาม unique_onprocess_statuses
+        onprocess_columns = []
+        for status_name in unique_onprocess_statuses:
+            if status_name in onprocess_by_status:
+                onprocess_columns.append({
+                    'status': status_name,
+                    'count': onprocess_by_status[status_name]['count'],
+                    'details': onprocess_by_status[status_name]['details'],
+                    'has_data': True
+                })
+            else:
+                onprocess_columns.append({
+                    'status': status_name,
+                    'count': 0,
+                    'details': [],
+                    'has_data': False
+                })
+        
         area_summary.append({
             'area': area,
             'total': total,
@@ -340,7 +380,9 @@ def get_area_step_summary(df):
             'closed': closed_count,
             'closed_breakdown': closed_breakdown,
             'onprocess': onprocess_count,
-            'onprocess_breakdown': onprocess_breakdown
+            'onprocess_breakdown': onprocess_breakdown,
+            'onprocess_columns': onprocess_columns,
+            'unique_onprocess_statuses': unique_onprocess_statuses
         })
     
     # เรียงตามชื่อ area (RSM1, RSM2, RSM3...)
