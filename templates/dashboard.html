@@ -217,7 +217,7 @@
                         {% if item.completed > 0 %}
                         <button class="toggle-status-details text-green-600 font-medium hover:bg-green-100 px-2 py-1 rounded cursor-pointer" 
                                 data-target="completed-{{ loop.index0 }}">
-                            <i class="fas fa-plus-circle mr-1 toggle-icon"></i>{{ item.completed }}
+                            {{ item.completed }}<i class="fas fa-caret-right ml-2 toggle-icon"></i>
                         </button>
                         {% else %}
                         <span class="text-gray-400">0</span>
@@ -228,7 +228,7 @@
                         {% if item.cancel > 0 %}
                         <button class="toggle-status-details text-gray-600 font-medium hover:bg-gray-200 px-2 py-1 rounded cursor-pointer" 
                                 data-target="cancel-{{ loop.index0 }}">
-                            <i class="fas fa-plus-circle mr-1 toggle-icon"></i>{{ item.cancel }}
+                            {{ item.cancel }}<i class="fas fa-caret-right ml-2 toggle-icon"></i>
                         </button>
                         {% else %}
                         <span class="text-gray-400">0</span>
@@ -239,7 +239,7 @@
                         {% if item.closed > 0 %}
                         <button class="toggle-status-details text-red-600 font-medium hover:bg-red-100 px-2 py-1 rounded cursor-pointer" 
                                 data-target="closed-{{ loop.index0 }}">
-                            <i class="fas fa-plus-circle mr-1 toggle-icon"></i>{{ item.closed }}
+                            {{ item.closed }}<i class="fas fa-caret-right ml-2 toggle-icon"></i>
                         </button>
                         {% else %}
                         <span class="text-gray-400">0</span>
@@ -250,7 +250,7 @@
                         {% if item.onprocess > 0 %}
                         <button class="toggle-status-details text-yellow-600 font-medium hover:bg-yellow-100 px-2 py-1 rounded cursor-pointer" 
                                 data-target="onprocess-{{ loop.index0 }}">
-                            <i class="fas fa-plus-circle mr-1 toggle-icon"></i>{{ item.onprocess }}
+                            {{ item.onprocess }}<i class="fas fa-caret-right ml-2 toggle-icon"></i>
                         </button>
                         {% else %}
                         <span class="text-gray-400">0</span>
@@ -501,13 +501,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (targetRow.classList.contains('hidden')) {
                     // Expand
                     targetRow.classList.remove('hidden');
-                    icon.classList.remove('fa-plus-circle');
-                    icon.classList.add('fa-minus-circle');
+                    icon.classList.remove('fa-caret-right');
+                    icon.classList.add('fa-caret-down');
                 } else {
                     // Collapse
                     targetRow.classList.add('hidden');
-                    icon.classList.remove('fa-minus-circle');
-                    icon.classList.add('fa-plus-circle');
+                    icon.classList.remove('fa-caret-down');
+                    icon.classList.add('fa-caret-right');
                 }
             }
         });
