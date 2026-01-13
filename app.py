@@ -539,6 +539,47 @@ def get_trainer_stats(df):
     
     return sorted(trainer_stats, key=lambda x: x['total'], reverse=True)[:10]
 
+def get_monthly_area_stats(df):
+    """สรุปสถิติรายเดือนแยกตามพื้นที่ - สำหรับกราฟ trend"""
+    if df.empty or 'training_month' not in df.columns or 'area' not in df.columns:
+        return []
+    
+    import re
+    month_order = ['Oct25', 'Nov25', 'Dec25', 'Jan26', 'Feb26']
+    
+    # รวบรวมข้อมูลแต่ละพื้นที่
+    area_monthly_data = []
+    for area in df['area'].dropna().unique():
+        area_df = df[df['area'] == area]
+        
+        monthly_data = []
+        for month in month_order:
+            month_df = area_df[area_df['training_month'] == month]
+            
+            # นับจากคอลัมน์ result
+            result_counts = month_df['result'].value_counts().to_dict() if 'result' in month_df.columns else {}
+            completed = result_counts.get('Completed', 0)
+            
+            monthly_data.append({
+                'month': month,
+                'total': len(month_df),
+                'completed': completed
+            })
+        
+        area_monthly_data.append({
+            'area': area,
+            'monthly': monthly_data
+        })
+    
+    # เรียงตามชื่อ area (RSM1, RSM2, RSM3...)
+    def get_area_sort_key(item):
+        match = re.search(r'RSM(\d+)', item.get('area', ''))
+        if match:
+            return int(match.group(1))
+        return 999
+    
+    return sorted(area_monthly_data, key=get_area_sort_key)
+
 def get_depot_stats(df):
     """สรุปสถิติตาม Depot
     เงื่อนไขใหม่: รวมค่า >= 0 ที่มี start_date และ end_date จริง
@@ -804,6 +845,7 @@ def dashboard():
     area_step_summary = get_area_step_summary(df)
     provinces = get_province_stats(df)
     monthly = get_monthly_stats(df)
+    monthly_area = get_monthly_area_stats(df)
     trainers = get_trainer_stats(df)
     status_detail = get_status_detail_stats(df)
     sla_dist = get_sla_distribution(df)
@@ -821,6 +863,7 @@ def dashboard():
                          area_step_summary=area_step_summary,
                          provinces=provinces,
                          monthly=monthly,
+                         monthly_area=monthly_area,
                          trainers=trainers,
                          status_detail=status_detail,
                          sla_dist=sla_dist,

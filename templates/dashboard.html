@@ -160,6 +160,29 @@
 
 <!-- Charts Row -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Monthly Trend Line Chart - Total vs Completed -->
+    <div class="bg-white rounded-xl shadow-sm p-5">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+            <i class="fas fa-chart-line text-purple-500 mr-2"></i>Trend รายเดือน: ลงทะเบียน vs ขึ้นทะเบียนสำเร็จ
+        </h3>
+        <div style="position: relative; height: 250px; width: 100%;">
+            <canvas id="trendChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Monthly Area Trend Chart - Total by Area -->
+    <div class="bg-white rounded-xl shadow-sm p-5">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+            <i class="fas fa-chart-area text-orange-500 mr-2"></i>Trend รายเดือนตามพื้นที่: ลงทะเบียน
+        </h3>
+        <div style="position: relative; height: 250px; width: 100%;">
+            <canvas id="areaTrendTotalChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 2 -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
     <!-- Monthly Trend Chart -->
     <div class="bg-white rounded-xl shadow-sm p-5">
         <h3 class="text-lg font-semibold text-gray-800 mb-4">
@@ -678,6 +701,130 @@ document.addEventListener('DOMContentLoaded', function() {
         return chartInstances[canvasId];
     }
 
+    // ===== กราฟที่ 1: Trend รายเดือน - ลงทะเบียน vs ขึ้นทะเบียนสำเร็จ =====
+    const monthLabels = [{% for m in monthly %}'{{ m.month }}'{% if not loop.last %},{% endif %}{% endfor %}];
+    const monthlyTotals = [{% for m in monthly %}{{ m.total }}{% if not loop.last %},{% endif %}{% endfor %}];
+    const monthlyCompleted = [{% for m in monthly %}{{ m.completed }}{% if not loop.last %},{% endif %}{% endfor %}];
+    
+    createChart('trendChart', {
+        type: 'line',
+        data: {
+            labels: monthLabels,
+            datasets: [
+                {
+                    label: 'ลงทะเบียน',
+                    data: monthlyTotals,
+                    borderColor: '#3B82F6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 3,
+                    tension: 0.3,
+                    fill: true,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    pointBackgroundColor: '#3B82F6',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2
+                },
+                {
+                    label: 'ขึ้นทะเบียนสำเร็จ',
+                    data: monthlyCompleted,
+                    borderColor: '#10B981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderWidth: 3,
+                    tension: 0.3,
+                    fill: true,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    pointBackgroundColor: '#10B981',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2
+                }
+            ]
+        },
+        options: {
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 10
+                    }
+                }
+            },
+            interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false
+            }
+        }
+    });
+
+    // ===== กราฟที่ 2: Trend รายเดือนตามพื้นที่ - ลงทะเบียน =====
+    const areaColors = [
+        '#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', 
+        '#EC4899', '#14B8A6', '#F97316'
+    ];
+    
+    const areaDatasets = [];
+    {% for area_data in monthly_area %}
+    areaDatasets.push({
+        label: '{{ area_data.area }}',
+        data: [{% for m in area_data.monthly %}{{ m.total }}{% if not loop.last %},{% endif %}{% endfor %}],
+        borderColor: areaColors[{{ loop.index0 }} % areaColors.length],
+        backgroundColor: areaColors[{{ loop.index0 }} % areaColors.length] + '20',
+        borderWidth: 2,
+        tension: 0.3,
+        fill: false,
+        pointRadius: 4,
+        pointHoverRadius: 6
+    });
+    {% endfor %}
+    
+    createChart('areaTrendTotalChart', {
+        type: 'line',
+        data: {
+            labels: monthLabels,
+            datasets: areaDatasets
+        },
+        options: {
+            plugins: {
+                legend: { 
+                    position: 'bottom',
+                    labels: {
+                        boxWidth: 12,
+                        padding: 8,
+                        font: {
+                            size: 10
+                        }
+                    }
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 5
+                    }
+                }
+            },
+            interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false
+            }
+        }
+    });
+
     // Status by Area Stacked Bar Chart
     const areaLabels = [{% for a in areas %}'{{ a.area }}'{% if not loop.last %},{% endif %}{% endfor %}];
     const areaCompleted = [{% for a in areas %}{{ a.completed }}{% if not loop.last %},{% endif %}{% endfor %}];
@@ -791,11 +938,11 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Monthly Trend Chart - ข้อมูลยอดรวมแต่ละเดือน
-    const monthlyTotals = [{% for m in monthly %}{{ m.total }}{% if not loop.last %},{% endif %}{% endfor %}];
-    const monthlyCompleted = [{% for m in monthly %}{{ m.completed }}{% if not loop.last %},{% endif %}{% endfor %}];
-    const monthlyOnprocess = [{% for m in monthly %}{{ m.onprocess }}{% if not loop.last %},{% endif %}{% endfor %}];
-    const monthlyClosed = [{% for m in monthly %}{{ m.closed }}{% if not loop.last %},{% endif %}{% endfor %}];
-    const monthlyCancel = [{% for m in monthly %}{{ m.cancel }}{% if not loop.last %},{% endif %}{% endfor %}];
+    const barMonthlyTotals = [{% for m in monthly %}{{ m.total }}{% if not loop.last %},{% endif %}{% endfor %}];
+    const barMonthlyCompleted = [{% for m in monthly %}{{ m.completed }}{% if not loop.last %},{% endif %}{% endfor %}];
+    const barMonthlyOnprocess = [{% for m in monthly %}{{ m.onprocess }}{% if not loop.last %},{% endif %}{% endfor %}];
+    const barMonthlyClosed = [{% for m in monthly %}{{ m.closed }}{% if not loop.last %},{% endif %}{% endfor %}];
+    const barMonthlyCancel = [{% for m in monthly %}{{ m.cancel }}{% if not loop.last %},{% endif %}{% endfor %}];
     
     createChart('monthlyChart', {
         type: 'bar',
@@ -804,7 +951,7 @@ document.addEventListener('DOMContentLoaded', function() {
             datasets: [
                 {
                     label: 'ขึ้นทะเบียนเรียบร้อย',
-                    data: monthlyCompleted,
+                    data: barMonthlyCompleted,
                     backgroundColor: '#10B981',
                     datalabels: {
                         color: '#fff',
@@ -814,7 +961,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 {
                     label: 'อยู่ระหว่างดำเนินการ',
-                    data: monthlyOnprocess,
+                    data: barMonthlyOnprocess,
                     backgroundColor: '#F59E0B',
                     datalabels: {
                         color: '#fff',
@@ -824,7 +971,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 {
                     label: 'ปิดงาน',
-                    data: monthlyClosed,
+                    data: barMonthlyClosed,
                     backgroundColor: '#EF4444',
                     datalabels: {
                         color: '#fff',
@@ -834,7 +981,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 {
                     label: 'ยกเลิก',
-                    data: monthlyCancel,
+                    data: barMonthlyCancel,
                     backgroundColor: '#6B7280',
                     datalabels: {
                         color: '#fff',
@@ -876,7 +1023,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 ctx.textAlign = 'center';
                 
                 meta.data.forEach((bar, index) => {
-                    const total = monthlyTotals[index];
+                    const total = barMonthlyTotals[index];
                     if (total > 0) {
                         ctx.fillText(total, bar.x, bar.y - 12);
                     }
