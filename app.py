@@ -274,9 +274,9 @@ def get_area_step_summary(df):
     import re
     
     # Status ที่ปิดงาน (Closed)
-    closed_statuses = ['ไม่ผ่านอบรม', 'ไม่ผ่านคุณสมบัติ']
+    closed_statuses = ['ไม่ผ่านอบรม', 'ไม่ผ่านคุณสมบัติ', 'ไม่เข้าอบรม']
     # Status ที่ยกเลิก (Cancel)
-    cancel_statuses = ['ช่างลาออก', 'ติดประวัติอาชญากรรม', 'ไม่เข้าอบรม']
+    cancel_statuses = ['ช่างลาออก', 'ติดประวัติอาชญากรรม']
     
     area_summary = []
     
@@ -746,9 +746,9 @@ def get_technician_list(df, status_filter=None, area_filter=None, province_filte
         'อยู่ระหว่างขออนุมัติDflow ขึ้นทะเบียนช่าง'
     ]
     # Status ที่ถือว่า Closed
-    closed_statuses = ['ไม่ผ่านอบรม', 'ไม่ผ่านคุณสมบัติ']
+    closed_statuses = ['ไม่ผ่านอบรม', 'ไม่ผ่านคุณสมบัติ', 'ไม่เข้าอบรม']
     # Status ที่ถือว่า Cancel
-    cancel_statuses = ['ช่างลาออก', 'ติดประวัติอาชญากรรม', 'ไม่เข้าอบรม']
+    cancel_statuses = ['ช่างลาออก', 'ติดประวัติอาชญากรรม']
     
     if status_filter and status_filter != 'all':
         if status_filter == 'Completed':
