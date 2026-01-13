@@ -173,10 +173,10 @@
     <!-- Monthly Area Trend Chart - Total by Area -->
     <div class="bg-white rounded-xl shadow-sm p-5">
         <h3 class="text-lg font-semibold text-gray-800 mb-4">
-            <i class="fas fa-chart-area text-orange-500 mr-2"></i>Trend รายเดือนตามพื้นที่: ลงทะเบียน
+            <i class="fas fa-trophy text-orange-500 mr-2"></i>Overall Success Rate Ranking
         </h3>
         <div style="position: relative; height: 250px; width: 100%;">
-            <canvas id="areaTrendTotalChart"></canvas>
+            <canvas id="areaSuccessRateChart"></canvas>
         </div>
     </div>
 </div>
@@ -812,62 +812,100 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // ===== กราฟที่ 2: Trend รายเดือนตามพื้นที่ - ลงทะเบียน =====
-    const areaColors = [
-        '#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', 
-        '#EC4899', '#14B8A6', '#F97316'
-    ];
+    // ===== กราฟที่ 2: Overall Success Rate Ranking (แท่งแนวนอน) =====
+    // จัดเรียงพื้นที่ตาม success_rate จากมากไปน้อย
+    const areaRankingData = [
+        {% for a in areas %}
+        { area: '{{ a.area }}', successRate: {{ a.success_rate }}, completed: {{ a.completed }}, total: {{ a.total }} }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ].sort((a, b) => b.successRate - a.successRate);
     
-    const areaDatasets = [];
-    {% for area_data in monthly_area %}
-    areaDatasets.push({
-        label: '{{ area_data.area }}',
-        data: [{% for m in area_data.monthly %}{{ m.total }}{% if not loop.last %},{% endif %}{% endfor %}],
-        borderColor: areaColors[{{ loop.index0 }} % areaColors.length],
-        backgroundColor: areaColors[{{ loop.index0 }} % areaColors.length] + '20',
-        borderWidth: 2,
-        tension: 0.3,
-        fill: false,
-        pointRadius: 4,
-        pointHoverRadius: 6
-    });
-    {% endfor %}
+    const areaRankingLabels = areaRankingData.map(d => d.area);
+    const areaRankingRates = areaRankingData.map(d => d.successRate);
     
-    createChart('areaTrendTotalChart', {
-        type: 'line',
+    // Custom plugin สำหรับแสดงจำนวนในแท่งและ % ที่ปลายแท่ง
+    const areaRankingLabelPlugin = {
+        id: 'areaRankingLabelPlugin',
+        afterDatasetsDraw: function(chart) {
+            const ctx = chart.ctx;
+            const meta = chart.getDatasetMeta(0);
+            
+            meta.data.forEach((bar, index) => {
+                const data = areaRankingData[index];
+                
+                ctx.save();
+                ctx.textBaseline = 'middle';
+                
+                // แสดงจำนวนคนในแท่ง (สีขาว) - ลดขนาดฟอนต์ถ้าจำเป็น
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 10px sans-serif';
+                ctx.textAlign = 'center';
+                const textToDisplay = data.completed + '/' + data.total;
+                const centerX = bar.x / 2;
+                ctx.fillText(textToDisplay, centerX, bar.y);
+                
+                // แสดง % ที่ปลายแท่ง (สีดำ)
+                ctx.fillStyle = '#1F2937';
+                ctx.font = 'bold 11px sans-serif';
+                ctx.textAlign = 'left';
+                const percentX = bar.x + 5;
+                ctx.fillText(data.successRate.toFixed(1) + '%', percentX, bar.y);
+                
+                ctx.restore();
+            });
+        }
+    };
+    
+    createChart('areaSuccessRateChart', {
+        type: 'bar',
+        plugins: [areaRankingLabelPlugin],
         data: {
-            labels: monthLabels,
-            datasets: areaDatasets
+            labels: areaRankingLabels,
+            datasets: [{
+                label: 'Success Rate (%)',
+                data: areaRankingRates,
+                backgroundColor: areaRankingRates.map((rate, idx) => {
+                    // ไล่สีจากเขียว (สูงสุด) ไปเหลือง/แดง (ต่ำสุด)
+                    if (rate >= 70) return '#10B981';  // เขียว
+                    if (rate >= 50) return '#F59E0B';  // เหลือง
+                    return '#EF4444';  // แดง
+                }),
+                borderWidth: 1,
+                borderColor: '#fff'
+            }]
         },
         options: {
+            indexAxis: 'y',  // แท่งแนวนอน
+            responsive: true,
+            maintainAspectRatio: false,
             plugins: {
-                legend: { 
-                    position: 'bottom',
-                    labels: {
-                        boxWidth: 12,
-                        padding: 8,
-                        font: {
-                            size: 10
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const idx = context.dataIndex;
+                            const data = areaRankingData[idx];
+                            return [
+                                'Success Rate: ' + data.successRate.toFixed(1) + '%',
+                                'สำเร็จ: ' + data.completed + ' / ' + data.total + ' คน'
+                            ];
                         }
                     }
                 },
-                tooltip: {
-                    mode: 'index',
-                    intersect: false
+                datalabels: {
+                    display: false  // ปิด datalabels plugin ใช้ custom plugin แทน
                 }
             },
             scales: {
-                y: {
+                x: {
                     beginAtZero: true,
+                    max: 100,
                     ticks: {
-                        stepSize: 5
+                        callback: function(value) {
+                            return value + '%';
+                        }
                     }
                 }
-            },
-            interaction: {
-                mode: 'nearest',
-                axis: 'x',
-                intersect: false
             }
         }
     });
