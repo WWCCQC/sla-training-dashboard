@@ -829,27 +829,44 @@ document.addEventListener('DOMContentLoaded', function() {
         afterDatasetsDraw: function(chart) {
             const ctx = chart.ctx;
             const meta = chart.getDatasetMeta(0);
+            const chartArea = chart.chartArea;
             
             meta.data.forEach((bar, index) => {
                 const data = areaRankingData[index];
+                const barWidth = bar.x - bar.base;
                 
                 ctx.save();
                 ctx.textBaseline = 'middle';
                 
-                // แสดงจำนวนคนในแท่ง (สีขาว) - ลดขนาดฟอนต์ถ้าจำเป็น
-                ctx.fillStyle = '#fff';
-                ctx.font = 'bold 10px sans-serif';
-                ctx.textAlign = 'center';
+                // คำนวณตำแหน่งจริงของแท่ง (bar.base = ตำแหน่งเริ่มต้น, bar.x = ตำแหน่งสิ้นสุด)
                 const textToDisplay = data.completed + '/' + data.total;
-                const centerX = bar.x / 2;
-                ctx.fillText(textToDisplay, centerX, bar.y);
                 
-                // แสดง % ที่ปลายแท่ง (สีดำ)
+                // วัดความกว้างของข้อความ
+                ctx.font = 'bold 10px sans-serif';
+                const textWidth = ctx.measureText(textToDisplay).width;
+                
+                // ถ้าแท่งกว้างพอ แสดงตัวเลขในแท่ง (สีขาว)
+                // ถ้าแท่งแคบเกินไป แสดงตัวเลขนอกแท่ง (สีดำ)
+                if (barWidth > textWidth + 10) {
+                    // แสดงในแท่ง - กึ่งกลางระหว่าง base กับ x
+                    ctx.fillStyle = '#fff';
+                    ctx.textAlign = 'center';
+                    const centerX = bar.base + (barWidth / 2);
+                    ctx.fillText(textToDisplay, centerX, bar.y);
+                } else {
+                    // แสดงนอกแท่ง (ด้านซ้ายของแกน Y)
+                    ctx.fillStyle = '#1F2937';
+                    ctx.textAlign = 'right';
+                    ctx.fillText(textToDisplay, bar.base - 5, bar.y);
+                }
+                
+                // แสดง % ที่ปลายแท่ง (สีดำ) - ตรวจสอบว่าไม่เกินขอบ chart
                 ctx.fillStyle = '#1F2937';
                 ctx.font = 'bold 11px sans-serif';
                 ctx.textAlign = 'left';
-                const percentX = bar.x + 5;
-                ctx.fillText(data.successRate.toFixed(1) + '%', percentX, bar.y);
+                const percentText = data.successRate.toFixed(1) + '%';
+                const percentX = Math.min(bar.x + 5, chartArea.right - ctx.measureText(percentText).width - 5);
+                ctx.fillText(percentText, percentX, bar.y);
                 
                 ctx.restore();
             });
