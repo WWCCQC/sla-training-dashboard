@@ -723,17 +723,22 @@ document.addEventListener('DOMContentLoaded', function() {
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'bottom';
                         
-                        // กำหนดสีตามชุดข้อมูล
+                        let displayText = value.toString();
+                        
+                        // กำหนดสีและข้อความตามชุดข้อมูล
                         if (datasetIndex === 0) {
                             // ลงทะเบียน - สีน้ำเงิน
                             ctx.fillStyle = '#3B82F6';
-                        } else {
-                            // ขึ้นทะเบียนสำเร็จ - สีเขียว
+                        } else if (datasetIndex === 1) {
+                            // ขึ้นทะเบียนสำเร็จ - สีเขียว + แสดง %
                             ctx.fillStyle = '#10B981';
+                            const totalRegistered = monthlyTotals[index];
+                            const percentage = totalRegistered > 0 ? (value / totalRegistered * 100).toFixed(1) : 0;
+                            displayText = value + ' (' + percentage + '%)';
                         }
                         
                         // แสดงตัวเลขเหนือจุด (ลบ 15 pixels จาก y position)
-                        ctx.fillText(value, point.x, point.y - 15);
+                        ctx.fillText(displayText, point.x, point.y - 15);
                         ctx.restore();
                     });
                 }
