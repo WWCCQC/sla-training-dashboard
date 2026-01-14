@@ -72,10 +72,13 @@
                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
         </div>
         
-        <!-- Search Button -->
-        <div class="flex items-end">
-            <button id="searchBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+        <!-- Buttons -->
+        <div class="flex items-end gap-2">
+            <button id="searchBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
                 <i class="fas fa-search mr-2"></i>ค้นหา
+            </button>
+            <button id="exportBtn" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors" title="Export เป็น Excel">
+                <i class="fas fa-file-excel"></i>
             </button>
         </div>
     </div>
@@ -148,7 +151,12 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- SheetJS for Excel Export -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script>
+// Global variable to store current data for export
+let currentTechniciansData = [];
+
 // Load technicians on page load
 document.addEventListener('DOMContentLoaded', function() {
     loadTechnicians();
@@ -171,6 +179,9 @@ document.getElementById('searchBtn').addEventListener('click', loadTechnicians);
     });
 });
 
+// Export button click
+document.getElementById('exportBtn').addEventListener('click', exportToExcel);
+
 function loadTechnicians() {
     const status = document.getElementById('statusFilter').value;
     const area = document.getElementById('areaFilter').value;
@@ -188,6 +199,7 @@ function loadTechnicians() {
     fetch(url)
         .then(response => response.json())
         .then(data => {
+            currentTechniciansData = data; // Store data for export
             renderTable(data);
             updateStats(data);
         })
@@ -287,6 +299,81 @@ function getSlaStepClass(sla) {
 function formatSla(sla) {
     if (sla === null || sla === undefined || sla === '' || sla < 0) return '-';
     return sla;
+}
+
+// Export to Excel function
+function exportToExcel() {
+    if (currentTechniciansData.length === 0) {
+        alert('ไม่มีข้อมูลสำหรับ Export');
+        return;
+    }
+    
+    // Prepare data for Excel
+    const excelData = currentTechniciansData.map((tech, index) => ({
+        'ลำดับ': index + 1,
+        'ชื่อ-นามสกุล (ไทย)': tech.name || '-',
+        'ชื่อ-นามสกุล (อังกฤษ)': tech.name_en || '-',
+        'Depot': tech.depot || '-',
+        'รหัส Depot': tech.depot_code || '-',
+        'จังหวัด': tech.province || '-',
+        'พื้นที่': tech.area || '-',
+        'ผลอบรมทฤษฎี': tech.theory_result || '-',
+        'ผล OJT': tech.ojt_result || '-',
+        'สถานะ': tech.status || '-',
+        'Result': tech.result || '-',
+        'SLA รวม (วัน)': tech.sla_total >= 0 ? tech.sla_total : '-',
+        'SLA อบรม': tech.sla_training >= 0 ? tech.sla_training : '-',
+        'SLA OJT': tech.sla_ojt >= 0 ? tech.sla_ojt : '-',
+        'SLA ทำบัตร': tech.sla_genid >= 0 ? tech.sla_genid : '-',
+        'SLA ตรวจความพร้อม': tech.sla_inspection >= 0 ? tech.sla_inspection : '-',
+        'SLA DFlow': tech.sla_dflow >= 0 ? tech.sla_dflow : '-',
+        'SLA ขึ้นทะเบียน': tech.sla_registration >= 0 ? tech.sla_registration : '-',
+        'รอบอบรม': tech.training_round || '-',
+        'เดือนอบรม': tech.training_month || '-'
+    }));
+    
+    // Create workbook and worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(excelData);
+    
+    // Set column widths
+    ws['!cols'] = [
+        { wch: 6 },   // ลำดับ
+        { wch: 25 },  // ชื่อ-นามสกุล (ไทย)
+        { wch: 25 },  // ชื่อ-นามสกุล (อังกฤษ)
+        { wch: 30 },  // Depot
+        { wch: 12 },  // รหัส Depot
+        { wch: 15 },  // จังหวัด
+        { wch: 18 },  // พื้นที่
+        { wch: 12 },  // ผลอบรมทฤษฎี
+        { wch: 10 },  // ผล OJT
+        { wch: 22 },  // สถานะ
+        { wch: 12 },  // Result
+        { wch: 12 },  // SLA รวม
+        { wch: 10 },  // SLA อบรม
+        { wch: 10 },  // SLA OJT
+        { wch: 10 },  // SLA ทำบัตร
+        { wch: 15 },  // SLA ตรวจความพร้อม
+        { wch: 10 },  // SLA DFlow
+        { wch: 14 },  // SLA ขึ้นทะเบียน
+        { wch: 15 },  // รอบอบรม
+        { wch: 12 }   // เดือนอบรม
+    ];
+    
+    XLSX.utils.book_append_sheet(wb, ws, 'รายชื่อช่าง');
+    
+    // Generate filename with current filter info
+    const status = document.getElementById('statusFilter').value;
+    const area = document.getElementById('areaFilter').value;
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 10);
+    let filename = `รายชื่อช่าง_${dateStr}`;
+    if (status !== 'all') filename += `_${status}`;
+    if (area !== 'all') filename += `_${area}`;
+    filename += '.xlsx';
+    
+    // Download file
+    XLSX.writeFile(wb, filename);
 }
 </script>
 {% endblock %}
