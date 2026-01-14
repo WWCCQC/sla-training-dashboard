@@ -604,14 +604,8 @@ def get_depot_agent_stats(df):
             'success_rate': success_rate
         })
     
-    # เรียงตาม area (RSM1, RSM2, RSM3...) แล้วตาม depot_code
-    def get_sort_key(item):
-        area = item.get('area', '')
-        match = re.search(r'RSM(\d+)', area)
-        area_num = int(match.group(1)) if match else 999
-        return (area_num, item.get('depot_code', ''))
-    
-    return sorted(depot_stats, key=get_sort_key)
+    # เรียงตาม total จากมากไปน้อย
+    return sorted(depot_stats, key=lambda x: x['total'], reverse=True)
 
 def get_depot_stats(df):
     """สรุปสถิติตาม Depot
