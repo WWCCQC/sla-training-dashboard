@@ -518,19 +518,19 @@
                 <thead class="bg-gray-800 text-white sticky top-0">
                     <tr>
                         <th class="px-2 py-2 text-left font-medium text-xs">#</th>
-                        <th class="px-2 py-2 text-left font-medium text-xs">Area</th>
-                        <th class="px-2 py-2 text-left font-medium text-xs">รหัส</th>
-                        <th class="px-2 py-2 text-left font-medium text-xs" style="max-width: 150px;">ตัวแทน</th>
-                        <th class="px-2 py-2 text-left font-medium text-xs">จังหวัด</th>
-                        <th class="px-2 py-2 text-center font-medium text-xs">ลงทะเบียน</th>
-                        <th class="px-2 py-2 text-center font-medium text-xs bg-green-700">สำเร็จ</th>
-                        <th class="px-2 py-2 text-center font-medium text-xs bg-blue-700">%</th>
+                        <th class="px-2 py-2 text-left font-medium text-xs cursor-pointer hover:bg-gray-700 sortable-header" data-sort="area">Area <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                        <th class="px-2 py-2 text-left font-medium text-xs cursor-pointer hover:bg-gray-700 sortable-header" data-sort="depot_code">รหัส <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                        <th class="px-2 py-2 text-left font-medium text-xs cursor-pointer hover:bg-gray-700 sortable-header" data-sort="depot_name" style="max-width: 150px;">ตัวแทน <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                        <th class="px-2 py-2 text-left font-medium text-xs cursor-pointer hover:bg-gray-700 sortable-header" data-sort="province">จังหวัด <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                        <th class="px-2 py-2 text-center font-medium text-xs cursor-pointer hover:bg-gray-700 sortable-header" data-sort="total">ลงทะเบียน <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                        <th class="px-2 py-2 text-center font-medium text-xs cursor-pointer hover:bg-gray-700 bg-green-700 sortable-header" data-sort="completed">สำเร็จ <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                        <th class="px-2 py-2 text-center font-medium text-xs cursor-pointer hover:bg-gray-700 bg-blue-700 sortable-header" data-sort="success_rate">% <i class="fas fa-sort text-gray-400 ml-1"></i></th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-200">
+                <tbody class="divide-y divide-gray-200" id="depotAgentTableBody">
                     {% for agent in depot_agents %}
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-2 py-1 text-gray-600 text-xs">{{ loop.index }}</td>
+                    <tr class="hover:bg-gray-50" data-area="{{ agent.area }}" data-depot_code="{{ agent.depot_code }}" data-depot_name="{{ agent.depot_name }}" data-province="{{ agent.province }}" data-total="{{ agent.total }}" data-completed="{{ agent.completed }}" data-success_rate="{{ agent.success_rate }}">
+                        <td class="px-2 py-1 text-gray-600 text-xs row-index">{{ loop.index }}</td>
                         <td class="px-2 py-1 text-gray-800 font-medium text-xs">{{ agent.area }}</td>
                         <td class="px-2 py-1 text-gray-600 text-xs">{{ agent.depot_code }}</td>
                         <td class="px-2 py-1 text-gray-800 text-xs truncate" style="max-width: 150px;" title="{{ agent.depot_name }}">{{ agent.depot_name }}</td>
@@ -1198,6 +1198,61 @@ document.addEventListener('DOMContentLoaded', function() {
                 ctx.restore();
             }
         }]
+    });
+
+    // ===== Depot Agent Table Sorting =====
+    let currentSort = { column: 'total', direction: 'desc' };
+    
+    document.querySelectorAll('.sortable-header').forEach(function(header) {
+        header.addEventListener('click', function() {
+            const sortColumn = this.getAttribute('data-sort');
+            const tbody = document.getElementById('depotAgentTableBody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            // Toggle direction if same column
+            if (currentSort.column === sortColumn) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = sortColumn;
+                currentSort.direction = 'asc';
+            }
+            
+            // Update icons
+            document.querySelectorAll('.sortable-header i').forEach(function(icon) {
+                icon.className = 'fas fa-sort text-gray-400 ml-1';
+            });
+            const icon = this.querySelector('i');
+            icon.className = currentSort.direction === 'asc' 
+                ? 'fas fa-sort-up text-white ml-1' 
+                : 'fas fa-sort-down text-white ml-1';
+            
+            // Sort rows
+            rows.sort(function(a, b) {
+                let aVal = a.getAttribute('data-' + sortColumn) || '';
+                let bVal = b.getAttribute('data-' + sortColumn) || '';
+                
+                // Check if numeric
+                if (['total', 'completed', 'success_rate'].includes(sortColumn)) {
+                    aVal = parseFloat(aVal) || 0;
+                    bVal = parseFloat(bVal) || 0;
+                } else {
+                    aVal = aVal.toLowerCase();
+                    bVal = bVal.toLowerCase();
+                }
+                
+                if (currentSort.direction === 'asc') {
+                    return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+                } else {
+                    return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+                }
+            });
+            
+            // Re-append rows and update index
+            rows.forEach(function(row, index) {
+                row.querySelector('.row-index').textContent = index + 1;
+                tbody.appendChild(row);
+            });
+        });
     });
 });
 </script>
