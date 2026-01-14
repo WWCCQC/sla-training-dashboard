@@ -580,6 +580,39 @@ def get_monthly_area_stats(df):
     
     return sorted(area_monthly_data, key=get_area_sort_key)
 
+def get_depot_agent_stats(df):
+    """สรุปสถิติตัวแทน (Depot) พร้อม area, จำนวนลงทะเบียน, สำเร็จ, และ %"""
+    if df.empty or 'depot_name' not in df.columns:
+        return []
+    
+    import re
+    
+    depot_stats = []
+    for depot in df['depot_name'].dropna().unique():
+        depot_df = df[df['depot_name'] == depot]
+        total = len(depot_df)
+        # นับขึ้นทะเบียนสำเร็จจาก result = 'Completed'
+        completed = len(depot_df[depot_df['result'] == 'Completed']) if 'result' in depot_df.columns else 0
+        success_rate = round((completed / total * 100), 1) if total > 0 else 0
+        
+        depot_stats.append({
+            'area': depot_df['area'].iloc[0] if 'area' in depot_df.columns else '',
+            'depot_code': depot_df['depot_code'].iloc[0] if 'depot_code' in depot_df.columns else '',
+            'depot_name': depot,
+            'total': total,
+            'completed': completed,
+            'success_rate': success_rate
+        })
+    
+    # เรียงตาม area (RSM1, RSM2, RSM3...) แล้วตาม depot_code
+    def get_sort_key(item):
+        area = item.get('area', '')
+        match = re.search(r'RSM(\d+)', area)
+        area_num = int(match.group(1)) if match else 999
+        return (area_num, item.get('depot_code', ''))
+    
+    return sorted(depot_stats, key=get_sort_key)
+
 def get_depot_stats(df):
     """สรุปสถิติตาม Depot
     เงื่อนไขใหม่: รวมค่า >= 0 ที่มี start_date และ end_date จริง
@@ -850,6 +883,7 @@ def dashboard():
     status_detail = get_status_detail_stats(df)
     sla_dist = get_sla_distribution(df)
     bottleneck = get_bottleneck_analysis(df)
+    depot_agents = get_depot_agent_stats(df)
     
     # รายชื่อสำหรับ filter
     area_list = df['area'].dropna().unique().tolist() if 'area' in df.columns else []
@@ -868,6 +902,7 @@ def dashboard():
                          status_detail=status_detail,
                          sla_dist=sla_dist,
                          bottleneck=bottleneck,
+                         depot_agents=depot_agents,
                          area_list=sorted(area_list),
                          province_list=sorted(set(province_list)),
                          active_page='dashboard')
