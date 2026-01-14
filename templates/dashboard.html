@@ -526,6 +526,19 @@
                         <th class="px-2 py-2 text-center font-medium text-xs cursor-pointer hover:bg-gray-700 bg-green-700 sortable-header" data-sort="completed">สำเร็จ <i class="fas fa-sort text-gray-400 ml-1"></i></th>
                         <th class="px-2 py-2 text-center font-medium text-xs cursor-pointer hover:bg-gray-700 bg-blue-700 sortable-header" data-sort="success_rate">% <i class="fas fa-sort text-gray-400 ml-1"></i></th>
                     </tr>
+                    <!-- Total Row -->
+                    <tr class="bg-gray-100 font-bold border-b-2 border-gray-400">
+                        <td class="px-2 py-2 text-gray-800 text-xs" colspan="5">Total ({{ depot_agents|length }} ตัวแทน)</td>
+                        <td class="px-2 py-2 text-center text-gray-800 text-xs">{{ depot_agents|sum(attribute='total') }}</td>
+                        <td class="px-2 py-2 text-center text-green-600 text-xs">{{ depot_agents|sum(attribute='completed') }}</td>
+                        <td class="px-2 py-2 text-center text-xs">
+                            {% set total_reg = depot_agents|sum(attribute='total') %}
+                            {% set total_comp = depot_agents|sum(attribute='completed') %}
+                            <span class="px-1 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                {{ ((total_comp / total_reg * 100) if total_reg > 0 else 0)|round(1) }}%
+                            </span>
+                        </td>
+                    </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200" id="depotAgentTableBody">
                     {% for agent in depot_agents %}
