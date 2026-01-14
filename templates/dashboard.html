@@ -237,8 +237,14 @@
                     <td class="px-4 py-3 text-center text-red-600">{{ area_step_summary|sum(attribute='closed') }}</td>
                     <td class="px-4 py-3 text-center text-yellow-600">{{ area_step_summary|sum(attribute='onprocess') }}</td>
                     {% if area_step_summary|length > 0 %}
-                    {% for status_name in area_step_summary[0].unique_onprocess_statuses %}
-                    <td class="px-3 py-3 text-center onprocess-sub-col hidden text-amber-700 font-medium">-</td>
+                    {% for col_idx in range(area_step_summary[0].onprocess_columns|length) %}
+                    {% set col_total = [] %}
+                    {% for item in area_step_summary %}
+                    {% if item.onprocess_columns[col_idx].count %}
+                    {% set _ = col_total.append(item.onprocess_columns[col_idx].count) %}
+                    {% endif %}
+                    {% endfor %}
+                    <td class="px-3 py-3 text-center onprocess-sub-col hidden text-amber-700 font-medium">{{ col_total|sum }}</td>
                     {% endfor %}
                     {% endif %}
                 </tr>
@@ -639,8 +645,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // ===== Technician List Expand/Collapse (สำหรับสถานะย่อย) =====
-    document.querySelectorAll('.toggle-technician-list').forEach(function(btn) {
+    // ===== Technician List Expand/Collapse (สำหรับสถานะย่อย Completed, Cancel, Closed) =====
+    // ใช้สำหรับปุ่มที่ไม่ได้อยู่ใน onprocess-sub-col
+    document.querySelectorAll('.toggle-technician-list:not(.onprocess-sub-col .toggle-technician-list)').forEach(function(btn) {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
             const targetId = this.getAttribute('data-target');
@@ -651,13 +658,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (targetDiv.classList.contains('hidden')) {
                     // Expand
                     targetDiv.classList.remove('hidden');
-                    icon.classList.remove('fa-chevron-down');
-                    icon.classList.add('fa-chevron-up');
+                    if (icon) {
+                        icon.classList.remove('fa-chevron-down');
+                        icon.classList.add('fa-chevron-up');
+                    }
                 } else {
                     // Collapse
                     targetDiv.classList.add('hidden');
-                    icon.classList.remove('fa-chevron-up');
-                    icon.classList.add('fa-chevron-down');
+                    if (icon) {
+                        icon.classList.remove('fa-chevron-up');
+                        icon.classList.add('fa-chevron-down');
+                    }
                 }
             }
         });
