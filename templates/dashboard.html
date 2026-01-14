@@ -141,11 +141,12 @@
     <div class="overflow-x-auto">
         <div class="flex gap-3 pb-2">
             {% for step in sla_steps %}
+            {% set avg_sla_ceil = (step.avg_sla | round(0, 'ceil')) | int %}
             <div class="flex-shrink-0 w-40 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-4 border">
                 <div class="text-center">
                     <div class="text-xs text-gray-500 mb-1">{{ loop.index }}. {{ step.name }}</div>
-                    <div class="text-2xl font-bold {% if step.avg_sla <= 7 %}text-green-600{% elif step.avg_sla <= 14 %}text-yellow-600{% else %}text-red-600{% endif %}">
-                        {{ step.avg_sla }}
+                    <div class="text-2xl font-bold {% if avg_sla_ceil <= 7 %}text-green-600{% elif avg_sla_ceil <= 14 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                        {{ avg_sla_ceil }}
                     </div>
                     <div class="text-xs text-gray-400">วันเฉลี่ย</div>
                     <div class="text-xs text-green-600 mt-2">
