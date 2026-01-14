@@ -6,13 +6,13 @@
 <!-- Header -->
 <div class="mb-6">
     <h1 class="text-2xl font-bold text-gray-800">วิเคราะห์ SLA แต่ละขั้นตอน</h1>
-    <p class="text-gray-600">ดู SLA 6 ขั้นตอน: อบรม → OJT → ทำบัตร → ตรวจความพร้อม → DFlow → ลงทะเบียน</p>
+    <p class="text-gray-600">ดู SLA 7 ขั้นตอน: เอกสาร → อบรม → OJT → ทำบัตร → ตรวจความพร้อม → DFlow → ลงทะเบียน</p>
 </div>
 
 <!-- SLA Flow Diagram -->
 <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
     <h3 class="text-lg font-semibold text-gray-800 mb-4">
-        <i class="fas fa-project-diagram text-blue-500 mr-2"></i>กระบวนการลงทะเบียนช่าง (6 ขั้นตอน)
+        <i class="fas fa-project-diagram text-blue-500 mr-2"></i>กระบวนการลงทะเบียนช่าง (7 ขั้นตอน)
     </h3>
     <div class="flex flex-wrap items-center justify-center gap-2 text-sm">
         {% for step in sla_steps %}
@@ -20,7 +20,7 @@
             <div class="bg-gradient-to-br {% if step.avg_sla <= 7 %}from-green-100 to-green-200 border-green-300{% elif step.avg_sla <= 14 %}from-yellow-100 to-yellow-200 border-yellow-300{% else %}from-red-100 to-red-200 border-red-300{% endif %} border-2 rounded-xl p-4 text-center min-w-[120px]">
                 <div class="text-xs font-medium text-gray-500 mb-1">{{ loop.index }}. {{ step.name }}</div>
                 <div class="text-2xl font-bold {% if step.avg_sla <= 7 %}text-green-600{% elif step.avg_sla <= 14 %}text-yellow-600{% else %}text-red-600{% endif %}">
-                    {{ step.avg_sla }}
+                    {{ (step.avg_sla | round(0, 'ceil')) | int }}
                 </div>
                 <div class="text-xs text-gray-500">วันเฉลี่ย</div>
                 <div class="mt-2 text-xs">
@@ -48,7 +48,7 @@
         <div class="grid grid-cols-3 gap-2 text-center">
             <div>
                 <div class="text-2xl font-bold {% if step.avg_sla <= 7 %}text-green-600{% elif step.avg_sla <= 14 %}text-yellow-600{% else %}text-red-600{% endif %}">
-                    {{ step.avg_sla }}
+                    {{ (step.avg_sla | round(0, 'ceil')) | int }}
                 </div>
                 <div class="text-xs text-gray-500">เฉลี่ย</div>
             </div>
@@ -121,7 +121,7 @@
                     <td class="px-4 py-3 text-center text-green-600 font-medium">{{ step.complete }}</td>
                     <td class="px-4 py-3 text-center">
                         <span class="px-3 py-1 rounded-full text-sm font-medium {% if step.avg_sla <= 7 %}bg-green-100 text-green-800{% elif step.avg_sla <= 14 %}bg-yellow-100 text-yellow-800{% else %}bg-red-100 text-red-800{% endif %}">
-                            {{ step.avg_sla }} วัน
+                            {{ (step.avg_sla | round(0, 'ceil')) | int }} วัน
                         </span>
                     </td>
                     <td class="px-4 py-3 text-center text-gray-600">{{ step.min_sla }} วัน</td>
