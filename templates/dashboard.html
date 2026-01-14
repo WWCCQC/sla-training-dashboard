@@ -584,6 +584,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const btn = e.target.closest('.onprocess-sub-col .toggle-technician-list');
         if (btn) {
             e.preventDefault();
+            e.stopPropagation();
             const targetId = btn.getAttribute('data-target');
             const targetRow = document.getElementById(targetId);
             const icon = btn.querySelector('.toggle-icon-sub');
@@ -602,6 +603,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         icon.classList.add('fa-caret-right');
                     }
                 }
+            } else {
+                // Fallback: ลองหา row ด้วย attribute selector
+                const allDetailRows = document.querySelectorAll('.technician-detail-row');
+                allDetailRows.forEach(function(row) {
+                    if (row.id === targetId) {
+                        row.classList.toggle('hidden');
+                    }
+                });
             }
         }
     });
