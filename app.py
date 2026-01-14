@@ -736,32 +736,33 @@ def get_technician_list(df, status_filter=None, area_filter=None, province_filte
     
     filtered_df = df.copy()
     
-    # Status ที่ถือว่า Completed
-    completed_statuses = ['ขึ้นทะเบียนเรียบร้อย']
-    # Status ที่ถือว่า Onprocess
-    onprocess_statuses = [
-        'ตัวแทนยังไม่ส่งขึ้นทะเบียน', 'เอกสารยังไม่ครบ',
-        'อยู่ระหว่างอบรมทฤษฎี/ปฏิบัติ', 'อยู่ระหว่างOJT/สอบประเมินความพร้อม',
-        'ส่ง Gen ID', 'Print/ส่งบัตร',
-        'อยู่ระหว่างตรวจกองงาน', 'อยู่ระหว่างขอ User',
-        'อยู่ระหว่างขออนุมัติDflow ขึ้นทะเบียนช่าง'
+    # สถานะย่อยของ Onprocess (ต้องตรงกับค่าในฐานข้อมูล)
+    onprocess_sub_statuses = [
+        'เอกสารยังไม่ครบ',
+        'อยู่ระหว่างอบรม',
+        'OJT',
+        'Gen ID',
+        'Print/ส่งบัตร',
+        'รอตรวจกองงาน',
+        'พื้นที่ขออนุมัติ',
+        'ขอสิทธิ์เข้าใช้งาน'
     ]
-    # Status ที่ถือว่า Closed
-    closed_statuses = ['ไม่ผ่านอบรม', 'ไม่ผ่านคุณสมบัติ', 'ไม่เข้าอบรม']
-    # Status ที่ถือว่า Cancel
-    cancel_statuses = ['ช่างลาออก', 'ติดประวัติอาชญากรรม']
     
     if status_filter and status_filter != 'all':
         if status_filter == 'Completed':
-            filtered_df = filtered_df[filtered_df['status'].isin(completed_statuses)]
+            # กรองจาก result column
+            filtered_df = filtered_df[filtered_df['result'] == 'Completed']
         elif status_filter == 'Onprocess':
-            filtered_df = filtered_df[filtered_df['status'].isin(onprocess_statuses)]
+            filtered_df = filtered_df[filtered_df['result'] == 'Onprocess']
         elif status_filter == 'Closed':
-            filtered_df = filtered_df[filtered_df['status'].isin(closed_statuses)]
+            filtered_df = filtered_df[filtered_df['result'] == 'Closed']
         elif status_filter == 'Cancel':
-            filtered_df = filtered_df[filtered_df['status'].isin(cancel_statuses)]
+            filtered_df = filtered_df[filtered_df['result'] == 'Cancel']
+        elif status_filter in onprocess_sub_statuses:
+            # กรองตามสถานะย่อย (status column)
+            filtered_df = filtered_df[filtered_df['status'] == status_filter]
         else:
-            # กรองตรงๆ
+            # กรองตรงๆ จาก status column
             filtered_df = filtered_df[filtered_df['status'] == status_filter]
     
     if area_filter and area_filter != 'all':

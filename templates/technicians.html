@@ -17,9 +17,22 @@
             <label class="block text-sm font-medium text-gray-700 mb-1">สถานะ</label>
             <select id="statusFilter" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 <option value="all">ทั้งหมด</option>
-                <option value="Completed">ขึ้นทะเบียนเรียบร้อย</option>
-                <option value="Onprocess">อยู่ระหว่างดำเนินการ</option>
-                <option value="Closed">ปิดงาน/ไม่ผ่าน</option>
+                <optgroup label="สถานะหลัก">
+                    <option value="Completed">Completed (ขึ้นทะเบียนเรียบร้อย)</option>
+                    <option value="Onprocess">Onprocess (ดำเนินการ)</option>
+                    <option value="Closed">Closed (ปิดงาน)</option>
+                    <option value="Cancel">Cancel (ยกเลิก)</option>
+                </optgroup>
+                <optgroup label="สถานะย่อย Onprocess">
+                    <option value="เอกสารยังไม่ครบ">เอกสารยังไม่ครบ</option>
+                    <option value="อยู่ระหว่างอบรม">อยู่ระหว่างอบรม</option>
+                    <option value="OJT">OJT</option>
+                    <option value="Gen ID">Gen ID</option>
+                    <option value="Print/ส่งบัตร">Print/ส่งบัตร</option>
+                    <option value="รอตรวจกองงาน">รอตรวจกองงาน</option>
+                    <option value="พื้นที่ขออนุมัติ">พื้นที่ขออนุมัติ</option>
+                    <option value="ขอสิทธิ์เข้าใช้งาน">ขอสิทธิ์เข้าใช้งาน</option>
+                </optgroup>
             </select>
         </div>
         
@@ -69,22 +82,26 @@
 </div>
 
 <!-- Stats Summary -->
-<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+<div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
     <div class="bg-white rounded-lg shadow-sm p-4 text-center" id="stat-total">
         <p class="text-sm text-gray-500">ทั้งหมด</p>
         <p class="text-2xl font-bold text-gray-800">-</p>
     </div>
     <div class="bg-white rounded-lg shadow-sm p-4 text-center" id="stat-completed">
-        <p class="text-sm text-gray-500">ขึ้นทะเบียนแล้ว</p>
+        <p class="text-sm text-gray-500">Completed</p>
         <p class="text-2xl font-bold text-green-600">-</p>
     </div>
     <div class="bg-white rounded-lg shadow-sm p-4 text-center" id="stat-onprocess">
-        <p class="text-sm text-gray-500">กำลังดำเนินการ</p>
+        <p class="text-sm text-gray-500">Onprocess</p>
         <p class="text-2xl font-bold text-yellow-600">-</p>
     </div>
     <div class="bg-white rounded-lg shadow-sm p-4 text-center" id="stat-closed">
-        <p class="text-sm text-gray-500">ปิดงาน/ไม่ผ่าน</p>
+        <p class="text-sm text-gray-500">Closed</p>
         <p class="text-2xl font-bold text-red-600">-</p>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm p-4 text-center" id="stat-cancel">
+        <p class="text-sm text-gray-500">Cancel</p>
+        <p class="text-2xl font-bold text-gray-600">-</p>
     </div>
 </div>
 
@@ -231,52 +248,25 @@ function renderTable(data) {
 
 function updateStats(data) {
     const total = data.length;
-    // Status ที่ถือว่า Completed
-    const completedStatuses = ['ขึ้นทะเบียนเรียบร้อย'];
-    // Status ที่ถือว่า Onprocess
-    const onprocessStatuses = [
-        'ตัวแทนยังไม่ส่งขึ้นทะเบียน', 'เอกสารยังไม่ครบ',
-        'อยู่ระหว่างอบรมทฤษฎี/ปฏิบัติ', 'อยู่ระหว่างOJT/สอบประเมินความพร้อม',
-        'ส่ง Gen ID', 'Print/ส่งบัตร',
-        'อยู่ระหว่างตรวจกองงาน', 'อยู่ระหว่างขอ User',
-        'อยู่ระหว่างขออนุมัติDflow ขึ้นทะเบียนช่าง'
-    ];
-    // Status ที่ถือว่า Closed
-    const closedStatuses = ['ไม่ผ่านอบรม', 'ไม่ผ่านคุณสมบัติ'];
-    // Status ที่ถือว่า Cancel
-    const cancelStatuses = ['ช่างลาออก', 'ติดประวัติอาชญากรรม', 'ไม่เข้าอบรม'];
-    
-    const completed = data.filter(t => completedStatuses.includes(t.status)).length;
-    const onprocess = data.filter(t => onprocessStatuses.includes(t.status)).length;
-    const closed = data.filter(t => closedStatuses.includes(t.status)).length;
-    const cancel = data.filter(t => cancelStatuses.includes(t.status)).length;
+    // นับจาก result column (สถานะหลัก)
+    const completed = data.filter(t => t.result === 'Completed').length;
+    const onprocess = data.filter(t => t.result === 'Onprocess').length;
+    const closed = data.filter(t => t.result === 'Closed').length;
+    const cancel = data.filter(t => t.result === 'Cancel').length;
     
     document.querySelector('#stat-total p:last-child').textContent = total;
     document.querySelector('#stat-completed p:last-child').textContent = completed;
     document.querySelector('#stat-onprocess p:last-child').textContent = onprocess;
     document.querySelector('#stat-closed p:last-child').textContent = closed;
+    document.querySelector('#stat-cancel p:last-child').textContent = cancel;
 }
 
 function getStatusClass(status, result) {
-    // Status ที่ถือว่า Completed
-    const completedStatuses = ['ขึ้นทะเบียนเรียบร้อย'];
-    // Status ที่ถือว่า Onprocess
-    const onprocessStatuses = [
-        'ตัวแทนยังไม่ส่งขึ้นทะเบียน', 'เอกสารยังไม่ครบ',
-        'อยู่ระหว่างอบรมทฤษฎี/ปฏิบัติ', 'อยู่ระหว่างOJT/สอบประเมินความพร้อม',
-        'ส่ง Gen ID', 'Print/ส่งบัตร',
-        'อยู่ระหว่างตรวจกองงาน', 'อยู่ระหว่างขอ User',
-        'อยู่ระหว่างขออนุมัติDflow ขึ้นทะเบียนช่าง'
-    ];
-    // Status ที่ถือว่า Closed
-    const closedStatuses = ['ไม่ผ่านอบรม', 'ไม่ผ่านคุณสมบัติ'];
-    // Status ที่ถือว่า Cancel
-    const cancelStatuses = ['ช่างลาออก', 'ติดประวัติอาชญากรรม', 'ไม่เข้าอบรม'];
-    
-    if (completedStatuses.includes(status)) return 'bg-green-100 text-green-800';
-    if (onprocessStatuses.includes(status)) return 'bg-yellow-100 text-yellow-800';
-    if (closedStatuses.includes(status)) return 'bg-red-100 text-red-800';
-    if (cancelStatuses.includes(status)) return 'bg-gray-100 text-gray-800';
+    // ใช้ result เป็นหลักในการกำหนดสี
+    if (result === 'Completed') return 'bg-green-100 text-green-800';
+    if (result === 'Onprocess') return 'bg-yellow-100 text-yellow-800';
+    if (result === 'Closed') return 'bg-red-100 text-red-800';
+    if (result === 'Cancel') return 'bg-gray-100 text-gray-800';
     return 'bg-gray-100 text-gray-800';
 }
 
