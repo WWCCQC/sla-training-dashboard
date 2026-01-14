@@ -521,6 +521,7 @@
                         <th class="px-2 py-2 text-left font-medium text-xs">Area</th>
                         <th class="px-2 py-2 text-left font-medium text-xs">รหัส</th>
                         <th class="px-2 py-2 text-left font-medium text-xs" style="max-width: 150px;">ตัวแทน</th>
+                        <th class="px-2 py-2 text-left font-medium text-xs">จังหวัด</th>
                         <th class="px-2 py-2 text-center font-medium text-xs">ลงทะเบียน</th>
                         <th class="px-2 py-2 text-center font-medium text-xs bg-green-700">สำเร็จ</th>
                         <th class="px-2 py-2 text-center font-medium text-xs bg-blue-700">%</th>
@@ -533,6 +534,7 @@
                         <td class="px-2 py-1 text-gray-800 font-medium text-xs">{{ agent.area }}</td>
                         <td class="px-2 py-1 text-gray-600 text-xs">{{ agent.depot_code }}</td>
                         <td class="px-2 py-1 text-gray-800 text-xs truncate" style="max-width: 150px;" title="{{ agent.depot_name }}">{{ agent.depot_name }}</td>
+                        <td class="px-2 py-1 text-gray-600 text-xs">{{ agent.province }}</td>
                         <td class="px-2 py-1 text-center font-medium text-xs">{{ agent.total }}</td>
                         <td class="px-2 py-1 text-center text-green-600 font-medium text-xs">{{ agent.completed }}</td>
                         <td class="px-2 py-1 text-center">

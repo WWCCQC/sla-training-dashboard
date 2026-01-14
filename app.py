@@ -599,6 +599,7 @@ def get_depot_agent_stats(df):
             'area': depot_df['area'].iloc[0] if 'area' in depot_df.columns else '',
             'depot_code': depot_df['depot_code'].iloc[0] if 'depot_code' in depot_df.columns else '',
             'depot_name': depot,
+            'province': depot_df['province'].iloc[0] if 'province' in depot_df.columns else '',
             'total': total,
             'completed': completed,
             'success_rate': success_rate
