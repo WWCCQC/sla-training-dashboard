@@ -3,10 +3,64 @@
 {% block title %}Dashboard - SLA Training{% endblock %}
 
 {% block content %}
-<!-- Header -->
-<div class="mb-6">
-    <h1 class="text-2xl font-bold text-gray-800">SLA Training Dashboard</h1>
-    <p class="text-gray-600">ภาพรวมการติดตาม SLA การลงทะเบียนช่าง</p>
+<!-- Header with Filter -->
+<div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800">SLA Training Dashboard</h1>
+        <p class="text-gray-600">ภาพรวมการติดตาม SLA การลงทะเบียนช่าง</p>
+    </div>
+    
+    <!-- Year and Month Filter (Multi-Select) -->
+    <div class="flex items-center gap-3 bg-white rounded-lg shadow-sm p-3 border">
+        <!-- Year Multi-Select -->
+        <div class="relative">
+            <label class="text-sm font-medium text-gray-600 mr-2">ปี:</label>
+            <button type="button" id="yearDropdownBtn" class="inline-flex items-center justify-between min-w-[120px] border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500">
+                <span id="yearSelectedText">{{ selected_years|join(', ') if selected_years else 'ทั้งหมด' }}</span>
+                <i class="fas fa-chevron-down ml-2 text-gray-400"></i>
+            </button>
+            <div id="yearDropdown" class="hidden absolute z-50 mt-1 w-48 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <label class="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer border-b">
+                    <input type="checkbox" id="yearSelectAll" class="mr-2 rounded text-blue-600">
+                    <span class="text-sm font-medium">เลือกทั้งหมด</span>
+                </label>
+                {% for year in year_list %}
+                <label class="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer">
+                    <input type="checkbox" class="yearCheckbox mr-2 rounded text-blue-600" value="{{ year }}" {% if year in selected_years %}checked{% endif %}>
+                    <span class="text-sm">{{ year }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Month Multi-Select -->
+        <div class="relative">
+            <label class="text-sm font-medium text-gray-600 mr-2">เดือน:</label>
+            <button type="button" id="monthDropdownBtn" class="inline-flex items-center justify-between min-w-[120px] border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500">
+                <span id="monthSelectedText">{{ selected_months|join(', ') if selected_months else 'ทั้งหมด' }}</span>
+                <i class="fas fa-chevron-down ml-2 text-gray-400"></i>
+            </button>
+            <div id="monthDropdown" class="hidden absolute z-50 mt-1 w-48 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <label class="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer border-b">
+                    <input type="checkbox" id="monthSelectAll" class="mr-2 rounded text-blue-600">
+                    <span class="text-sm font-medium">เลือกทั้งหมด</span>
+                </label>
+                {% for month in month_list %}
+                <label class="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer">
+                    <input type="checkbox" class="monthCheckbox mr-2 rounded text-blue-600" value="{{ month }}" {% if month in selected_months %}checked{% endif %}>
+                    <span class="text-sm">{{ month }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <button type="button" id="applyFilterBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-sm font-medium transition">
+            <i class="fas fa-search mr-1"></i>ค้นหา
+        </button>
+        <button type="button" id="resetFilterBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-1.5 rounded-md text-sm font-medium transition">
+            <i class="fas fa-undo mr-1"></i>รีเซ็ต
+        </button>
+    </div>
 </div>
 
 <!-- KPI Cards Row 1 -->
@@ -1291,6 +1345,216 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
+});
+
+// Multi-Select Dropdown Filter
+document.addEventListener('DOMContentLoaded', function() {
+    // เก็บค่าที่เลือกไว้
+    let selectedYears = [];
+    let selectedMonths = [];
+    
+    const yearDropdownBtn = document.getElementById('yearDropdownBtn');
+    const monthDropdownBtn = document.getElementById('monthDropdownBtn');
+    const yearDropdown = document.getElementById('yearDropdown');
+    const monthDropdown = document.getElementById('monthDropdown');
+    const applyFilterBtn = document.getElementById('applyFilterBtn');
+    const resetFilterBtn = document.getElementById('resetFilterBtn');
+    const yearSelectAll = document.getElementById('yearSelectAll');
+    const monthSelectAll = document.getElementById('monthSelectAll');
+    
+    // Initialize จากค่าที่ checked อยู่แล้ว
+    function init() {
+        selectedYears = [];
+        selectedMonths = [];
+        document.querySelectorAll('.yearCheckbox:checked').forEach(function(cb) {
+            selectedYears.push(cb.value);
+        });
+        document.querySelectorAll('.monthCheckbox:checked').forEach(function(cb) {
+            selectedMonths.push(cb.value);
+        });
+        updateDisplayText();
+    }
+    
+    function updateDisplayText() {
+        const yearText = document.getElementById('yearSelectedText');
+        const monthText = document.getElementById('monthSelectedText');
+        
+        if (selectedYears.length === 0) {
+            yearText.textContent = 'ทั้งหมด';
+        } else if (selectedYears.length <= 2) {
+            yearText.textContent = selectedYears.join(', ');
+        } else {
+            yearText.textContent = selectedYears.length + ' รายการ';
+        }
+        
+        if (selectedMonths.length === 0) {
+            monthText.textContent = 'ทั้งหมด';
+        } else if (selectedMonths.length <= 2) {
+            monthText.textContent = selectedMonths.join(', ');
+        } else {
+            monthText.textContent = selectedMonths.length + ' รายการ';
+        }
+    }
+    
+    function toggleDropdown(dropdownId) {
+        var dropdown = document.getElementById(dropdownId);
+        var otherDropdowns = document.querySelectorAll('#yearDropdown, #monthDropdown');
+        otherDropdowns.forEach(function(d) {
+            if (d.id !== dropdownId) d.classList.add('hidden');
+        });
+        dropdown.classList.toggle('hidden');
+    }
+    
+    // Year dropdown button
+    if (yearDropdownBtn) {
+        yearDropdownBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            toggleDropdown('yearDropdown');
+        });
+    }
+    
+    // Month dropdown button
+    if (monthDropdownBtn) {
+        monthDropdownBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            toggleDropdown('monthDropdown');
+        });
+    }
+    
+    // Year checkboxes
+    document.querySelectorAll('.yearCheckbox').forEach(function(cb) {
+        cb.addEventListener('change', function() {
+            if (this.checked) {
+                if (selectedYears.indexOf(this.value) === -1) {
+                    selectedYears.push(this.value);
+                }
+            } else {
+                selectedYears = selectedYears.filter(function(v) { return v !== cb.value; });
+            }
+            updateDisplayText();
+            
+            // Update select all checkbox
+            var allYearCbs = document.querySelectorAll('.yearCheckbox');
+            var checkedYearCbs = document.querySelectorAll('.yearCheckbox:checked');
+            if (yearSelectAll) {
+                yearSelectAll.checked = allYearCbs.length === checkedYearCbs.length;
+            }
+        });
+    });
+    
+    // Month checkboxes
+    document.querySelectorAll('.monthCheckbox').forEach(function(cb) {
+        cb.addEventListener('change', function() {
+            if (this.checked) {
+                if (selectedMonths.indexOf(this.value) === -1) {
+                    selectedMonths.push(this.value);
+                }
+            } else {
+                selectedMonths = selectedMonths.filter(function(v) { return v !== cb.value; });
+            }
+            updateDisplayText();
+            
+            // Update select all checkbox
+            var allMonthCbs = document.querySelectorAll('.monthCheckbox');
+            var checkedMonthCbs = document.querySelectorAll('.monthCheckbox:checked');
+            if (monthSelectAll) {
+                monthSelectAll.checked = allMonthCbs.length === checkedMonthCbs.length;
+            }
+        });
+    });
+    
+    // Select all year
+    if (yearSelectAll) {
+        yearSelectAll.addEventListener('change', function() {
+            var checkboxes = document.querySelectorAll('.yearCheckbox');
+            var isChecked = this.checked;
+            selectedYears = [];
+            checkboxes.forEach(function(cb) {
+                cb.checked = isChecked;
+                if (isChecked) selectedYears.push(cb.value);
+            });
+            updateDisplayText();
+        });
+    }
+    
+    // Select all month
+    if (monthSelectAll) {
+        monthSelectAll.addEventListener('change', function() {
+            var checkboxes = document.querySelectorAll('.monthCheckbox');
+            var isChecked = this.checked;
+            selectedMonths = [];
+            checkboxes.forEach(function(cb) {
+                cb.checked = isChecked;
+                if (isChecked) selectedMonths.push(cb.value);
+            });
+            updateDisplayText();
+        });
+    }
+    
+    // Apply filter button
+    if (applyFilterBtn) {
+        applyFilterBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // อ่านค่าจาก checkboxes โดยตรง ณ ตอนกดปุ่ม
+            var years = [];
+            var months = [];
+            document.querySelectorAll('.yearCheckbox:checked').forEach(function(cb) {
+                years.push(cb.value);
+            });
+            document.querySelectorAll('.monthCheckbox:checked').forEach(function(cb) {
+                months.push(cb.value);
+            });
+            
+            var params = [];
+            if (years.length > 0) {
+                params.push('years=' + encodeURIComponent(years.join(',')));
+            }
+            if (months.length > 0) {
+                params.push('months=' + encodeURIComponent(months.join(',')));
+            }
+            
+            var url = params.length > 0 ? '/?' + params.join('&') : '/';
+            console.log('Filter URL:', url);
+            console.log('Selected years:', years);
+            console.log('Selected months:', months);
+            window.location.href = url;
+        });
+    }
+    
+    // Reset filter button
+    if (resetFilterBtn) {
+        resetFilterBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = '/';
+        });
+    }
+    
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', function(e) {
+        if (yearDropdown && yearDropdownBtn && !yearDropdown.contains(e.target) && !yearDropdownBtn.contains(e.target)) {
+            yearDropdown.classList.add('hidden');
+        }
+        if (monthDropdown && monthDropdownBtn && !monthDropdown.contains(e.target) && !monthDropdownBtn.contains(e.target)) {
+            monthDropdown.classList.add('hidden');
+        }
+    });
+    
+    // Prevent dropdown from closing when clicking inside
+    if (yearDropdown) {
+        yearDropdown.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    }
+    if (monthDropdown) {
+        monthDropdown.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    }
+    
+    // Initialize on page load
+    init();
 });
 </script>
 {% endblock %}

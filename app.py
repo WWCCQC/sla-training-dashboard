@@ -1011,7 +1011,72 @@ def dashboard():
     df = load_data()
     df = process_data(df)
     
-    summary = get_summary_stats(df)
+    # รับ parameter filter จาก URL (รองรับ multi-select)
+    years_param = request.args.get('years', '')  # format: "2025,2026"
+    months_param = request.args.get('months', '')  # format: "Jan,Feb,Mar"
+    
+    # แปลงเป็น list
+    selected_years = [y.strip() for y in years_param.split(',') if y.strip()] if years_param else []
+    selected_months = [m.strip() for m in months_param.split(',') if m.strip()] if months_param else []
+    
+    # สร้างรายการปีและเดือนจาก training_month column (format: MonYY เช่น Nov25, Jan26)
+    year_list = []
+    month_list = []
+    month_order = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+                   'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12}
+    
+    if 'training_month' in df.columns:
+        unique_training_months = df['training_month'].dropna().unique()
+        years_set = set()
+        months_set = set()
+        for tm in unique_training_months:
+            tm_str = str(tm).strip()
+            if len(tm_str) >= 5:
+                month_part = tm_str[:3]   # เช่น 'Nov', 'Jan'
+                year_part = tm_str[3:]    # เช่น '25', '26'
+                if month_part in month_order:
+                    months_set.add(month_part)
+                    # แปลง 25 → 2025, 26 → 2026
+                    full_year = '20' + year_part
+                    years_set.add(full_year)
+        
+        # เรียงลำดับ
+        year_list = sorted(list(years_set))
+        month_list = sorted(list(months_set), key=lambda x: month_order.get(x, 99))
+    
+    # Filter DataFrame ตาม years และ months (multi-select)
+    filtered_df = df.copy()
+    if 'training_month' in filtered_df.columns:
+        # สร้าง list ของ training_month ที่ต้องการ filter
+        valid_training_months = []
+        
+        if selected_years and selected_months:
+            # Filter ทั้งปีและเดือน - สร้าง combinations
+            for year in selected_years:
+                year_short = year[2:] if len(year) == 4 else year  # 2025 → 25
+                for month in selected_months:
+                    valid_training_months.append(month + year_short)  # เช่น Nov25
+        elif selected_years:
+            # Filter เฉพาะปี - เก็บทุกเดือนของปีที่เลือก
+            years_short = [y[2:] if len(y) == 4 else y for y in selected_years]
+            filtered_df = filtered_df[
+                filtered_df['training_month'].apply(
+                    lambda x: any(str(x).endswith(ys) for ys in years_short) if pd.notna(x) else False
+                )
+            ]
+        elif selected_months:
+            # Filter เฉพาะเดือน - เก็บทุกปีของเดือนที่เลือก
+            filtered_df = filtered_df[
+                filtered_df['training_month'].apply(
+                    lambda x: any(str(x).startswith(m) for m in selected_months) if pd.notna(x) else False
+                )
+            ]
+        
+        # ถ้ามี valid_training_months (กรณีเลือกทั้งปีและเดือน)
+        if valid_training_months:
+            filtered_df = filtered_df[filtered_df['training_month'].isin(valid_training_months)]
+    
+    summary = get_summary_stats(filtered_df)
     
     # ตรวจสอบให้แน่ใจว่ามี key ที่จำเป็น
     default_summary = {
@@ -1025,19 +1090,19 @@ def dashboard():
         if key not in summary:
             summary[key] = val
     
-    sla_steps = get_sla_by_step_stats(df)
-    areas = get_area_stats(df)
-    area_step_summary = get_area_step_summary(df)
-    provinces = get_province_stats(df)
-    monthly = get_monthly_stats(df)
-    monthly_area = get_monthly_area_stats(df)
-    trainers = get_trainer_stats(df)
-    status_detail = get_status_detail_stats(df)
-    sla_dist = get_sla_distribution(df)
-    bottleneck = get_bottleneck_analysis(df)
-    depot_agents = get_depot_agent_stats(df)
+    sla_steps = get_sla_by_step_stats(filtered_df)
+    areas = get_area_stats(filtered_df)
+    area_step_summary = get_area_step_summary(filtered_df)
+    provinces = get_province_stats(filtered_df)
+    monthly = get_monthly_stats(filtered_df)
+    monthly_area = get_monthly_area_stats(filtered_df)
+    trainers = get_trainer_stats(filtered_df)
+    status_detail = get_status_detail_stats(filtered_df)
+    sla_dist = get_sla_distribution(filtered_df)
+    bottleneck = get_bottleneck_analysis(filtered_df)
+    depot_agents = get_depot_agent_stats(filtered_df)
     
-    # รายชื่อสำหรับ filter
+    # รายชื่อสำหรับ filter (ใช้ df เดิมเพื่อให้มีรายการครบ)
     area_list = df['area'].dropna().unique().tolist() if 'area' in df.columns else []
     province_list = df['province'].dropna().unique().tolist() if 'province' in df.columns else []
     province_list = [str(p).strip() for p in province_list if pd.notna(p)]
@@ -1057,6 +1122,10 @@ def dashboard():
                          depot_agents=depot_agents,
                          area_list=sorted(area_list),
                          province_list=sorted(set(province_list)),
+                         year_list=year_list,
+                         month_list=month_list,
+                         selected_years=selected_years,
+                         selected_months=selected_months,
                          active_page='dashboard')
 
 @app.route('/technicians')
