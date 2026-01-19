@@ -272,20 +272,150 @@ def get_area_step_summary(df):
         return []
     
     import re
+    from datetime import datetime
     
-    # Helper function สำหรับดึงข้อมูลช่าง
-    def get_technician_details(df_subset):
+    # Mapping สถานะย่อย -> คอลัมน์ start/end สำหรับคำนวณ SLA
+    STATUS_SLA_MAPPING = {
+        'เอกสารยังไม่ครบ': {'start_col': 'doc_start', 'end_col': 'doc_end'},
+        'อยู่ระหว่างอบรม': {'start_col': 'training_start', 'end_col': 'training_end'},
+        'OJT': {'start_col': 'ojt_start', 'end_col': 'ojt_end'},
+        'Gen ID': {'start_col': 'genid_start', 'end_col': 'genid_end'},
+        'Print/ส่งบัตร': {'start_col': 'printcard_start', 'end_col': 'printcard_end'},
+        'รอตรวจกองงาน': {'start_col': 'inspection_start', 'end_col': 'inspection_end'},
+        'พื้นที่ขออนุมัติ': {'start_col': 'dflow_start', 'end_col': 'dflow_end'},
+        'ขอสิทธิ์เข้าใช้งาน': {'start_col': 'registration_start', 'end_col': 'registration_end'}
+    }
+    
+    # Helper function สำหรับคำนวณ SLA จาก start/end date
+    def calculate_sla_days(start_date, end_date):
+        """คำนวณจำนวนวันจาก start_date ถึง end_date"""
+        if pd.isna(start_date) or pd.isna(end_date):
+            return 0
+        try:
+            if isinstance(start_date, str):
+                start = pd.to_datetime(start_date)
+            else:
+                start = start_date
+            if isinstance(end_date, str):
+                end = pd.to_datetime(end_date)
+            else:
+                end = end_date
+            
+            if pd.isna(start) or pd.isna(end):
+                return 0
+                
+            days = (end - start).days
+            return max(0, days)  # ไม่ให้ติดลบ
+        except:
+            return 0
+    
+    # Helper function สำหรับดึงข้อมูลช่าง พร้อมคำนวณ SLA ตามสถานะ
+    def get_technician_details_with_status_sla(df_subset, status_name):
         details = []
+        sla_mapping = STATUS_SLA_MAPPING.get(status_name, {})
+        start_col = sla_mapping.get('start_col', '')
+        end_col = sla_mapping.get('end_col', '')
+        
         for _, row in df_subset.iterrows():
+            # ใช้ safe_str helper function เพื่อจัดการ None/NaN
+            depot_code = str(row['depot_code']) if pd.notna(row.get('depot_code')) else ''
+            depot_name = str(row['depot_name']) if pd.notna(row.get('depot_name')) else ''
+            province = str(row['province']) if 'province' in row.index and pd.notna(row['province']) else ''
+            full_name_th = str(row['full_name_th']) if pd.notna(row.get('full_name_th')) else ''
+            status = str(row['status']) if pd.notna(row.get('status')) else ''
+            
+            # คำนวณ SLA ตามสถานะย่อย (end_col - start_col)
+            sla_days = 0
+            if start_col and end_col and start_col in row.index and end_col in row.index:
+                start_date = row.get(start_col)
+                end_date = row.get(end_col)
+                # ถ้าไม่มี end_date ให้ใช้วันปัจจุบัน
+                if pd.notna(start_date):
+                    if pd.isna(end_date):
+                        end_date = datetime.now()
+                    sla_days = calculate_sla_days(start_date, end_date)
+            
             details.append({
-                'depot_code': str(row.get('depot_code', '')),
-                'depot_name': str(row.get('depot_name', '')),
-                'full_name_th': str(row.get('full_name_th', '')),
-                'status': str(row.get('status', ''))
+                'depot_code': depot_code,
+                'depot_name': depot_name,
+                'province': province,
+                'full_name_th': full_name_th,
+                'status': status,
+                'sla_total': sla_days
             })
         return details
     
-    # Helper function สำหรับ breakdown สถานะย่อย
+    # Helper function สำหรับคำนวณ SLA เฉลี่ยของ subset ตามสถานะย่อย
+    def calculate_avg_sla_by_status(df_subset, status_name):
+        if df_subset.empty:
+            return 0
+        
+        sla_mapping = STATUS_SLA_MAPPING.get(status_name, {})
+        start_col = sla_mapping.get('start_col', '')
+        end_col = sla_mapping.get('end_col', '')
+        
+        if not start_col or not end_col:
+            return 0
+        
+        sla_values = []
+        for _, row in df_subset.iterrows():
+            if start_col in row.index and end_col in row.index:
+                start_date = row.get(start_col)
+                end_date = row.get(end_col)
+                # ถ้าไม่มี end_date ให้ใช้วันปัจจุบัน
+                if pd.notna(start_date):
+                    if pd.isna(end_date):
+                        end_date = datetime.now()
+                    sla_days = calculate_sla_days(start_date, end_date)
+                    if sla_days >= 0:
+                        sla_values.append(sla_days)
+        
+        if len(sla_values) > 0:
+            return round(sum(sla_values) / len(sla_values), 1)
+        return 0
+    
+    # Helper function สำหรับดึงข้อมูลช่าง (สำหรับ Completed, Cancel, Closed - ใช้ sla_total)
+    def get_technician_details(df_subset):
+        details = []
+        for _, row in df_subset.iterrows():
+            depot_code = str(row['depot_code']) if pd.notna(row.get('depot_code')) else ''
+            depot_name = str(row['depot_name']) if pd.notna(row.get('depot_name')) else ''
+            province = str(row['province']) if 'province' in row.index and pd.notna(row['province']) else ''
+            full_name_th = str(row['full_name_th']) if pd.notna(row.get('full_name_th')) else ''
+            status = str(row['status']) if pd.notna(row.get('status')) else ''
+            
+            # SLA total - เฉพาะค่า >= 0
+            sla_total = 0
+            if 'sla_total' in row.index and pd.notna(row['sla_total']):
+                try:
+                    sla_val = float(row['sla_total'])
+                    sla_total = int(sla_val) if sla_val >= 0 else 0
+                except:
+                    sla_total = 0
+            
+            details.append({
+                'depot_code': depot_code,
+                'depot_name': depot_name,
+                'province': province,
+                'full_name_th': full_name_th,
+                'status': status,
+                'sla_total': sla_total
+            })
+        return details
+    
+    # Helper function สำหรับคำนวณ SLA เฉลี่ยของ subset (สำหรับ Completed, Cancel, Closed)
+    def calculate_avg_sla(df_subset):
+        if df_subset.empty or 'sla_total' not in df_subset.columns:
+            return 0
+        valid_sla = df_subset[
+            (df_subset['sla_total'] >= 0) & 
+            (df_subset['sla_total'].notna())
+        ]['sla_total']
+        if len(valid_sla) > 0:
+            return round(valid_sla.mean(), 1)
+        return 0
+    
+    # Helper function สำหรับ breakdown สถานะย่อย (Completed, Cancel, Closed)
     def get_status_breakdown(df_subset):
         breakdown = []
         if 'status' in df_subset.columns and len(df_subset) > 0:
@@ -295,7 +425,23 @@ def get_area_step_summary(df):
                 breakdown.append({
                     'status': status,
                     'count': count,
+                    'avg_sla': calculate_avg_sla(status_df),
                     'details': get_technician_details(status_df)
+                })
+        return breakdown
+    
+    # Helper function สำหรับ breakdown สถานะย่อย Onprocess (คำนวณ SLA ตามขั้นตอน)
+    def get_onprocess_status_breakdown(df_subset):
+        breakdown = []
+        if 'status' in df_subset.columns and len(df_subset) > 0:
+            status_counts = df_subset['status'].value_counts().to_dict()
+            for status, count in status_counts.items():
+                status_df = df_subset[df_subset['status'] == status]
+                breakdown.append({
+                    'status': status,
+                    'count': count,
+                    'avg_sla': calculate_avg_sla_by_status(status_df, status),
+                    'details': get_technician_details_with_status_sla(status_df, status)
                 })
         return breakdown
     
@@ -339,16 +485,17 @@ def get_area_step_summary(df):
         closed_df = area_df[area_df['result'] == 'Closed'] if 'result' in area_df.columns else pd.DataFrame()
         closed_breakdown = get_status_breakdown(closed_df)
         
-        # Onprocess
+        # Onprocess - ใช้ get_onprocess_status_breakdown เพื่อคำนวณ SLA ตามสถานะย่อย
         onprocess_count = result_counts.get('Onprocess', 0)
         onprocess_df = area_df[area_df['result'] == 'Onprocess'] if 'result' in area_df.columns else pd.DataFrame()
-        onprocess_breakdown = get_status_breakdown(onprocess_df)
+        onprocess_breakdown = get_onprocess_status_breakdown(onprocess_df)
         
         # สร้าง onprocess_by_status dict
         onprocess_by_status = {}
         for sub in onprocess_breakdown:
             onprocess_by_status[sub['status']] = {
                 'count': sub['count'],
+                'avg_sla': sub['avg_sla'],
                 'details': sub['details']
             }
         
@@ -359,6 +506,7 @@ def get_area_step_summary(df):
                 onprocess_columns.append({
                     'status': status_name,
                     'count': onprocess_by_status[status_name]['count'],
+                    'avg_sla': onprocess_by_status[status_name]['avg_sla'],
                     'details': onprocess_by_status[status_name]['details'],
                     'has_data': True
                 })
@@ -366,6 +514,7 @@ def get_area_step_summary(df):
                 onprocess_columns.append({
                     'status': status_name,
                     'count': 0,
+                    'avg_sla': 0,
                     'details': [],
                     'has_data': False
                 })

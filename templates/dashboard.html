@@ -322,8 +322,11 @@
                 <tr class="technician-detail-row bg-amber-50 hidden" id="onprocess-{{ area_idx }}-{{ col_idx }}">
                     <td colspan="20" class="px-6 py-3">
                         <div class="text-sm">
-                            <div class="font-medium text-amber-800 mb-2">
-                                <i class="fas fa-users mr-2"></i>{{ col.status }} ({{ col.count }} คน)
+                            <div class="font-medium text-amber-800 mb-2 flex items-center justify-between">
+                                <span><i class="fas fa-users mr-2"></i>{{ col.status }} ({{ col.count }} คน)</span>
+                                <span class="bg-amber-600 text-white px-3 py-1 rounded-full text-xs">
+                                    <i class="fas fa-clock mr-1"></i>SLA เฉลี่ย: {{ col.avg_sla }} วัน
+                                </span>
                             </div>
                             <table class="min-w-full bg-white rounded border">
                                 <thead class="bg-amber-100">
@@ -331,7 +334,9 @@
                                         <th class="px-3 py-2 text-left text-xs font-medium text-amber-800">#</th>
                                         <th class="px-3 py-2 text-left text-xs font-medium text-amber-800">รหัส Depot</th>
                                         <th class="px-3 py-2 text-left text-xs font-medium text-amber-800">ชื่อ Depot</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-amber-800">จังหวัด</th>
                                         <th class="px-3 py-2 text-left text-xs font-medium text-amber-800">ชื่อช่าง</th>
+                                        <th class="px-3 py-2 text-center text-xs font-medium text-amber-800">SLA (วัน)</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-200">
@@ -340,7 +345,18 @@
                                         <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
                                         <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
                                         <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.province }}</td>
                                         <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
+                                        <td class="px-3 py-2 text-xs text-center">
+                                            {% set sla_val = tech.get('sla_total', 0) %}
+                                            {% if sla_val > 60 %}
+                                            <span class="bg-red-100 text-red-700 px-2 py-1 rounded font-medium">{{ sla_val }}</span>
+                                            {% elif sla_val > 45 %}
+                                            <span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded font-medium">{{ sla_val }}</span>
+                                            {% else %}
+                                            <span class="bg-green-100 text-green-700 px-2 py-1 rounded font-medium">{{ sla_val }}</span>
+                                            {% endif %}
+                                        </td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -379,6 +395,7 @@
                                                     <th class="px-3 py-2 text-left text-xs font-medium text-green-700">#</th>
                                                     <th class="px-3 py-2 text-left text-xs font-medium text-green-700">รหัส Depot</th>
                                                     <th class="px-3 py-2 text-left text-xs font-medium text-green-700">ชื่อ Depot</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-green-700">จังหวัด</th>
                                                     <th class="px-3 py-2 text-left text-xs font-medium text-green-700">ชื่อช่าง</th>
                                                 </tr>
                                             </thead>
@@ -388,6 +405,7 @@
                                                     <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
                                                     <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
                                                     <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.province }}</td>
                                                     <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
                                                 </tr>
                                                 {% endfor %}
@@ -428,6 +446,7 @@
                                                     <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">#</th>
                                                     <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">รหัส Depot</th>
                                                     <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">ชื่อ Depot</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">จังหวัด</th>
                                                     <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">ชื่อช่าง</th>
                                                 </tr>
                                             </thead>
@@ -437,6 +456,7 @@
                                                     <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
                                                     <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
                                                     <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.province }}</td>
                                                     <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
                                                 </tr>
                                                 {% endfor %}
@@ -477,6 +497,7 @@
                                                     <th class="px-3 py-2 text-left text-xs font-medium text-red-700">#</th>
                                                     <th class="px-3 py-2 text-left text-xs font-medium text-red-700">รหัส Depot</th>
                                                     <th class="px-3 py-2 text-left text-xs font-medium text-red-700">ชื่อ Depot</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-red-700">จังหวัด</th>
                                                     <th class="px-3 py-2 text-left text-xs font-medium text-red-700">ชื่อช่าง</th>
                                                 </tr>
                                             </thead>
@@ -486,6 +507,7 @@
                                                     <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
                                                     <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
                                                     <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.province }}</td>
                                                     <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
                                                 </tr>
                                                 {% endfor %}
