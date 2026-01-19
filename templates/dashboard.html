@@ -336,6 +336,7 @@
                                         <th class="px-3 py-2 text-left text-xs font-medium text-amber-800">ชื่อ Depot</th>
                                         <th class="px-3 py-2 text-left text-xs font-medium text-amber-800">จังหวัด</th>
                                         <th class="px-3 py-2 text-left text-xs font-medium text-amber-800">ชื่อช่าง</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-amber-800">หมายเหตุ</th>
                                         <th class="px-3 py-2 text-center text-xs font-medium text-amber-800">SLA (วัน)</th>
                                     </tr>
                                 </thead>
@@ -347,6 +348,7 @@
                                         <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
                                         <td class="px-3 py-2 text-xs text-gray-800">{{ tech.province }}</td>
                                         <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-600">{{ tech.get('remark', '') }}</td>
                                         <td class="px-3 py-2 text-xs text-center">
                                             {% set sla_val = tech.get('sla_total', 0) %}
                                             {% if sla_val > 60 %}

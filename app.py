@@ -276,14 +276,14 @@ def get_area_step_summary(df):
     
     # Mapping สถานะย่อย -> คอลัมน์ start/end สำหรับคำนวณ SLA
     STATUS_SLA_MAPPING = {
-        'เอกสารยังไม่ครบ': {'start_col': 'doc_start', 'end_col': 'doc_end'},
-        'อยู่ระหว่างอบรม': {'start_col': 'training_start', 'end_col': 'training_end'},
-        'OJT': {'start_col': 'ojt_start', 'end_col': 'ojt_end'},
-        'Gen ID': {'start_col': 'genid_start', 'end_col': 'genid_end'},
-        'Print/ส่งบัตร': {'start_col': 'printcard_start', 'end_col': 'printcard_end'},
-        'รอตรวจกองงาน': {'start_col': 'inspection_start', 'end_col': 'inspection_end'},
-        'พื้นที่ขออนุมัติ': {'start_col': 'dflow_start', 'end_col': 'dflow_end'},
-        'ขอสิทธิ์เข้าใช้งาน': {'start_col': 'registration_start', 'end_col': 'registration_end'}
+        'เอกสารยังไม่ครบ': {'start_col': 'doc_start', 'end_col': 'doc_end', 'remark_col': 'remark_doc'},
+        'อยู่ระหว่างอบรม': {'start_col': 'training_start', 'end_col': 'training_end', 'remark_col': 'remark_training'},
+        'OJT': {'start_col': 'ojt_start', 'end_col': 'ojt_end', 'remark_col': 'remark_ojt'},
+        'Gen ID': {'start_col': 'genid_start', 'end_col': 'genid_end', 'remark_col': 'remark_genid_card'},
+        'Print/ส่งบัตร': {'start_col': 'printcard_start', 'end_col': 'printcard_end', 'remark_col': 'remark_genid_card'},
+        'รอตรวจกองงาน': {'start_col': 'inspection_start', 'end_col': 'inspection_end', 'remark_col': 'remark_inspection'},
+        'พื้นที่ขออนุมัติ': {'start_col': 'dflow_start', 'end_col': 'dflow_end', 'remark_col': 'remark_dflow'},
+        'ขอสิทธิ์เข้าใช้งาน': {'start_col': 'registration_start', 'end_col': 'registration_end', 'remark_col': 'remark_registration'}
     }
     
     # Helper function สำหรับคำนวณ SLA จาก start/end date
@@ -315,6 +315,7 @@ def get_area_step_summary(df):
         sla_mapping = STATUS_SLA_MAPPING.get(status_name, {})
         start_col = sla_mapping.get('start_col', '')
         end_col = sla_mapping.get('end_col', '')
+        remark_col = sla_mapping.get('remark_col', '')
         
         for _, row in df_subset.iterrows():
             # ใช้ safe_str helper function เพื่อจัดการ None/NaN
@@ -323,6 +324,11 @@ def get_area_step_summary(df):
             province = str(row['province']) if 'province' in row.index and pd.notna(row['province']) else ''
             full_name_th = str(row['full_name_th']) if pd.notna(row.get('full_name_th')) else ''
             status = str(row['status']) if pd.notna(row.get('status')) else ''
+            
+            # ดึง remark ตามสถานะย่อย
+            remark = ''
+            if remark_col and remark_col in row.index and pd.notna(row[remark_col]):
+                remark = str(row[remark_col])
             
             # คำนวณ SLA ตามสถานะย่อย (end_col - start_col)
             sla_days = 0
@@ -340,6 +346,7 @@ def get_area_step_summary(df):
                 'depot_name': depot_name,
                 'province': province,
                 'full_name_th': full_name_th,
+                'remark': remark,
                 'status': status,
                 'sla_total': sla_days
             })
