@@ -541,9 +541,15 @@ def get_area_step_summary(df):
             'unique_onprocess_statuses': unique_onprocess_statuses
         })
     
-    # เรียงตามชื่อ area (RSM1, RSM2, RSM3...)
+    # เรียงตามชื่อ area (R1_..., R2_..., R3_... หรือ RSM1, RSM2, RSM3...)
     def get_area_sort_key(item):
-        match = re.search(r'RSM(\d+)', item.get('area', ''))
+        area_name = item.get('area', '')
+        # ลองหา pattern R1_, R2_, R3_... ก่อน
+        match = re.search(r'^R(\d+)[_\-]', area_name)
+        if match:
+            return int(match.group(1))
+        # ถ้าไม่เจอ ลองหา RSM pattern
+        match = re.search(r'RSM(\d+)', area_name)
         if match:
             return int(match.group(1))
         return 999
