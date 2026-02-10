@@ -9,55 +9,63 @@
         <h1 class="text-2xl font-bold text-gray-800">SLA Training Dashboard</h1>
         <p class="text-gray-600">ภาพรวมการติดตาม SLA การลงทะเบียนช่าง</p>
     </div>
-    
+
     <!-- Year and Month Filter (Multi-Select) -->
     <div class="flex items-center gap-3 bg-white rounded-lg shadow-sm p-3 border">
         <!-- Year Multi-Select -->
         <div class="relative">
             <label class="text-sm font-medium text-gray-600 mr-2">ปี:</label>
-            <button type="button" id="yearDropdownBtn" class="inline-flex items-center justify-between min-w-[120px] border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500">
+            <button type="button" id="yearDropdownBtn"
+                class="inline-flex items-center justify-between min-w-[120px] border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500">
                 <span id="yearSelectedText">{{ selected_years|join(', ') if selected_years else 'ทั้งหมด' }}</span>
                 <i class="fas fa-chevron-down ml-2 text-gray-400"></i>
             </button>
-            <div id="yearDropdown" class="hidden absolute z-50 mt-1 w-48 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+            <div id="yearDropdown"
+                class="hidden absolute z-50 mt-1 w-48 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
                 <label class="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer border-b">
                     <input type="checkbox" id="yearSelectAll" class="mr-2 rounded text-blue-600">
                     <span class="text-sm font-medium">เลือกทั้งหมด</span>
                 </label>
                 {% for year in year_list %}
                 <label class="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer">
-                    <input type="checkbox" class="yearCheckbox mr-2 rounded text-blue-600" value="{{ year }}" {% if year in selected_years %}checked{% endif %}>
+                    <input type="checkbox" class="yearCheckbox mr-2 rounded text-blue-600" value="{{ year }}" {% if year
+                        in selected_years %}checked{% endif %}>
                     <span class="text-sm">{{ year }}</span>
                 </label>
                 {% endfor %}
             </div>
         </div>
-        
+
         <!-- Month Multi-Select -->
         <div class="relative">
             <label class="text-sm font-medium text-gray-600 mr-2">เดือน:</label>
-            <button type="button" id="monthDropdownBtn" class="inline-flex items-center justify-between min-w-[120px] border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500">
+            <button type="button" id="monthDropdownBtn"
+                class="inline-flex items-center justify-between min-w-[120px] border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500">
                 <span id="monthSelectedText">{{ selected_months|join(', ') if selected_months else 'ทั้งหมด' }}</span>
                 <i class="fas fa-chevron-down ml-2 text-gray-400"></i>
             </button>
-            <div id="monthDropdown" class="hidden absolute z-50 mt-1 w-48 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+            <div id="monthDropdown"
+                class="hidden absolute z-50 mt-1 w-48 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
                 <label class="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer border-b">
                     <input type="checkbox" id="monthSelectAll" class="mr-2 rounded text-blue-600">
                     <span class="text-sm font-medium">เลือกทั้งหมด</span>
                 </label>
                 {% for month in month_list %}
                 <label class="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer">
-                    <input type="checkbox" class="monthCheckbox mr-2 rounded text-blue-600" value="{{ month }}" {% if month in selected_months %}checked{% endif %}>
+                    <input type="checkbox" class="monthCheckbox mr-2 rounded text-blue-600" value="{{ month }}" {% if
+                        month in selected_months %}checked{% endif %}>
                     <span class="text-sm">{{ month }}</span>
                 </label>
                 {% endfor %}
             </div>
         </div>
-        
-        <button type="button" id="applyFilterBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-sm font-medium transition">
+
+        <button type="button" id="applyFilterBtn"
+            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-sm font-medium transition">
             <i class="fas fa-search mr-1"></i>ค้นหา
         </button>
-        <button type="button" id="resetFilterBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-1.5 rounded-md text-sm font-medium transition">
+        <button type="button" id="resetFilterBtn"
+            class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-1.5 rounded-md text-sm font-medium transition">
             <i class="fas fa-undo mr-1"></i>รีเซ็ต
         </button>
     </div>
@@ -77,7 +85,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Closed -->
     <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-red-500">
         <div class="flex items-center justify-between">
@@ -91,7 +99,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Cancel -->
     <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-gray-500">
         <div class="flex items-center justify-between">
@@ -105,7 +113,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- On Process -->
     <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-yellow-500">
         <div class="flex items-center justify-between">
@@ -119,7 +127,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Completed -->
     <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-green-500">
         <div class="flex items-center justify-between">
@@ -147,14 +155,15 @@
             <div class="bg-blue-600 h-3 rounded-full" style="width: {{ summary.theory_rate }}%"></div>
         </div>
         <div class="flex justify-between text-sm mt-2">
-            <span class="text-blue-600"><i class="fas fa-users"></i> เข้าอบรม {{ summary.theory_pass + summary.theory_fail }}</span>
+            <span class="text-blue-600"><i class="fas fa-users"></i> เข้าอบรม {{ summary.theory_pass +
+                summary.theory_fail }}</span>
         </div>
         <div class="flex justify-between text-sm mt-1">
             <span class="text-green-600"><i class="fas fa-check"></i> ผ่าน {{ summary.theory_pass }}</span>
             <span class="text-red-600"><i class="fas fa-times"></i> ไม่ผ่าน {{ summary.theory_fail }}</span>
         </div>
     </div>
-    
+
     <!-- OJT -->
     <div class="bg-white rounded-xl shadow-sm p-5">
         <div class="flex items-center justify-between mb-3">
@@ -165,19 +174,21 @@
             <div class="bg-purple-600 h-3 rounded-full" style="width: {{ summary.ojt_rate }}%"></div>
         </div>
         <div class="flex justify-between text-sm mt-2">
-            <span class="text-purple-600"><i class="fas fa-users"></i> เข้า OJT {{ summary.ojt_pass + summary.ojt_fail }}</span>
+            <span class="text-purple-600"><i class="fas fa-users"></i> เข้า OJT {{ summary.ojt_pass + summary.ojt_fail
+                }}</span>
         </div>
         <div class="flex justify-between text-sm mt-1">
             <span class="text-green-600"><i class="fas fa-check"></i> ผ่าน {{ summary.ojt_pass }}</span>
             <span class="text-red-600"><i class="fas fa-times"></i> ไม่ผ่าน {{ summary.ojt_fail }}</span>
         </div>
     </div>
-    
+
     <!-- Average SLA -->
     <div class="bg-white rounded-xl shadow-sm p-5">
         <div class="flex items-center justify-between mb-3">
             <h4 class="text-gray-700 font-medium">SLA เฉลี่ยรวม</h4>
-            <span class="text-2xl font-bold {% if summary.avg_sla_total <= 45 %}text-green-600{% elif summary.avg_sla_total <= 60 %}text-yellow-600{% else %}text-red-600{% endif %}">
+            <span
+                class="text-2xl font-bold {% if summary.avg_sla_total <= 45 %}text-green-600{% elif summary.avg_sla_total <= 60 %}text-yellow-600{% else %}text-red-600{% endif %}">
                 {{ summary.avg_sla_total }} วัน
             </span>
         </div>
@@ -199,7 +210,8 @@
             <div class="flex-shrink-0 w-40 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-4 border">
                 <div class="text-center">
                     <div class="text-xs text-gray-500 mb-1">{{ loop.index }}. {{ step.name }}</div>
-                    <div class="text-2xl font-bold {% if avg_sla_ceil <= 7 %}text-green-600{% elif avg_sla_ceil <= 14 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                    <div
+                        class="text-2xl font-bold {% if avg_sla_ceil <= 7 %}text-green-600{% elif avg_sla_ceil <= 14 %}text-yellow-600{% else %}text-red-600{% endif %}">
                         {{ avg_sla_ceil }}
                     </div>
                     <div class="text-xs text-gray-400">วันเฉลี่ย</div>
@@ -224,7 +236,7 @@
             <canvas id="trendChart"></canvas>
         </div>
     </div>
-    
+
     <!-- Monthly Area Trend Chart - Total by Area -->
     <div class="bg-white rounded-xl shadow-sm p-5">
         <h3 class="text-lg font-semibold text-gray-800 mb-4">
@@ -247,7 +259,7 @@
             <canvas id="monthlyChart"></canvas>
         </div>
     </div>
-    
+
     <!-- Status Pie Chart -->
     <div class="bg-white rounded-xl shadow-sm p-5">
         <h3 class="text-lg font-semibold text-gray-800 mb-4">
@@ -272,12 +284,13 @@
                     <th class="px-4 py-3 text-center font-medium">ลงทะเบียน<br>(คน)</th>
                     <th class="px-4 py-3 text-center font-medium bg-green-700">Completed<br>(เสร็จสิ้น)</th>
                     <th class="px-4 py-3 text-center font-medium bg-gray-600">Cancel<br>(ลาออก)</th>
-                    <th class="px-4 py-3 text-center font-medium bg-red-700">Closed<br>(ไม่ผ่าน/ปิดงาน)</th>
+                    <th class="px-4 py-3 text-center font-medium bg-red-700">Closed<br>(ไม่ผ่าน)</th>
                     <th class="px-4 py-3 text-center font-medium bg-yellow-600">Onprocess<br>(ดำเนินการ)</th>
                     <!-- Dynamic Onprocess sub-status columns from unique statuses -->
                     {% if area_step_summary|length > 0 %}
                     {% for status_name in area_step_summary[0].unique_onprocess_statuses %}
-                    <th class="px-3 py-3 text-center font-medium bg-amber-500 onprocess-sub-col hidden text-xs" data-substatus="{{ loop.index0 }}">{{ status_name }}</th>
+                    <th class="px-3 py-3 text-center font-medium bg-amber-500 onprocess-sub-col hidden text-xs"
+                        data-substatus="{{ loop.index0 }}">{{ status_name }}</th>
                     {% endfor %}
                     {% endif %}
                 </tr>
@@ -287,10 +300,12 @@
                 <tr class="bg-gray-100 font-bold border-b-2 border-gray-400">
                     <td class="px-4 py-3 text-gray-800">Total</td>
                     <td class="px-4 py-3 text-center">{{ area_step_summary|sum(attribute='total') }}</td>
-                    <td class="px-4 py-3 text-center text-green-600">{{ area_step_summary|sum(attribute='completed') }}</td>
+                    <td class="px-4 py-3 text-center text-green-600">{{ area_step_summary|sum(attribute='completed') }}
+                    </td>
                     <td class="px-4 py-3 text-center text-gray-600">{{ area_step_summary|sum(attribute='cancel') }}</td>
                     <td class="px-4 py-3 text-center text-red-600">{{ area_step_summary|sum(attribute='closed') }}</td>
-                    <td class="px-4 py-3 text-center text-yellow-600">{{ area_step_summary|sum(attribute='onprocess') }}</td>
+                    <td class="px-4 py-3 text-center text-yellow-600">{{ area_step_summary|sum(attribute='onprocess') }}
+                    </td>
                     {% if area_step_summary|length > 0 %}
                     {% for col_idx in range(area_step_summary[0].onprocess_columns|length) %}
                     {% set col_total = [] %}
@@ -299,7 +314,8 @@
                     {% set _ = col_total.append(item.onprocess_columns[col_idx].count) %}
                     {% endif %}
                     {% endfor %}
-                    <td class="px-3 py-3 text-center onprocess-sub-col hidden text-amber-700 font-medium">{{ col_total|sum }}</td>
+                    <td class="px-3 py-3 text-center onprocess-sub-col hidden text-amber-700 font-medium">{{
+                        col_total|sum }}</td>
                     {% endfor %}
                     {% endif %}
                 </tr>
@@ -311,8 +327,9 @@
                     <!-- Completed -->
                     <td class="px-4 py-3 text-center">
                         {% if item.completed > 0 %}
-                        <button class="toggle-status-details text-green-600 font-medium hover:bg-green-100 px-2 py-1 rounded cursor-pointer" 
-                                data-target="completed-{{ area_idx }}">
+                        <button
+                            class="toggle-status-details text-green-600 font-medium hover:bg-green-100 px-2 py-1 rounded cursor-pointer"
+                            data-target="completed-{{ area_idx }}">
                             {{ item.completed }}<i class="fas fa-caret-right ml-2 toggle-icon"></i>
                         </button>
                         {% else %}
@@ -322,8 +339,9 @@
                     <!-- Cancel -->
                     <td class="px-4 py-3 text-center">
                         {% if item.cancel > 0 %}
-                        <button class="toggle-status-details text-gray-600 font-medium hover:bg-gray-200 px-2 py-1 rounded cursor-pointer" 
-                                data-target="cancel-{{ area_idx }}">
+                        <button
+                            class="toggle-status-details text-gray-600 font-medium hover:bg-gray-200 px-2 py-1 rounded cursor-pointer"
+                            data-target="cancel-{{ area_idx }}">
                             {{ item.cancel }}<i class="fas fa-caret-right ml-2 toggle-icon"></i>
                         </button>
                         {% else %}
@@ -333,8 +351,9 @@
                     <!-- Closed -->
                     <td class="px-4 py-3 text-center">
                         {% if item.closed > 0 %}
-                        <button class="toggle-status-details text-red-600 font-medium hover:bg-red-100 px-2 py-1 rounded cursor-pointer" 
-                                data-target="closed-{{ area_idx }}">
+                        <button
+                            class="toggle-status-details text-red-600 font-medium hover:bg-red-100 px-2 py-1 rounded cursor-pointer"
+                            data-target="closed-{{ area_idx }}">
                             {{ item.closed }}<i class="fas fa-caret-right ml-2 toggle-icon"></i>
                         </button>
                         {% else %}
@@ -344,9 +363,9 @@
                     <!-- Onprocess -->
                     <td class="px-4 py-3 text-center">
                         {% if item.onprocess > 0 %}
-                        <button class="toggle-onprocess-expand text-yellow-600 font-medium hover:bg-yellow-100 px-2 py-1 rounded cursor-pointer" 
-                                data-area-idx="{{ area_idx }}"
-                                data-breakdown='{{ item.onprocess_breakdown | tojson }}'>
+                        <button
+                            class="toggle-onprocess-expand text-yellow-600 font-medium hover:bg-yellow-100 px-2 py-1 rounded cursor-pointer"
+                            data-area-idx="{{ area_idx }}" data-breakdown='{{ item.onprocess_breakdown | tojson }}'>
                             {{ item.onprocess }}<i class="fas fa-caret-right ml-2 toggle-icon-onprocess"></i>
                         </button>
                         {% else %}
@@ -358,8 +377,9 @@
                     {% set col = item.onprocess_columns[col_idx] %}
                     <td class="px-3 py-3 text-center onprocess-sub-col hidden" data-area="{{ area_idx }}">
                         {% if col.count > 0 %}
-                        <button class="toggle-technician-list text-amber-700 font-medium hover:bg-amber-100 px-2 py-1 rounded cursor-pointer text-xs"
-                                data-target="onprocess-{{ area_idx }}-{{ col_idx }}">
+                        <button
+                            class="toggle-technician-list text-amber-700 font-medium hover:bg-amber-100 px-2 py-1 rounded cursor-pointer text-xs"
+                            data-target="onprocess-{{ area_idx }}-{{ col_idx }}">
                             {{ col.count }}<i class="fas fa-caret-right ml-1 toggle-icon-sub"></i>
                         </button>
                         {% else %}
@@ -368,7 +388,7 @@
                     </td>
                     {% endfor %}
                 </tr>
-                
+
                 <!-- Onprocess technician detail rows (hidden) - ใช้ enumerate-style index -->
                 {% for col_idx in range(item.onprocess_columns|length) %}
                 {% set col = item.onprocess_columns[col_idx] %}
@@ -386,12 +406,15 @@
                                 <thead class="bg-amber-100">
                                     <tr>
                                         <th class="px-3 py-2 text-left text-xs font-medium text-amber-800">#</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-amber-800">รหัส Depot</th>
-                                        <th class="px-3 py-2 text-left text-xs font-medium text-amber-800">ชื่อ Depot</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-amber-800">รหัส Depot
+                                        </th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-amber-800">ชื่อ Depot
+                                        </th>
                                         <th class="px-3 py-2 text-left text-xs font-medium text-amber-800">จังหวัด</th>
                                         <th class="px-3 py-2 text-left text-xs font-medium text-amber-800">ชื่อช่าง</th>
                                         <th class="px-3 py-2 text-left text-xs font-medium text-amber-800">หมายเหตุ</th>
-                                        <th class="px-3 py-2 text-center text-xs font-medium text-amber-800">SLA (วัน)</th>
+                                        <th class="px-3 py-2 text-center text-xs font-medium text-amber-800">SLA (วัน)
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-200">
@@ -401,16 +424,20 @@
                                         <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
                                         <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
                                         <td class="px-3 py-2 text-xs text-gray-800">{{ tech.province }}</td>
-                                        <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}
+                                        </td>
                                         <td class="px-3 py-2 text-xs text-gray-600">{{ tech.get('remark', '') }}</td>
                                         <td class="px-3 py-2 text-xs text-center">
                                             {% set sla_val = tech.get('sla_total', 0) %}
                                             {% if sla_val > 60 %}
-                                            <span class="bg-red-100 text-red-700 px-2 py-1 rounded font-medium">{{ sla_val }}</span>
+                                            <span class="bg-red-100 text-red-700 px-2 py-1 rounded font-medium">{{
+                                                sla_val }}</span>
                                             {% elif sla_val > 45 %}
-                                            <span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded font-medium">{{ sla_val }}</span>
+                                            <span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded font-medium">{{
+                                                sla_val }}</span>
                                             {% else %}
-                                            <span class="bg-green-100 text-green-700 px-2 py-1 rounded font-medium">{{ sla_val }}</span>
+                                            <span class="bg-green-100 text-green-700 px-2 py-1 rounded font-medium">{{
+                                                sla_val }}</span>
                                             {% endif %}
                                         </td>
                                     </tr>
@@ -422,9 +449,9 @@
                 </tr>
                 {% endif %}
                 {% endfor %}
-                
+
                 <!-- Detail rows for other status (Completed, Cancel, Closed) -->
-                
+
                 <!-- Completed Breakdown -->
                 {% if item.completed_breakdown|length > 0 %}
                 <tr class="status-detail-row bg-green-50 hidden" id="completed-{{ area_idx }}">
@@ -436,33 +463,44 @@
                             <div class="space-y-2">
                                 {% for sub in item.completed_breakdown %}
                                 <div class="border border-green-200 rounded-lg overflow-hidden">
-                                    <button class="toggle-technician-list w-full flex items-center justify-between px-4 py-2 bg-green-100 hover:bg-green-200 transition cursor-pointer"
-                                            data-target="completed-{{ area_idx }}-{{ loop.index0 }}">
+                                    <button
+                                        class="toggle-technician-list w-full flex items-center justify-between px-4 py-2 bg-green-100 hover:bg-green-200 transition cursor-pointer"
+                                        data-target="completed-{{ area_idx }}-{{ loop.index0 }}">
                                         <span class="font-medium text-green-800">{{ sub.status }}</span>
                                         <span class="flex items-center gap-2">
-                                            <span class="bg-green-600 text-white px-2 py-1 rounded text-xs">{{ sub.count }} คน</span>
+                                            <span class="bg-green-600 text-white px-2 py-1 rounded text-xs">{{ sub.count
+                                                }} คน</span>
                                             <i class="fas fa-chevron-down toggle-icon-sub text-green-600"></i>
                                         </span>
                                     </button>
-                                    <div class="technician-list hidden bg-white" id="completed-{{ area_idx }}-{{ loop.index0 }}">
+                                    <div class="technician-list hidden bg-white"
+                                        id="completed-{{ area_idx }}-{{ loop.index0 }}">
                                         <table class="min-w-full">
                                             <thead class="bg-green-50">
                                                 <tr>
-                                                    <th class="px-3 py-2 text-left text-xs font-medium text-green-700">#</th>
-                                                    <th class="px-3 py-2 text-left text-xs font-medium text-green-700">รหัส Depot</th>
-                                                    <th class="px-3 py-2 text-left text-xs font-medium text-green-700">ชื่อ Depot</th>
-                                                    <th class="px-3 py-2 text-left text-xs font-medium text-green-700">จังหวัด</th>
-                                                    <th class="px-3 py-2 text-left text-xs font-medium text-green-700">ชื่อช่าง</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-green-700">#
+                                                    </th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-green-700">
+                                                        รหัส Depot</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-green-700">
+                                                        ชื่อ Depot</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-green-700">
+                                                        จังหวัด</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-green-700">
+                                                        ชื่อช่าง</th>
                                                 </tr>
                                             </thead>
                                             <tbody class="divide-y divide-gray-100">
                                                 {% for tech in sub.details %}
                                                 <tr class="hover:bg-gray-50">
                                                     <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
-                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
-                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}
+                                                    </td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}
+                                                    </td>
                                                     <td class="px-3 py-2 text-xs text-gray-800">{{ tech.province }}</td>
-                                                    <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{
+                                                        tech.full_name_th }}</td>
                                                 </tr>
                                                 {% endfor %}
                                             </tbody>
@@ -475,7 +513,7 @@
                     </td>
                 </tr>
                 {% endif %}
-                
+
                 <!-- Cancel Breakdown -->
                 {% if item.cancel_breakdown|length > 0 %}
                 <tr class="status-detail-row bg-gray-100 hidden" id="cancel-{{ area_idx }}">
@@ -487,33 +525,44 @@
                             <div class="space-y-2">
                                 {% for sub in item.cancel_breakdown %}
                                 <div class="border border-gray-300 rounded-lg overflow-hidden">
-                                    <button class="toggle-technician-list w-full flex items-center justify-between px-4 py-2 bg-gray-200 hover:bg-gray-300 transition cursor-pointer"
-                                            data-target="cancel-{{ area_idx }}-{{ loop.index0 }}">
+                                    <button
+                                        class="toggle-technician-list w-full flex items-center justify-between px-4 py-2 bg-gray-200 hover:bg-gray-300 transition cursor-pointer"
+                                        data-target="cancel-{{ area_idx }}-{{ loop.index0 }}">
                                         <span class="font-medium text-gray-700">{{ sub.status }}</span>
                                         <span class="flex items-center gap-2">
-                                            <span class="bg-gray-600 text-white px-2 py-1 rounded text-xs">{{ sub.count }} คน</span>
+                                            <span class="bg-gray-600 text-white px-2 py-1 rounded text-xs">{{ sub.count
+                                                }} คน</span>
                                             <i class="fas fa-chevron-down toggle-icon-sub text-gray-600"></i>
                                         </span>
                                     </button>
-                                    <div class="technician-list hidden bg-white" id="cancel-{{ area_idx }}-{{ loop.index0 }}">
+                                    <div class="technician-list hidden bg-white"
+                                        id="cancel-{{ area_idx }}-{{ loop.index0 }}">
                                         <table class="min-w-full">
                                             <thead class="bg-gray-50">
                                                 <tr>
-                                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">#</th>
-                                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">รหัส Depot</th>
-                                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">ชื่อ Depot</th>
-                                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">จังหวัด</th>
-                                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">ชื่อช่าง</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">#
+                                                    </th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                                                        รหัส Depot</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                                                        ชื่อ Depot</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                                                        จังหวัด</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                                                        ชื่อช่าง</th>
                                                 </tr>
                                             </thead>
                                             <tbody class="divide-y divide-gray-100">
                                                 {% for tech in sub.details %}
                                                 <tr class="hover:bg-gray-50">
                                                     <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
-                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
-                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}
+                                                    </td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}
+                                                    </td>
                                                     <td class="px-3 py-2 text-xs text-gray-800">{{ tech.province }}</td>
-                                                    <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{
+                                                        tech.full_name_th }}</td>
                                                 </tr>
                                                 {% endfor %}
                                             </tbody>
@@ -526,7 +575,7 @@
                     </td>
                 </tr>
                 {% endif %}
-                
+
                 <!-- Closed Breakdown -->
                 {% if item.closed_breakdown|length > 0 %}
                 <tr class="status-detail-row bg-red-50 hidden" id="closed-{{ area_idx }}">
@@ -538,33 +587,44 @@
                             <div class="space-y-2">
                                 {% for sub in item.closed_breakdown %}
                                 <div class="border border-red-200 rounded-lg overflow-hidden">
-                                    <button class="toggle-technician-list w-full flex items-center justify-between px-4 py-2 bg-red-100 hover:bg-red-200 transition cursor-pointer"
-                                            data-target="closed-{{ area_idx }}-{{ loop.index0 }}">
+                                    <button
+                                        class="toggle-technician-list w-full flex items-center justify-between px-4 py-2 bg-red-100 hover:bg-red-200 transition cursor-pointer"
+                                        data-target="closed-{{ area_idx }}-{{ loop.index0 }}">
                                         <span class="font-medium text-red-800">{{ sub.status }}</span>
                                         <span class="flex items-center gap-2">
-                                            <span class="bg-red-600 text-white px-2 py-1 rounded text-xs">{{ sub.count }} คน</span>
+                                            <span class="bg-red-600 text-white px-2 py-1 rounded text-xs">{{ sub.count
+                                                }} คน</span>
                                             <i class="fas fa-chevron-down toggle-icon-sub text-red-600"></i>
                                         </span>
                                     </button>
-                                    <div class="technician-list hidden bg-white" id="closed-{{ area_idx }}-{{ loop.index0 }}">
+                                    <div class="technician-list hidden bg-white"
+                                        id="closed-{{ area_idx }}-{{ loop.index0 }}">
                                         <table class="min-w-full">
                                             <thead class="bg-red-50">
                                                 <tr>
-                                                    <th class="px-3 py-2 text-left text-xs font-medium text-red-700">#</th>
-                                                    <th class="px-3 py-2 text-left text-xs font-medium text-red-700">รหัส Depot</th>
-                                                    <th class="px-3 py-2 text-left text-xs font-medium text-red-700">ชื่อ Depot</th>
-                                                    <th class="px-3 py-2 text-left text-xs font-medium text-red-700">จังหวัด</th>
-                                                    <th class="px-3 py-2 text-left text-xs font-medium text-red-700">ชื่อช่าง</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-red-700">#
+                                                    </th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-red-700">
+                                                        รหัส Depot</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-red-700">
+                                                        ชื่อ Depot</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-red-700">
+                                                        จังหวัด</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-red-700">
+                                                        ชื่อช่าง</th>
                                                 </tr>
                                             </thead>
                                             <tbody class="divide-y divide-gray-100">
                                                 {% for tech in sub.details %}
                                                 <tr class="hover:bg-gray-50">
                                                     <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
-                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
-                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}
+                                                    </td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}
+                                                    </td>
                                                     <td class="px-3 py-2 text-xs text-gray-800">{{ tech.province }}</td>
-                                                    <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}</td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{
+                                                        tech.full_name_th }}</td>
                                                 </tr>
                                                 {% endfor %}
                                             </tbody>
@@ -577,7 +637,7 @@
                     </td>
                 </tr>
                 {% endif %}
-                
+
                 {% endfor %}
             </tbody>
         </table>
@@ -596,19 +656,30 @@
                 <thead class="bg-gray-800 text-white sticky top-0">
                     <tr>
                         <th class="px-2 py-2 text-left font-medium text-xs">#</th>
-                        <th class="px-2 py-2 text-left font-medium text-xs cursor-pointer hover:bg-gray-700 sortable-header" data-sort="area">Area <i class="fas fa-sort text-gray-400 ml-1"></i></th>
-                        <th class="px-2 py-2 text-left font-medium text-xs cursor-pointer hover:bg-gray-700 sortable-header" data-sort="depot_code">รหัส <i class="fas fa-sort text-gray-400 ml-1"></i></th>
-                        <th class="px-2 py-2 text-left font-medium text-xs cursor-pointer hover:bg-gray-700 sortable-header" data-sort="depot_name" style="max-width: 150px;">ตัวแทน <i class="fas fa-sort text-gray-400 ml-1"></i></th>
-                        <th class="px-2 py-2 text-left font-medium text-xs cursor-pointer hover:bg-gray-700 sortable-header" data-sort="province">จังหวัด <i class="fas fa-sort text-gray-400 ml-1"></i></th>
-                        <th class="px-2 py-2 text-center font-medium text-xs cursor-pointer hover:bg-gray-700 sortable-header" data-sort="total">ลงทะเบียน <i class="fas fa-sort text-gray-400 ml-1"></i></th>
-                        <th class="px-2 py-2 text-center font-medium text-xs cursor-pointer hover:bg-gray-700 bg-green-700 sortable-header" data-sort="completed">สำเร็จ <i class="fas fa-sort text-gray-400 ml-1"></i></th>
-                        <th class="px-2 py-2 text-center font-medium text-xs cursor-pointer hover:bg-gray-700 bg-blue-700 sortable-header" data-sort="success_rate">% <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                        <th class="px-2 py-2 text-left font-medium text-xs cursor-pointer hover:bg-gray-700 sortable-header"
+                            data-sort="area">Area <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                        <th class="px-2 py-2 text-left font-medium text-xs cursor-pointer hover:bg-gray-700 sortable-header"
+                            data-sort="depot_code">รหัส <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                        <th class="px-2 py-2 text-left font-medium text-xs cursor-pointer hover:bg-gray-700 sortable-header"
+                            data-sort="depot_name" style="max-width: 150px;">ตัวแทน <i
+                                class="fas fa-sort text-gray-400 ml-1"></i></th>
+                        <th class="px-2 py-2 text-left font-medium text-xs cursor-pointer hover:bg-gray-700 sortable-header"
+                            data-sort="province">จังหวัด <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                        <th class="px-2 py-2 text-center font-medium text-xs cursor-pointer hover:bg-gray-700 sortable-header"
+                            data-sort="total">ลงทะเบียน <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                        <th class="px-2 py-2 text-center font-medium text-xs cursor-pointer hover:bg-gray-700 bg-green-700 sortable-header"
+                            data-sort="completed">สำเร็จ <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                        <th class="px-2 py-2 text-center font-medium text-xs cursor-pointer hover:bg-gray-700 bg-blue-700 sortable-header"
+                            data-sort="success_rate">% <i class="fas fa-sort text-gray-400 ml-1"></i></th>
                     </tr>
                     <!-- Total Row -->
                     <tr class="bg-gray-100 font-bold border-b-2 border-gray-400">
-                        <td class="px-2 py-2 text-gray-800 text-xs" colspan="5">Total ({{ depot_agents|length }} ตัวแทน)</td>
-                        <td class="px-2 py-2 text-center text-gray-800 text-xs">{{ depot_agents|sum(attribute='total') }}</td>
-                        <td class="px-2 py-2 text-center text-green-600 text-xs">{{ depot_agents|sum(attribute='completed') }}</td>
+                        <td class="px-2 py-2 text-gray-800 text-xs" colspan="5">Total ({{ depot_agents|length }} ตัวแทน)
+                        </td>
+                        <td class="px-2 py-2 text-center text-gray-800 text-xs">{{ depot_agents|sum(attribute='total')
+                            }}</td>
+                        <td class="px-2 py-2 text-center text-green-600 text-xs">{{
+                            depot_agents|sum(attribute='completed') }}</td>
                         <td class="px-2 py-2 text-center text-xs">
                             {% set total_reg = depot_agents|sum(attribute='total') %}
                             {% set total_comp = depot_agents|sum(attribute='completed') %}
@@ -620,11 +691,15 @@
                 </thead>
                 <tbody class="divide-y divide-gray-200" id="depotAgentTableBody">
                     {% for agent in depot_agents %}
-                    <tr class="hover:bg-gray-50" data-area="{{ agent.area }}" data-depot_code="{{ agent.depot_code }}" data-depot_name="{{ agent.depot_name }}" data-province="{{ agent.province }}" data-total="{{ agent.total }}" data-completed="{{ agent.completed }}" data-success_rate="{{ agent.success_rate }}">
+                    <tr class="hover:bg-gray-50" data-area="{{ agent.area }}" data-depot_code="{{ agent.depot_code }}"
+                        data-depot_name="{{ agent.depot_name }}" data-province="{{ agent.province }}"
+                        data-total="{{ agent.total }}" data-completed="{{ agent.completed }}"
+                        data-success_rate="{{ agent.success_rate }}">
                         <td class="px-2 py-1 text-gray-600 text-xs row-index">{{ loop.index }}</td>
                         <td class="px-2 py-1 text-gray-800 font-medium text-xs">{{ agent.area }}</td>
                         <td class="px-2 py-1 text-gray-600 text-xs">{{ agent.depot_code }}</td>
-                        <td class="px-2 py-1 text-gray-800 text-xs truncate" style="max-width: 150px;" title="{{ agent.depot_name }}">{{ agent.depot_name }}</td>
+                        <td class="px-2 py-1 text-gray-800 text-xs truncate" style="max-width: 150px;"
+                            title="{{ agent.depot_name }}">{{ agent.depot_name }}</td>
                         <td class="px-2 py-1 text-gray-600 text-xs">{{ agent.province }}</td>
                         <td class="px-2 py-1 text-center font-medium text-xs">{{ agent.total }}</td>
                         <td class="px-2 py-1 text-center text-green-600 font-medium text-xs">{{ agent.completed }}</td>
@@ -666,221 +741,221 @@
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // ===== Onprocess Expand to Right (แสดงสถานะย่อยเป็นคอลัมน์ทางขวา) =====
-    let onprocessExpanded = false;
-    
-    // ไม่ต้อง update header names เพราะมาจาก server แล้ว
-    
-    document.querySelectorAll('.toggle-onprocess-expand').forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const icon = this.querySelector('.toggle-icon-onprocess');
-            
-            if (!onprocessExpanded) {
-                // Expand - แสดงคอลัมน์ทางขวาทั้งหมด
-                onprocessExpanded = true;
-                
-                // แสดงทุก sub-columns
-                document.querySelectorAll('.onprocess-sub-col').forEach(function(col) {
-                    col.classList.remove('hidden');
-                });
-                
-                // เปลี่ยน icon ทุกปุ่ม
-                document.querySelectorAll('.toggle-icon-onprocess').forEach(function(ic) {
-                    ic.classList.remove('fa-caret-right');
-                    ic.classList.add('fa-caret-down');
-                });
-            } else {
-                // Collapse - ซ่อนคอลัมน์ทางขวา
-                onprocessExpanded = false;
-                
-                // ซ่อน sub-status columns
-                document.querySelectorAll('.onprocess-sub-col').forEach(function(col) {
-                    col.classList.add('hidden');
-                });
-                
-                // ซ่อน technician detail rows
-                document.querySelectorAll('.technician-detail-row').forEach(function(row) {
-                    row.classList.add('hidden');
-                });
-                
-                // เปลี่ยน icon กลับ
-                document.querySelectorAll('.toggle-icon-onprocess').forEach(function(ic) {
-                    ic.classList.remove('fa-caret-down');
-                    ic.classList.add('fa-caret-right');
-                });
-                
-                // reset sub icons
-                document.querySelectorAll('.onprocess-sub-col .toggle-icon-sub').forEach(function(ic) {
-                    ic.classList.remove('fa-caret-down');
-                    ic.classList.add('fa-caret-right');
-                });
-            }
+    document.addEventListener('DOMContentLoaded', function () {
+        // ===== Onprocess Expand to Right (แสดงสถานะย่อยเป็นคอลัมน์ทางขวา) =====
+        let onprocessExpanded = false;
+
+        // ไม่ต้อง update header names เพราะมาจาก server แล้ว
+
+        document.querySelectorAll('.toggle-onprocess-expand').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                const icon = this.querySelector('.toggle-icon-onprocess');
+
+                if (!onprocessExpanded) {
+                    // Expand - แสดงคอลัมน์ทางขวาทั้งหมด
+                    onprocessExpanded = true;
+
+                    // แสดงทุก sub-columns
+                    document.querySelectorAll('.onprocess-sub-col').forEach(function (col) {
+                        col.classList.remove('hidden');
+                    });
+
+                    // เปลี่ยน icon ทุกปุ่ม
+                    document.querySelectorAll('.toggle-icon-onprocess').forEach(function (ic) {
+                        ic.classList.remove('fa-caret-right');
+                        ic.classList.add('fa-caret-down');
+                    });
+                } else {
+                    // Collapse - ซ่อนคอลัมน์ทางขวา
+                    onprocessExpanded = false;
+
+                    // ซ่อน sub-status columns
+                    document.querySelectorAll('.onprocess-sub-col').forEach(function (col) {
+                        col.classList.add('hidden');
+                    });
+
+                    // ซ่อน technician detail rows
+                    document.querySelectorAll('.technician-detail-row').forEach(function (row) {
+                        row.classList.add('hidden');
+                    });
+
+                    // เปลี่ยน icon กลับ
+                    document.querySelectorAll('.toggle-icon-onprocess').forEach(function (ic) {
+                        ic.classList.remove('fa-caret-down');
+                        ic.classList.add('fa-caret-right');
+                    });
+
+                    // reset sub icons
+                    document.querySelectorAll('.onprocess-sub-col .toggle-icon-sub').forEach(function (ic) {
+                        ic.classList.remove('fa-caret-down');
+                        ic.classList.add('fa-caret-right');
+                    });
+                }
+            });
         });
-    });
-    
-    // ===== Technician Detail Row Toggle (สำหรับ Onprocess sub-status) - ใช้ Event Delegation =====
-    document.addEventListener('click', function(e) {
-        // ตรวจสอบว่าคลิกที่ปุ่มใน onprocess-sub-col หรือไม่
-        const btn = e.target.closest('.onprocess-sub-col .toggle-technician-list');
-        if (btn) {
-            e.preventDefault();
-            e.stopPropagation();
-            const targetId = btn.getAttribute('data-target');
-            const targetRow = document.getElementById(targetId);
-            const icon = btn.querySelector('.toggle-icon-sub');
-            
-            if (targetRow) {
-                if (targetRow.classList.contains('hidden')) {
-                    targetRow.classList.remove('hidden');
-                    if (icon) {
-                        icon.classList.remove('fa-caret-right');
-                        icon.classList.add('fa-caret-down');
+
+        // ===== Technician Detail Row Toggle (สำหรับ Onprocess sub-status) - ใช้ Event Delegation =====
+        document.addEventListener('click', function (e) {
+            // ตรวจสอบว่าคลิกที่ปุ่มใน onprocess-sub-col หรือไม่
+            const btn = e.target.closest('.onprocess-sub-col .toggle-technician-list');
+            if (btn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const targetId = btn.getAttribute('data-target');
+                const targetRow = document.getElementById(targetId);
+                const icon = btn.querySelector('.toggle-icon-sub');
+
+                if (targetRow) {
+                    if (targetRow.classList.contains('hidden')) {
+                        targetRow.classList.remove('hidden');
+                        if (icon) {
+                            icon.classList.remove('fa-caret-right');
+                            icon.classList.add('fa-caret-down');
+                        }
+                    } else {
+                        targetRow.classList.add('hidden');
+                        if (icon) {
+                            icon.classList.remove('fa-caret-down');
+                            icon.classList.add('fa-caret-right');
+                        }
                     }
                 } else {
-                    targetRow.classList.add('hidden');
-                    if (icon) {
+                    // Fallback: ลองหา row ด้วย attribute selector
+                    const allDetailRows = document.querySelectorAll('.technician-detail-row');
+                    allDetailRows.forEach(function (row) {
+                        if (row.id === targetId) {
+                            row.classList.toggle('hidden');
+                        }
+                    });
+                }
+            }
+        });
+
+        // ===== Status Details Expand/Collapse (สำหรับ Completed, Cancel, Closed) =====
+        document.querySelectorAll('.toggle-status-details').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('data-target');
+                const targetRow = document.getElementById(targetId);
+                const icon = this.querySelector('.toggle-icon');
+
+                if (targetRow) {
+                    if (targetRow.classList.contains('hidden')) {
+                        // Expand
+                        targetRow.classList.remove('hidden');
+                        icon.classList.remove('fa-caret-right');
+                        icon.classList.add('fa-caret-down');
+                    } else {
+                        // Collapse
+                        targetRow.classList.add('hidden');
                         icon.classList.remove('fa-caret-down');
                         icon.classList.add('fa-caret-right');
                     }
                 }
-            } else {
-                // Fallback: ลองหา row ด้วย attribute selector
-                const allDetailRows = document.querySelectorAll('.technician-detail-row');
-                allDetailRows.forEach(function(row) {
-                    if (row.id === targetId) {
-                        row.classList.toggle('hidden');
+            });
+        });
+
+        // ===== Technician List Expand/Collapse (สำหรับสถานะย่อย Completed, Cancel, Closed) =====
+        // ใช้สำหรับปุ่มที่ไม่ได้อยู่ใน onprocess-sub-col
+        document.querySelectorAll('.toggle-technician-list:not(.onprocess-sub-col .toggle-technician-list)').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('data-target');
+                const targetDiv = document.getElementById(targetId);
+                const icon = this.querySelector('.toggle-icon-sub');
+
+                if (targetDiv) {
+                    if (targetDiv.classList.contains('hidden')) {
+                        // Expand
+                        targetDiv.classList.remove('hidden');
+                        if (icon) {
+                            icon.classList.remove('fa-chevron-down');
+                            icon.classList.add('fa-chevron-up');
+                        }
+                    } else {
+                        // Collapse
+                        targetDiv.classList.add('hidden');
+                        if (icon) {
+                            icon.classList.remove('fa-chevron-up');
+                            icon.classList.add('fa-chevron-down');
+                        }
                     }
-                });
+                }
+            });
+        });
+
+        // ===== Area Table Expand/Collapse =====
+        document.querySelectorAll('.toggle-breakdown').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('data-target');
+                const targetRow = document.getElementById(targetId);
+                const icon = this.querySelector('.toggle-icon');
+
+                if (targetRow) {
+                    if (targetRow.classList.contains('hidden')) {
+                        // Expand
+                        targetRow.classList.remove('hidden');
+                        icon.classList.remove('fa-plus-circle');
+                        icon.classList.add('fa-minus-circle');
+                    } else {
+                        // Collapse
+                        targetRow.classList.add('hidden');
+                        icon.classList.remove('fa-minus-circle');
+                        icon.classList.add('fa-plus-circle');
+                    }
+                }
+            });
+        });
+
+        // Store chart instances
+        let chartInstances = {};
+
+        // Helper to create chart safely
+        function createChart(canvasId, config) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return null;
+
+            // Destroy existing chart on this canvas
+            if (chartInstances[canvasId]) {
+                chartInstances[canvasId].destroy();
             }
+
+            const ctx = canvas.getContext('2d');
+            config.options = config.options || {};
+            config.options.animation = false;
+            config.options.responsive = true;
+            config.options.maintainAspectRatio = false;
+
+            chartInstances[canvasId] = new Chart(ctx, config);
+            return chartInstances[canvasId];
         }
-    });
 
-    // ===== Status Details Expand/Collapse (สำหรับ Completed, Cancel, Closed) =====
-    document.querySelectorAll('.toggle-status-details').forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const targetId = this.getAttribute('data-target');
-            const targetRow = document.getElementById(targetId);
-            const icon = this.querySelector('.toggle-icon');
-            
-            if (targetRow) {
-                if (targetRow.classList.contains('hidden')) {
-                    // Expand
-                    targetRow.classList.remove('hidden');
-                    icon.classList.remove('fa-caret-right');
-                    icon.classList.add('fa-caret-down');
-                } else {
-                    // Collapse
-                    targetRow.classList.add('hidden');
-                    icon.classList.remove('fa-caret-down');
-                    icon.classList.add('fa-caret-right');
-                }
-            }
-        });
-    });
-
-    // ===== Technician List Expand/Collapse (สำหรับสถานะย่อย Completed, Cancel, Closed) =====
-    // ใช้สำหรับปุ่มที่ไม่ได้อยู่ใน onprocess-sub-col
-    document.querySelectorAll('.toggle-technician-list:not(.onprocess-sub-col .toggle-technician-list)').forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const targetId = this.getAttribute('data-target');
-            const targetDiv = document.getElementById(targetId);
-            const icon = this.querySelector('.toggle-icon-sub');
-            
-            if (targetDiv) {
-                if (targetDiv.classList.contains('hidden')) {
-                    // Expand
-                    targetDiv.classList.remove('hidden');
-                    if (icon) {
-                        icon.classList.remove('fa-chevron-down');
-                        icon.classList.add('fa-chevron-up');
-                    }
-                } else {
-                    // Collapse
-                    targetDiv.classList.add('hidden');
-                    if (icon) {
-                        icon.classList.remove('fa-chevron-up');
-                        icon.classList.add('fa-chevron-down');
-                    }
-                }
-            }
-        });
-    });
-
-    // ===== Area Table Expand/Collapse =====
-    document.querySelectorAll('.toggle-breakdown').forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            const targetId = this.getAttribute('data-target');
-            const targetRow = document.getElementById(targetId);
-            const icon = this.querySelector('.toggle-icon');
-            
-            if (targetRow) {
-                if (targetRow.classList.contains('hidden')) {
-                    // Expand
-                    targetRow.classList.remove('hidden');
-                    icon.classList.remove('fa-plus-circle');
-                    icon.classList.add('fa-minus-circle');
-                } else {
-                    // Collapse
-                    targetRow.classList.add('hidden');
-                    icon.classList.remove('fa-minus-circle');
-                    icon.classList.add('fa-plus-circle');
-                }
-            }
-        });
-    });
-
-    // Store chart instances
-    let chartInstances = {};
-    
-    // Helper to create chart safely
-    function createChart(canvasId, config) {
-        const canvas = document.getElementById(canvasId);
-        if (!canvas) return null;
-        
-        // Destroy existing chart on this canvas
-        if (chartInstances[canvasId]) {
-            chartInstances[canvasId].destroy();
-        }
-        
-        const ctx = canvas.getContext('2d');
-        config.options = config.options || {};
-        config.options.animation = false;
-        config.options.responsive = true;
-        config.options.maintainAspectRatio = false;
-        
-        chartInstances[canvasId] = new Chart(ctx, config);
-        return chartInstances[canvasId];
-    }
-
-    // ===== กราฟที่ 1: Trend รายเดือน - ลงทะเบียน vs ขึ้นทะเบียนสำเร็จ =====
-    const monthLabels = [{% for m in monthly %}'{{ m.month }}'{% if not loop.last %},{% endif %}{% endfor %}];
+        // ===== กราฟที่ 1: Trend รายเดือน - ลงทะเบียน vs ขึ้นทะเบียนสำเร็จ =====
+        const monthLabels = [{% for m in monthly %}'{{ m.month }}'{% if not loop.last %},{% endif %}{% endfor %}];
     const monthlyTotals = [{% for m in monthly %}{{ m.total }}{% if not loop.last %},{% endif %}{% endfor %}];
     const monthlyCompleted = [{% for m in monthly %}{{ m.completed }}{% if not loop.last %},{% endif %}{% endfor %}];
-    
+
     // Custom plugin สำหรับแสดงตัวเลขบนจุดกราฟ
     const trendLabelPlugin = {
         id: 'trendLabelPlugin',
-        afterDatasetsDraw: function(chart) {
+        afterDatasetsDraw: function (chart) {
             const ctx = chart.ctx;
-            
+
             chart.data.datasets.forEach((dataset, datasetIndex) => {
                 const meta = chart.getDatasetMeta(datasetIndex);
                 if (!meta.hidden) {
                     meta.data.forEach((point, index) => {
                         const value = dataset.data[index];
-                        
+
                         ctx.save();
                         ctx.font = 'bold 12px sans-serif';
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'bottom';
-                        
+
                         let displayText = value.toString();
-                        
+
                         // กำหนดสีและข้อความตามชุดข้อมูล
                         if (datasetIndex === 0) {
                             // ลงทะเบียน - สีน้ำเงิน
@@ -892,7 +967,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             const percentage = totalRegistered > 0 ? (value / totalRegistered * 100).toFixed(1) : 0;
                             displayText = value + ' (' + percentage + '%)';
                         }
-                        
+
                         // แสดงตัวเลขเหนือจุด (ลบ 15 pixels จาก y position)
                         ctx.fillText(displayText, point.x, point.y - 15);
                         ctx.restore();
@@ -901,7 +976,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     };
-    
+
     createChart('trendChart', {
         type: 'line',
         plugins: [trendLabelPlugin],
@@ -975,32 +1050,32 @@ document.addEventListener('DOMContentLoaded', function() {
         { area: '{{ a.area }}', successRate: {{ a.success_rate }}, completed: {{ a.completed }}, total: {{ a.total }} }{% if not loop.last %},{% endif %}
         {% endfor %}
     ].sort((a, b) => b.successRate - a.successRate);
-    
+
     const areaRankingLabels = areaRankingData.map(d => d.area);
     const areaRankingRates = areaRankingData.map(d => d.successRate);
-    
+
     // Custom plugin สำหรับแสดงจำนวนในแท่งและ % ที่ปลายแท่ง
     const areaRankingLabelPlugin = {
         id: 'areaRankingLabelPlugin',
-        afterDatasetsDraw: function(chart) {
+        afterDatasetsDraw: function (chart) {
             const ctx = chart.ctx;
             const meta = chart.getDatasetMeta(0);
             const chartArea = chart.chartArea;
-            
+
             meta.data.forEach((bar, index) => {
                 const data = areaRankingData[index];
                 const barWidth = bar.x - bar.base;
-                
+
                 ctx.save();
                 ctx.textBaseline = 'middle';
-                
+
                 // คำนวณตำแหน่งจริงของแท่ง (bar.base = ตำแหน่งเริ่มต้น, bar.x = ตำแหน่งสิ้นสุด)
                 const textToDisplay = data.completed + '/' + data.total;
-                
+
                 // วัดความกว้างของข้อความ
                 ctx.font = 'bold 10px sans-serif';
                 const textWidth = ctx.measureText(textToDisplay).width;
-                
+
                 // ถ้าแท่งกว้างพอ แสดงตัวเลขในแท่ง (สีขาว)
                 // ถ้าแท่งแคบเกินไป แสดงตัวเลขนอกแท่ง (สีดำ)
                 if (barWidth > textWidth + 10) {
@@ -1015,7 +1090,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     ctx.textAlign = 'right';
                     ctx.fillText(textToDisplay, bar.base - 5, bar.y);
                 }
-                
+
                 // แสดง % ที่ปลายแท่ง (สีดำ) - ตรวจสอบว่าไม่เกินขอบ chart
                 ctx.fillStyle = '#1F2937';
                 ctx.font = 'bold 11px sans-serif';
@@ -1023,12 +1098,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 const percentText = data.successRate.toFixed(1) + '%';
                 const percentX = Math.min(bar.x + 5, chartArea.right - ctx.measureText(percentText).width - 5);
                 ctx.fillText(percentText, percentX, bar.y);
-                
+
                 ctx.restore();
             });
         }
     };
-    
+
     createChart('areaSuccessRateChart', {
         type: 'bar',
         plugins: [areaRankingLabelPlugin],
@@ -1055,7 +1130,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 legend: { display: false },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             const idx = context.dataIndex;
                             const data = areaRankingData[idx];
                             return [
@@ -1074,7 +1149,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     beginAtZero: true,
                     max: 100,
                     ticks: {
-                        callback: function(value) {
+                        callback: function (value) {
                             return value + '%';
                         }
                     }
@@ -1090,18 +1165,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const areaClosed = [{% for a in areas %}{{ a.closed }}{% if not loop.last %},{% endif %}{% endfor %}];
     const areaCancel = [{% for a in areas %}{{ a.cancel }}{% if not loop.last %},{% endif %}{% endfor %}];
     const areaTotals = [{% for a in areas %}{{ a.total }}{% if not loop.last %},{% endif %}{% endfor %}];
-    
+
     // Custom plugin สำหรับแสดง total บน top ของ stack
     const stackTotalPlugin = {
         id: 'stackTotalPlugin',
-        afterDatasetsDraw: function(chart) {
+        afterDatasetsDraw: function (chart) {
             const ctx = chart.ctx;
             const datasets = chart.data.datasets;
-            
+
             chart.data.labels.forEach((label, i) => {
                 let total = 0;
                 let maxY = null;
-                
+
                 datasets.forEach((dataset, j) => {
                     const meta = chart.getDatasetMeta(j);
                     if (!meta.hidden) {
@@ -1112,7 +1187,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }
                 });
-                
+
                 if (total > 0 && maxY !== null) {
                     ctx.save();
                     ctx.textAlign = 'center';
@@ -1125,7 +1200,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     };
-    
+
     new Chart(document.getElementById('statusChart'), {
         type: 'bar',
         plugins: [ChartDataLabels, stackTotalPlugin],
@@ -1139,7 +1214,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     datalabels: {
                         color: '#fff',
                         font: { weight: 'bold', size: 11 },
-                        formatter: function(value) { return value > 0 ? value : ''; }
+                        formatter: function (value) { return value > 0 ? value : ''; }
                     }
                 },
                 {
@@ -1149,17 +1224,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     datalabels: {
                         color: '#fff',
                         font: { weight: 'bold', size: 11 },
-                        formatter: function(value) { return value > 0 ? value : ''; }
+                        formatter: function (value) { return value > 0 ? value : ''; }
                     }
                 },
                 {
-                    label: 'ปิดงาน',
+                    label: 'ไม่ผ่าน',
                     data: areaClosed,
                     backgroundColor: '#EF4444',
                     datalabels: {
                         color: '#fff',
                         font: { weight: 'bold', size: 11 },
-                        formatter: function(value) { return value > 0 ? value : ''; }
+                        formatter: function (value) { return value > 0 ? value : ''; }
                     }
                 },
                 {
@@ -1169,7 +1244,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     datalabels: {
                         color: '#fff',
                         font: { weight: 'bold', size: 11 },
-                        formatter: function(value) { return value > 0 ? value : ''; }
+                        formatter: function (value) { return value > 0 ? value : ''; }
                     }
                 }
             ]
@@ -1185,7 +1260,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 legend: { position: 'bottom' },
                 tooltip: {
                     callbacks: {
-                        afterTitle: function(context) {
+                        afterTitle: function (context) {
                             const idx = context[0].dataIndex;
                             return 'รวม: ' + areaTotals[idx] + ' คน';
                         }
@@ -1201,85 +1276,85 @@ document.addEventListener('DOMContentLoaded', function() {
     const barMonthlyOnprocess = [{% for m in monthly %}{{ m.onprocess }}{% if not loop.last %},{% endif %}{% endfor %}];
     const barMonthlyClosed = [{% for m in monthly %}{{ m.closed }}{% if not loop.last %},{% endif %}{% endfor %}];
     const barMonthlyCancel = [{% for m in monthly %}{{ m.cancel }}{% if not loop.last %},{% endif %}{% endfor %}];
-    
+
     createChart('monthlyChart', {
         type: 'bar',
         data: {
             labels: [{% for m in monthly %}'{{ m.month }}'{% if not loop.last %},{% endif %}{% endfor %}],
-            datasets: [
-                {
-                    label: 'ขึ้นทะเบียนเรียบร้อย',
-                    data: barMonthlyCompleted,
-                    backgroundColor: '#10B981',
-                    datalabels: {
-                        color: '#fff',
-                        font: { weight: 'bold', size: 11 },
-                        formatter: function(value) { return value > 0 ? value : ''; }
-                    }
-                },
-                {
-                    label: 'อยู่ระหว่างดำเนินการ',
-                    data: barMonthlyOnprocess,
-                    backgroundColor: '#F59E0B',
-                    datalabels: {
-                        color: '#fff',
-                        font: { weight: 'bold', size: 11 },
-                        formatter: function(value) { return value > 0 ? value : ''; }
-                    }
-                },
-                {
-                    label: 'ปิดงาน',
-                    data: barMonthlyClosed,
-                    backgroundColor: '#EF4444',
-                    datalabels: {
-                        color: '#fff',
-                        font: { weight: 'bold', size: 11 },
-                        formatter: function(value) { return value > 0 ? value : ''; }
-                    }
-                },
-                {
-                    label: 'ยกเลิก',
-                    data: barMonthlyCancel,
-                    backgroundColor: '#6B7280',
-                    datalabels: {
-                        color: '#fff',
-                        font: { weight: 'bold', size: 11 },
-                        formatter: function(value) { return value > 0 ? value : ''; }
-                    }
-                }
-            ]
-        },
-        options: {
-            layout: {
-                padding: { top: 25 }
-            },
-            plugins: { 
-                legend: { position: 'bottom' },
-                datalabels: { display: true }
-            },
-            scales: { 
-                x: { stacked: true }, 
-                y: { 
-                    stacked: true,
-                    afterFit: function(scaleInstance) {
-                        scaleInstance.paddingTop = 25;
-                    }
-                } 
+        datasets: [
+        {
+            label: 'ขึ้นทะเบียนเรียบร้อย',
+            data: barMonthlyCompleted,
+            backgroundColor: '#10B981',
+            datalabels: {
+                color: '#fff',
+                font: { weight: 'bold', size: 11 },
+                formatter: function (value) { return value > 0 ? value : ''; }
             }
         },
+        {
+            label: 'อยู่ระหว่างดำเนินการ',
+            data: barMonthlyOnprocess,
+            backgroundColor: '#F59E0B',
+            datalabels: {
+                color: '#fff',
+                font: { weight: 'bold', size: 11 },
+                formatter: function (value) { return value > 0 ? value : ''; }
+            }
+        },
+        {
+            label: 'ไม่ผ่าน',
+            data: barMonthlyClosed,
+            backgroundColor: '#EF4444',
+            datalabels: {
+                color: '#fff',
+                font: { weight: 'bold', size: 11 },
+                formatter: function (value) { return value > 0 ? value : ''; }
+            }
+        },
+        {
+            label: 'ยกเลิก',
+            data: barMonthlyCancel,
+            backgroundColor: '#6B7280',
+            datalabels: {
+                color: '#fff',
+                font: { weight: 'bold', size: 11 },
+                formatter: function (value) { return value > 0 ? value : ''; }
+            }
+        }
+    ]
+        },
+        options: {
+        layout: {
+            padding: { top: 25 }
+        },
+        plugins: {
+            legend: { position: 'bottom' },
+            datalabels: { display: true }
+        },
+        scales: {
+            x: { stacked: true },
+            y: {
+                stacked: true,
+                afterFit: function (scaleInstance) {
+                    scaleInstance.paddingTop = 25;
+                }
+            }
+        }
+    },
         plugins: [{
             // Custom plugin เพื่อแสดงยอดรวมบนแท่ง
             id: 'totalLabels',
-            afterDatasetsDraw: function(chart) {
+            afterDatasetsDraw: function (chart) {
                 const ctx = chart.ctx;
                 const datasets = chart.data.datasets;
                 const meta = chart.getDatasetMeta(datasets.length - 1);
-                
+
                 ctx.save();
                 ctx.font = 'bold 13px sans-serif';
                 ctx.fillStyle = '#1F2937';
                 ctx.textAlign = 'center';
-                
+
                 meta.data.forEach((bar, index) => {
                     const total = barMonthlyTotals[index];
                     if (total > 0) {
@@ -1293,13 +1368,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ===== Depot Agent Table Sorting =====
     let currentSort = { column: 'total', direction: 'desc' };
-    
-    document.querySelectorAll('.sortable-header').forEach(function(header) {
-        header.addEventListener('click', function() {
+
+    document.querySelectorAll('.sortable-header').forEach(function (header) {
+        header.addEventListener('click', function () {
             const sortColumn = this.getAttribute('data-sort');
             const tbody = document.getElementById('depotAgentTableBody');
             const rows = Array.from(tbody.querySelectorAll('tr'));
-            
+
             // Toggle direction if same column
             if (currentSort.column === sortColumn) {
                 currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
@@ -1307,21 +1382,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 currentSort.column = sortColumn;
                 currentSort.direction = 'asc';
             }
-            
+
             // Update icons
-            document.querySelectorAll('.sortable-header i').forEach(function(icon) {
+            document.querySelectorAll('.sortable-header i').forEach(function (icon) {
                 icon.className = 'fas fa-sort text-gray-400 ml-1';
             });
             const icon = this.querySelector('i');
-            icon.className = currentSort.direction === 'asc' 
-                ? 'fas fa-sort-up text-white ml-1' 
+            icon.className = currentSort.direction === 'asc'
+                ? 'fas fa-sort-up text-white ml-1'
                 : 'fas fa-sort-down text-white ml-1';
-            
+
             // Sort rows
-            rows.sort(function(a, b) {
+            rows.sort(function (a, b) {
                 let aVal = a.getAttribute('data-' + sortColumn) || '';
                 let bVal = b.getAttribute('data-' + sortColumn) || '';
-                
+
                 // Check if numeric
                 if (['total', 'completed', 'success_rate'].includes(sortColumn)) {
                     aVal = parseFloat(aVal) || 0;
@@ -1330,16 +1405,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     aVal = aVal.toLowerCase();
                     bVal = bVal.toLowerCase();
                 }
-                
+
                 if (currentSort.direction === 'asc') {
                     return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
                 } else {
                     return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
                 }
             });
-            
+
             // Re-append rows and update index
-            rows.forEach(function(row, index) {
+            rows.forEach(function (row, index) {
                 row.querySelector('.row-index').textContent = index + 1;
                 tbody.appendChild(row);
             });
@@ -1347,214 +1422,214 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Multi-Select Dropdown Filter
-document.addEventListener('DOMContentLoaded', function() {
-    // เก็บค่าที่เลือกไว้
-    let selectedYears = [];
-    let selectedMonths = [];
-    
-    const yearDropdownBtn = document.getElementById('yearDropdownBtn');
-    const monthDropdownBtn = document.getElementById('monthDropdownBtn');
-    const yearDropdown = document.getElementById('yearDropdown');
-    const monthDropdown = document.getElementById('monthDropdown');
-    const applyFilterBtn = document.getElementById('applyFilterBtn');
-    const resetFilterBtn = document.getElementById('resetFilterBtn');
-    const yearSelectAll = document.getElementById('yearSelectAll');
-    const monthSelectAll = document.getElementById('monthSelectAll');
-    
-    // Initialize จากค่าที่ checked อยู่แล้ว
-    function init() {
-        selectedYears = [];
-        selectedMonths = [];
-        document.querySelectorAll('.yearCheckbox:checked').forEach(function(cb) {
-            selectedYears.push(cb.value);
-        });
-        document.querySelectorAll('.monthCheckbox:checked').forEach(function(cb) {
-            selectedMonths.push(cb.value);
-        });
-        updateDisplayText();
-    }
-    
-    function updateDisplayText() {
-        const yearText = document.getElementById('yearSelectedText');
-        const monthText = document.getElementById('monthSelectedText');
-        
-        if (selectedYears.length === 0) {
-            yearText.textContent = 'ทั้งหมด';
-        } else if (selectedYears.length <= 2) {
-            yearText.textContent = selectedYears.join(', ');
-        } else {
-            yearText.textContent = selectedYears.length + ' รายการ';
-        }
-        
-        if (selectedMonths.length === 0) {
-            monthText.textContent = 'ทั้งหมด';
-        } else if (selectedMonths.length <= 2) {
-            monthText.textContent = selectedMonths.join(', ');
-        } else {
-            monthText.textContent = selectedMonths.length + ' รายการ';
-        }
-    }
-    
-    function toggleDropdown(dropdownId) {
-        var dropdown = document.getElementById(dropdownId);
-        var otherDropdowns = document.querySelectorAll('#yearDropdown, #monthDropdown');
-        otherDropdowns.forEach(function(d) {
-            if (d.id !== dropdownId) d.classList.add('hidden');
-        });
-        dropdown.classList.toggle('hidden');
-    }
-    
-    // Year dropdown button
-    if (yearDropdownBtn) {
-        yearDropdownBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            toggleDropdown('yearDropdown');
-        });
-    }
-    
-    // Month dropdown button
-    if (monthDropdownBtn) {
-        monthDropdownBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            toggleDropdown('monthDropdown');
-        });
-    }
-    
-    // Year checkboxes
-    document.querySelectorAll('.yearCheckbox').forEach(function(cb) {
-        cb.addEventListener('change', function() {
-            if (this.checked) {
-                if (selectedYears.indexOf(this.value) === -1) {
-                    selectedYears.push(this.value);
-                }
-            } else {
-                selectedYears = selectedYears.filter(function(v) { return v !== cb.value; });
-            }
-            updateDisplayText();
-            
-            // Update select all checkbox
-            var allYearCbs = document.querySelectorAll('.yearCheckbox');
-            var checkedYearCbs = document.querySelectorAll('.yearCheckbox:checked');
-            if (yearSelectAll) {
-                yearSelectAll.checked = allYearCbs.length === checkedYearCbs.length;
-            }
-        });
-    });
-    
-    // Month checkboxes
-    document.querySelectorAll('.monthCheckbox').forEach(function(cb) {
-        cb.addEventListener('change', function() {
-            if (this.checked) {
-                if (selectedMonths.indexOf(this.value) === -1) {
-                    selectedMonths.push(this.value);
-                }
-            } else {
-                selectedMonths = selectedMonths.filter(function(v) { return v !== cb.value; });
-            }
-            updateDisplayText();
-            
-            // Update select all checkbox
-            var allMonthCbs = document.querySelectorAll('.monthCheckbox');
-            var checkedMonthCbs = document.querySelectorAll('.monthCheckbox:checked');
-            if (monthSelectAll) {
-                monthSelectAll.checked = allMonthCbs.length === checkedMonthCbs.length;
-            }
-        });
-    });
-    
-    // Select all year
-    if (yearSelectAll) {
-        yearSelectAll.addEventListener('change', function() {
-            var checkboxes = document.querySelectorAll('.yearCheckbox');
-            var isChecked = this.checked;
+    // Multi-Select Dropdown Filter
+    document.addEventListener('DOMContentLoaded', function () {
+        // เก็บค่าที่เลือกไว้
+        let selectedYears = [];
+        let selectedMonths = [];
+
+        const yearDropdownBtn = document.getElementById('yearDropdownBtn');
+        const monthDropdownBtn = document.getElementById('monthDropdownBtn');
+        const yearDropdown = document.getElementById('yearDropdown');
+        const monthDropdown = document.getElementById('monthDropdown');
+        const applyFilterBtn = document.getElementById('applyFilterBtn');
+        const resetFilterBtn = document.getElementById('resetFilterBtn');
+        const yearSelectAll = document.getElementById('yearSelectAll');
+        const monthSelectAll = document.getElementById('monthSelectAll');
+
+        // Initialize จากค่าที่ checked อยู่แล้ว
+        function init() {
             selectedYears = [];
-            checkboxes.forEach(function(cb) {
-                cb.checked = isChecked;
-                if (isChecked) selectedYears.push(cb.value);
-            });
-            updateDisplayText();
-        });
-    }
-    
-    // Select all month
-    if (monthSelectAll) {
-        monthSelectAll.addEventListener('change', function() {
-            var checkboxes = document.querySelectorAll('.monthCheckbox');
-            var isChecked = this.checked;
             selectedMonths = [];
-            checkboxes.forEach(function(cb) {
-                cb.checked = isChecked;
-                if (isChecked) selectedMonths.push(cb.value);
+            document.querySelectorAll('.yearCheckbox:checked').forEach(function (cb) {
+                selectedYears.push(cb.value);
+            });
+            document.querySelectorAll('.monthCheckbox:checked').forEach(function (cb) {
+                selectedMonths.push(cb.value);
             });
             updateDisplayText();
-        });
-    }
-    
-    // Apply filter button
-    if (applyFilterBtn) {
-        applyFilterBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // อ่านค่าจาก checkboxes โดยตรง ณ ตอนกดปุ่ม
-            var years = [];
-            var months = [];
-            document.querySelectorAll('.yearCheckbox:checked').forEach(function(cb) {
-                years.push(cb.value);
-            });
-            document.querySelectorAll('.monthCheckbox:checked').forEach(function(cb) {
-                months.push(cb.value);
-            });
-            
-            var params = [];
-            if (years.length > 0) {
-                params.push('years=' + encodeURIComponent(years.join(',')));
-            }
-            if (months.length > 0) {
-                params.push('months=' + encodeURIComponent(months.join(',')));
-            }
-            
-            var url = params.length > 0 ? '/?' + params.join('&') : '/';
-            console.log('Filter URL:', url);
-            console.log('Selected years:', years);
-            console.log('Selected months:', months);
-            window.location.href = url;
-        });
-    }
-    
-    // Reset filter button
-    if (resetFilterBtn) {
-        resetFilterBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            window.location.href = '/';
-        });
-    }
-    
-    // Close dropdowns when clicking outside
-    document.addEventListener('click', function(e) {
-        if (yearDropdown && yearDropdownBtn && !yearDropdown.contains(e.target) && !yearDropdownBtn.contains(e.target)) {
-            yearDropdown.classList.add('hidden');
         }
-        if (monthDropdown && monthDropdownBtn && !monthDropdown.contains(e.target) && !monthDropdownBtn.contains(e.target)) {
-            monthDropdown.classList.add('hidden');
+
+        function updateDisplayText() {
+            const yearText = document.getElementById('yearSelectedText');
+            const monthText = document.getElementById('monthSelectedText');
+
+            if (selectedYears.length === 0) {
+                yearText.textContent = 'ทั้งหมด';
+            } else if (selectedYears.length <= 2) {
+                yearText.textContent = selectedYears.join(', ');
+            } else {
+                yearText.textContent = selectedYears.length + ' รายการ';
+            }
+
+            if (selectedMonths.length === 0) {
+                monthText.textContent = 'ทั้งหมด';
+            } else if (selectedMonths.length <= 2) {
+                monthText.textContent = selectedMonths.join(', ');
+            } else {
+                monthText.textContent = selectedMonths.length + ' รายการ';
+            }
         }
+
+        function toggleDropdown(dropdownId) {
+            var dropdown = document.getElementById(dropdownId);
+            var otherDropdowns = document.querySelectorAll('#yearDropdown, #monthDropdown');
+            otherDropdowns.forEach(function (d) {
+                if (d.id !== dropdownId) d.classList.add('hidden');
+            });
+            dropdown.classList.toggle('hidden');
+        }
+
+        // Year dropdown button
+        if (yearDropdownBtn) {
+            yearDropdownBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                toggleDropdown('yearDropdown');
+            });
+        }
+
+        // Month dropdown button
+        if (monthDropdownBtn) {
+            monthDropdownBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                toggleDropdown('monthDropdown');
+            });
+        }
+
+        // Year checkboxes
+        document.querySelectorAll('.yearCheckbox').forEach(function (cb) {
+            cb.addEventListener('change', function () {
+                if (this.checked) {
+                    if (selectedYears.indexOf(this.value) === -1) {
+                        selectedYears.push(this.value);
+                    }
+                } else {
+                    selectedYears = selectedYears.filter(function (v) { return v !== cb.value; });
+                }
+                updateDisplayText();
+
+                // Update select all checkbox
+                var allYearCbs = document.querySelectorAll('.yearCheckbox');
+                var checkedYearCbs = document.querySelectorAll('.yearCheckbox:checked');
+                if (yearSelectAll) {
+                    yearSelectAll.checked = allYearCbs.length === checkedYearCbs.length;
+                }
+            });
+        });
+
+        // Month checkboxes
+        document.querySelectorAll('.monthCheckbox').forEach(function (cb) {
+            cb.addEventListener('change', function () {
+                if (this.checked) {
+                    if (selectedMonths.indexOf(this.value) === -1) {
+                        selectedMonths.push(this.value);
+                    }
+                } else {
+                    selectedMonths = selectedMonths.filter(function (v) { return v !== cb.value; });
+                }
+                updateDisplayText();
+
+                // Update select all checkbox
+                var allMonthCbs = document.querySelectorAll('.monthCheckbox');
+                var checkedMonthCbs = document.querySelectorAll('.monthCheckbox:checked');
+                if (monthSelectAll) {
+                    monthSelectAll.checked = allMonthCbs.length === checkedMonthCbs.length;
+                }
+            });
+        });
+
+        // Select all year
+        if (yearSelectAll) {
+            yearSelectAll.addEventListener('change', function () {
+                var checkboxes = document.querySelectorAll('.yearCheckbox');
+                var isChecked = this.checked;
+                selectedYears = [];
+                checkboxes.forEach(function (cb) {
+                    cb.checked = isChecked;
+                    if (isChecked) selectedYears.push(cb.value);
+                });
+                updateDisplayText();
+            });
+        }
+
+        // Select all month
+        if (monthSelectAll) {
+            monthSelectAll.addEventListener('change', function () {
+                var checkboxes = document.querySelectorAll('.monthCheckbox');
+                var isChecked = this.checked;
+                selectedMonths = [];
+                checkboxes.forEach(function (cb) {
+                    cb.checked = isChecked;
+                    if (isChecked) selectedMonths.push(cb.value);
+                });
+                updateDisplayText();
+            });
+        }
+
+        // Apply filter button
+        if (applyFilterBtn) {
+            applyFilterBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                // อ่านค่าจาก checkboxes โดยตรง ณ ตอนกดปุ่ม
+                var years = [];
+                var months = [];
+                document.querySelectorAll('.yearCheckbox:checked').forEach(function (cb) {
+                    years.push(cb.value);
+                });
+                document.querySelectorAll('.monthCheckbox:checked').forEach(function (cb) {
+                    months.push(cb.value);
+                });
+
+                var params = [];
+                if (years.length > 0) {
+                    params.push('years=' + encodeURIComponent(years.join(',')));
+                }
+                if (months.length > 0) {
+                    params.push('months=' + encodeURIComponent(months.join(',')));
+                }
+
+                var url = params.length > 0 ? '/?' + params.join('&') : '/';
+                console.log('Filter URL:', url);
+                console.log('Selected years:', years);
+                console.log('Selected months:', months);
+                window.location.href = url;
+            });
+        }
+
+        // Reset filter button
+        if (resetFilterBtn) {
+            resetFilterBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                window.location.href = '/';
+            });
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function (e) {
+            if (yearDropdown && yearDropdownBtn && !yearDropdown.contains(e.target) && !yearDropdownBtn.contains(e.target)) {
+                yearDropdown.classList.add('hidden');
+            }
+            if (monthDropdown && monthDropdownBtn && !monthDropdown.contains(e.target) && !monthDropdownBtn.contains(e.target)) {
+                monthDropdown.classList.add('hidden');
+            }
+        });
+
+        // Prevent dropdown from closing when clicking inside
+        if (yearDropdown) {
+            yearDropdown.addEventListener('click', function (e) {
+                e.stopPropagation();
+            });
+        }
+        if (monthDropdown) {
+            monthDropdown.addEventListener('click', function (e) {
+                e.stopPropagation();
+            });
+        }
+
+        // Initialize on page load
+        init();
     });
-    
-    // Prevent dropdown from closing when clicking inside
-    if (yearDropdown) {
-        yearDropdown.addEventListener('click', function(e) {
-            e.stopPropagation();
-        });
-    }
-    if (monthDropdown) {
-        monthDropdown.addEventListener('click', function(e) {
-            e.stopPropagation();
-        });
-    }
-    
-    // Initialize on page load
-    init();
-});
 </script>
 {% endblock %}
