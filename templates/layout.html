@@ -1,19 +1,21 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}SLA Training Dashboard{% endblock %}</title>
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- Chart.js - stable version -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    
+
     <!-- Chart.js Datalabels Plugin -->
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-    
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+
     <!-- Chart.js defaults -->
     <script>
         Chart.defaults.animation = false;
@@ -21,27 +23,27 @@
         Chart.defaults.maintainAspectRatio = false;
         Chart.register(ChartDataLabels);
     </script>
-    
+
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap');
-        
+
         * {
             font-family: 'Sarabun', 'Noto Sans Thai', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
         }
-        
+
         .sidebar {
             background: linear-gradient(180deg, #1e3a5f 0%, #0f2744 100%);
             transition: width 0.3s ease, transform 0.3s ease;
             width: 256px;
         }
-        
+
         .sidebar.collapsed {
             width: 72px;
         }
-        
+
         .sidebar.collapsed .sidebar-text,
         .sidebar.collapsed .sidebar-badge,
         .sidebar.collapsed .sidebar-title,
@@ -50,110 +52,124 @@
         .sidebar.collapsed .sidebar-footer-text {
             display: none;
         }
-        
+
         .sidebar.collapsed .sidebar-logo {
             justify-content: center;
             padding: 1.5rem 0.5rem;
         }
-        
+
         .sidebar.collapsed .sidebar-logo-icon {
             margin: 0;
         }
-        
+
         .sidebar.collapsed .sidebar-item {
             justify-content: center;
             padding-left: 0;
             padding-right: 0;
         }
-        
+
         .sidebar.collapsed .sidebar-item i {
             width: auto;
             margin: 0;
             font-size: 1.25rem;
         }
-        
+
         .sidebar.collapsed .sidebar-footer {
             text-align: center;
         }
-        
+
         .sidebar.collapsed .sidebar-footer-status {
             justify-content: center;
         }
-        
+
         .sidebar-item {
             transition: all 0.2s ease;
         }
-        
+
         .sidebar-item:hover {
             background-color: rgba(255, 255, 255, 0.1);
         }
-        
+
         .sidebar:not(.collapsed) .sidebar-item:hover {
             transform: translateX(5px);
         }
-        
+
         .sidebar-item.active {
             background-color: rgba(255, 255, 255, 0.15);
             border-left: 4px solid #3b82f6;
         }
-        
+
         .sidebar.collapsed .sidebar-item.active {
             border-left: none;
             border-bottom: 3px solid #3b82f6;
         }
-        
+
         .main-content {
             transition: margin-left 0.3s ease;
             margin-left: 256px;
         }
-        
+
         .main-content.expanded {
             margin-left: 72px;
         }
-        
+
         .toggle-btn {
             transition: transform 0.3s ease;
         }
-        
+
         .toggle-btn.rotated {
             transform: rotate(180deg);
         }
-        
+
         .card-hover:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
         }
-        
+
         .stat-card {
             transition: all 0.3s ease;
         }
-        
+
         .stat-card:hover {
             transform: scale(1.02);
         }
-        
+
         .progress-bar {
             transition: width 1s ease-in-out;
         }
-        
+
         .fade-in {
             animation: fadeIn 0.5s ease-in;
         }
-        
+
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
-        
+
         .pulse-green {
             animation: pulse-green 2s infinite;
         }
-        
+
         @keyframes pulse-green {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
-            50% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
+            }
+
+            50% {
+                box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
+            }
         }
-        
+
         .loading {
             display: inline-block;
             width: 20px;
@@ -163,16 +179,18 @@
             border-top-color: #3b82f6;
             animation: spin 1s ease-in-out infinite;
         }
-        
+
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
-        
+
         /* Tooltip for collapsed sidebar */
         .sidebar.collapsed .sidebar-item {
             position: relative;
         }
-        
+
         .sidebar.collapsed .sidebar-item::after {
             content: attr(data-tooltip);
             position: absolute;
@@ -192,24 +210,27 @@
             z-index: 100;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
         }
-        
+
         .sidebar.collapsed .sidebar-item:hover::after {
             opacity: 1;
             visibility: visible;
         }
-        
+
         /* Mobile styles */
         @media (max-width: 768px) {
             .sidebar {
                 transform: translateX(-100%);
                 width: 256px !important;
             }
+
             .sidebar.open {
                 transform: translateX(0);
             }
+
             .sidebar.collapsed {
                 width: 256px !important;
             }
+
             .main-content {
                 margin-left: 0 !important;
             }
@@ -217,9 +238,11 @@
     </style>
     {% block extra_styles %}{% endblock %}
 </head>
+
 <body class="bg-gray-50 min-h-screen">
     <!-- Mobile Menu Button -->
-    <button id="mobileMenuBtn" class="md:hidden fixed top-4 left-4 z-50 bg-blue-600 text-white p-3 rounded-lg shadow-lg">
+    <button id="mobileMenuBtn"
+        class="md:hidden fixed top-4 left-4 z-50 bg-blue-600 text-white p-3 rounded-lg shadow-lg">
         <i class="fas fa-bars"></i>
     </button>
 
@@ -227,7 +250,8 @@
     <aside id="sidebar" class="sidebar fixed left-0 top-0 h-full text-white z-40 shadow-xl">
         <!-- Logo Section -->
         <div class="sidebar-logo flex items-center p-6 border-b border-white/10">
-            <div class="sidebar-logo-icon w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
+            <div
+                class="sidebar-logo-icon w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
                 <i class="fas fa-chart-line text-xl"></i>
             </div>
             <div class="ml-3 sidebar-text">
@@ -237,34 +261,47 @@
         </div>
 
         <!-- Toggle Button -->
-        <button id="toggleSidebar" class="hidden md:flex absolute -right-3 top-20 w-6 h-6 bg-blue-500 rounded-full items-center justify-center text-white shadow-lg hover:bg-blue-600 transition z-50">
+        <button id="toggleSidebar"
+            class="hidden md:flex absolute -right-3 top-20 w-6 h-6 bg-blue-500 rounded-full items-center justify-center text-white shadow-lg hover:bg-blue-600 transition z-50">
             <i class="fas fa-chevron-left text-xs toggle-btn"></i>
         </button>
 
         <!-- Navigation Menu -->
         <nav class="p-4 space-y-2 overflow-y-auto" style="max-height: calc(100vh - 180px);">
             <p class="sidebar-section-title text-xs text-blue-300 uppercase tracking-wider mb-3 px-3">เมนูหลัก</p>
-            
-            <a href="/" data-tooltip="Dashboard" class="sidebar-item flex items-center px-4 py-3 rounded-lg text-white/90 hover:text-white {% if active_page == 'dashboard' %}active{% endif %}">
+
+            <a href="/" data-tooltip="Dashboard"
+                class="sidebar-item flex items-center px-4 py-3 rounded-lg text-white/90 hover:text-white {% if active_page == 'dashboard' %}active{% endif %}">
                 <i class="fas fa-home w-6 text-center"></i>
                 <span class="ml-3 sidebar-text">Dashboard</span>
             </a>
-            
-            <a href="/technicians" data-tooltip="รายชื่อช่าง" class="sidebar-item flex items-center px-4 py-3 rounded-lg text-white/90 hover:text-white {% if active_page == 'technicians' %}active{% endif %}">
+
+            <a href="/technicians" data-tooltip="รายชื่อช่าง"
+                class="sidebar-item flex items-center px-4 py-3 rounded-lg text-white/90 hover:text-white {% if active_page == 'technicians' %}active{% endif %}">
                 <i class="fas fa-users w-6 text-center"></i>
                 <span class="ml-3 sidebar-text">รายชื่อช่าง</span>
             </a>
 
             <p class="sidebar-section-title text-xs text-blue-300 uppercase tracking-wider mb-3 px-3 mt-6">วิเคราะห์</p>
-            
-            <a href="/sla-analysis" data-tooltip="วิเคราะห์ SLA" class="sidebar-item flex items-center px-4 py-3 rounded-lg text-white/90 hover:text-white {% if active_page == 'sla_analysis' %}active{% endif %}">
+
+            <a href="/sla-analysis" data-tooltip="วิเคราะห์ SLA"
+                class="sidebar-item flex items-center px-4 py-3 rounded-lg text-white/90 hover:text-white {% if active_page == 'sla_analysis' %}active{% endif %}">
                 <i class="fas fa-chart-line w-6 text-center"></i>
                 <span class="ml-3 sidebar-text">วิเคราะห์ SLA</span>
             </a>
-            
-            <a href="/thailand-map" data-tooltip="ช่างอบรมรายจังหวัด" class="sidebar-item flex items-center px-4 py-3 rounded-lg text-white/90 hover:text-white {% if active_page == 'thailand_map' %}active{% endif %}">
+
+            <a href="/thailand-map" data-tooltip="ช่างอบรมรายจังหวัด"
+                class="sidebar-item flex items-center px-4 py-3 rounded-lg text-white/90 hover:text-white {% if active_page == 'thailand_map' %}active{% endif %}">
                 <i class="fas fa-map w-6 text-center"></i>
                 <span class="ml-3 sidebar-text">ช่างอบรมรายจังหวัด</span>
+            </a>
+
+            <p class="sidebar-section-title text-xs text-blue-300 uppercase tracking-wider mb-3 px-3 mt-6">จัดการ</p>
+
+            <a href="/admin" data-tooltip="แอดมิน"
+                class="sidebar-item flex items-center px-4 py-3 rounded-lg text-white/90 hover:text-white {% if active_page == 'admin' %}active{% endif %}">
+                <i class="fas fa-user-shield w-6 text-center"></i>
+                <span class="ml-3 sidebar-text">แอดมิน</span>
             </a>
         </nav>
 
@@ -285,12 +322,14 @@
             <div class="px-6 py-4 flex items-center justify-between">
                 <div class="flex items-center">
                     <!-- Desktop Toggle Button in Header -->
-                    <button id="headerToggle" class="hidden md:flex mr-4 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition">
+                    <button id="headerToggle"
+                        class="hidden md:flex mr-4 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition">
                         <i class="fas fa-bars"></i>
                     </button>
                     <div>
                         <h2 class="text-xl font-bold text-gray-800">{% block page_title %}Dashboard{% endblock %}</h2>
-                        <p class="text-sm text-gray-500">{% block page_subtitle %}ภาพรวมการอบรมและขึ้นทะเบียนช่าง{% endblock %}</p>
+                        <p class="text-sm text-gray-500">{% block page_subtitle %}ภาพรวมการอบรมและขึ้นทะเบียนช่าง{%
+                            endblock %}</p>
                     </div>
                 </div>
                 <div class="flex items-center space-x-4">
@@ -302,7 +341,8 @@
                         <i class="fas fa-bell"></i>
                         <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
                     </button>
-                    <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-bold cursor-pointer hover:bg-blue-600 transition">
+                    <div
+                        class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-bold cursor-pointer hover:bg-blue-600 transition">
                         IM
                     </div>
                 </div>
@@ -333,7 +373,7 @@
         const headerToggle = document.getElementById('headerToggle');
         const mobileMenuBtn = document.getElementById('mobileMenuBtn');
         const toggleIcon = toggleSidebar ? toggleSidebar.querySelector('.toggle-btn') : null;
-        
+
         // Load saved state from localStorage
         const savedState = localStorage.getItem('sidebarCollapsed');
         if (savedState === 'true' && window.innerWidth >= 768) {
@@ -341,26 +381,26 @@
             mainContent.classList.add('expanded');
             if (toggleIcon) toggleIcon.classList.add('rotated');
         }
-        
+
         // Toggle sidebar function
         function toggleSidebarState() {
             sidebar.classList.toggle('collapsed');
             mainContent.classList.toggle('expanded');
             if (toggleIcon) toggleIcon.classList.toggle('rotated');
-            
+
             // Save state to localStorage
             localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
         }
-        
+
         // Desktop toggle buttons
         if (toggleSidebar) {
             toggleSidebar.addEventListener('click', toggleSidebarState);
         }
-        
+
         if (headerToggle) {
             headerToggle.addEventListener('click', toggleSidebarState);
         }
-        
+
         // Mobile menu toggle
         if (mobileMenuBtn) {
             mobileMenuBtn.addEventListener('click', () => {
@@ -376,7 +416,7 @@
                 }
             }
         });
-        
+
         // Handle window resize
         window.addEventListener('resize', () => {
             if (window.innerWidth < 768) {
@@ -387,4 +427,5 @@
     </script>
     {% block scripts %}{% endblock %}
 </body>
+
 </html>

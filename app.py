@@ -2,7 +2,10 @@
 # ระบบ Dashboard สำหรับติดตาม SLA การลงทะเบียนช่าง
 # รองรับ SLA 6 ขั้นตอน: Training > OJT > GenID > Inspection > DFlow > Registration
 
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, session, redirect, url_for, flash
+import functools
+import io
+import csv
 import pandas as pd
 import numpy as np
 from datetime import datetime
@@ -14,6 +17,42 @@ from supabase import create_client, Client
 load_dotenv()
 
 app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'sla-dashboard-secret-key-2025')
+
+# ===============================
+# ADMIN CREDENTIALS
+# ===============================
+ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'admin')
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin123')
+
+# Admin columns configuration
+ADMIN_DEFAULT_COLUMNS = ['no', 'full_name_th', 'depot_name', 'area', 'province', 'status', 'result', 'sla_total']
+ADMIN_ALL_COLUMNS = [
+    'row_id', 'no', 'first_name_th', 'last_name_th', 'full_name_th', 'first_name_en', 'last_name_en',
+    'depot_name', 'depot_code', 'province', 'national_id', 'birth_date_thai', 'age', 'education', 'workgroup_status',
+    'theory_training_result', 'on_the_job_result',
+    'technician_profile_file', 'id_card_file', 'education_certificate_file', 'technician_photo_status',
+    'medical_certificate_file', 'pole_climbing_training', 'driver_license_file', 'criminal_record_document',
+    'background_check_status', 'payment_status',
+    'area', 'training_round_date', 'training_month', 'id', 'certificate', 'date_card', 'card', 'result', 'status',
+    'start_date', 'end_date', 'sla_total', 'training_by', 'week', 'round_month', 'year', 'remark', 'model', 'update', 'status_group',
+    'status_result_round', 'result_round', 'training_start', 'training_end', 'sla_training', 'remark_training',
+    'status_result_ojt', 'result_round_ojt', 'ojt_start', 'ojt_end', 'sla_ojt', 'remark_ojt',
+    'status_doc', 'result_doc', 'doc_start', 'doc_end', 'sla_doc', 'remark_doc',
+    'status_genid', 'result_genid', 'genid_start', 'genid_end', 'sla_genid', 'remark_genid',
+    'status_printcard', 'result_printcard', 'printcard_start', 'printcard_end', 'sla_printcard', 'remark_genid_card',
+    'status_inspection', 'result_inspection', 'inspection_start', 'inspection_end', 'sla_inspection', 'remark_inspection',
+    'status_dflow', 'result_dflow', 'dflow_start', 'dflow_end', 'sla_dflow', 'remark_dflow',
+    'status_registration', 'result_registration', 'registration_start', 'registration_end', 'sla_registration', 'remark_registration'
+]
+
+def login_required(f):
+    @functools.wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('admin_logged_in'):
+            return redirect(url_for('admin_login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 # ===============================
 # SUPABASE CONFIGURATION
@@ -1213,7 +1252,19 @@ def api_provinces_map():
     """API: ข้อมูลตามจังหวัดสำหรับแผนที่ (ทุกจังหวัด)"""
     df = load_data()
     df = process_data(df)
-    return jsonify(get_province_stats_all(df))
+    provinces = get_province_stats_all(df)
+    
+    # คำนวณจำนวนจริงจาก DataFrame โดยตรง (รวมช่างที่ไม่มีข้อมูลจังหวัด)
+    total_all = len(df)
+    completed_all = len(df[df['result'] == 'Completed']) if 'result' in df.columns else 0
+    
+    return jsonify({
+        'provinces': provinces,
+        'summary': {
+            'total': total_all,
+            'completed': completed_all
+        }
+    })
 
 @app.route('/api/monthly')
 def api_monthly():
@@ -1263,6 +1314,233 @@ def api_depots():
     df = load_data()
     df = process_data(df)
     return jsonify(get_depot_stats(df))
+
+# ===============================
+# ADMIN ROUTES
+# ===============================
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    """หน้า Login สำหรับ Admin"""
+    if session.get('admin_logged_in'):
+        return redirect(url_for('admin_page'))
+    
+    if request.method == 'POST':
+        username = request.form.get('username', '')
+        password = request.form.get('password', '')
+        
+        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+            session['admin_logged_in'] = True
+            session['admin_username'] = username
+            return redirect(url_for('admin_page'))
+        else:
+            return render_template('login.html', error='ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง')
+    
+    return render_template('login.html')
+
+@app.route('/admin/logout')
+def admin_logout():
+    """Logout Admin"""
+    session.pop('admin_logged_in', None)
+    session.pop('admin_username', None)
+    return redirect(url_for('admin_login'))
+
+@app.route('/admin')
+@login_required
+def admin_page():
+    """หน้า Admin CRUD"""
+    return render_template('admin.html',
+                         active_page='admin',
+                         default_columns=ADMIN_DEFAULT_COLUMNS,
+                         all_columns=ADMIN_ALL_COLUMNS)
+
+# ===============================
+# ADMIN CRUD API ROUTES
+# ===============================
+
+@app.route('/api/admin/data')
+@login_required
+def api_admin_data():
+    """API: ดึงข้อมูล training_sla พร้อม search/filter/pagination"""
+    try:
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 20))
+        search = request.args.get('search', '').strip()
+        area_filter = request.args.get('area', '').strip()
+        status_filter = request.args.get('status', '').strip()
+        result_filter = request.args.get('result', '').strip()
+        sort_by = request.args.get('sort_by', 'row_id')
+        sort_order = request.args.get('sort_order', 'desc')
+        
+        # Build query
+        query = supabase.table('training_sla').select('*', count='exact')
+        
+        # Apply filters
+        if area_filter:
+            query = query.eq('area', area_filter)
+        if status_filter:
+            query = query.eq('status', status_filter)
+        if result_filter:
+            query = query.eq('result', result_filter)
+        if search:
+            query = query.or_(f'full_name_th.ilike.%{search}%,no.ilike.%{search}%,depot_name.ilike.%{search}%,province.ilike.%{search}%')
+        
+        # Sort
+        is_desc = sort_order == 'desc'
+        query = query.order(sort_by, desc=is_desc)
+        
+        # Pagination
+        offset = (page - 1) * per_page
+        query = query.range(offset, offset + per_page - 1)
+        
+        response = query.execute()
+        
+        total = response.count if response.count else 0
+        total_pages = (total + per_page - 1) // per_page if total > 0 else 1
+        
+        # Get filter options
+        all_data = supabase.table('training_sla').select('area,status,result').execute()
+        areas = sorted(set(r['area'] for r in all_data.data if r.get('area'))) if all_data.data else []
+        statuses = sorted(set(r['status'] for r in all_data.data if r.get('status'))) if all_data.data else []
+        results = sorted(set(r['result'] for r in all_data.data if r.get('result'))) if all_data.data else []
+        
+        # Clean data - convert None to empty string for JSON
+        clean_data = []
+        for row in (response.data or []):
+            clean_row = {}
+            for k, v in row.items():
+                clean_row[k] = v if v is not None else ''
+            clean_data.append(clean_row)
+        
+        return jsonify({
+            'success': True,
+            'data': clean_data,
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': total,
+                'total_pages': total_pages
+            },
+            'filters': {
+                'areas': areas,
+                'statuses': statuses,
+                'results': results
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/create', methods=['POST'])
+@login_required
+def api_admin_create():
+    """API: เพิ่มข้อมูลใหม่"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
+        
+        # Remove row_id if present (auto-generated)
+        data.pop('row_id', None)
+        data.pop('created_at', None)
+        data.pop('updated_at', None)
+        
+        # Remove empty string values to let DB use defaults
+        clean_data = {k: v for k, v in data.items() if v != ''}
+        
+        response = supabase.table('training_sla').insert(clean_data).execute()
+        
+        return jsonify({'success': True, 'data': response.data})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/update/<int:row_id>', methods=['PUT'])
+@login_required
+def api_admin_update(row_id):
+    """API: แก้ไขข้อมูล"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
+        
+        # Remove fields that shouldn't be updated
+        data.pop('row_id', None)
+        data.pop('created_at', None)
+        
+        response = supabase.table('training_sla').update(data).eq('row_id', row_id).execute()
+        
+        return jsonify({'success': True, 'data': response.data})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/delete/<int:row_id>', methods=['DELETE'])
+@login_required
+def api_admin_delete(row_id):
+    """API: ลบข้อมูล"""
+    try:
+        response = supabase.table('training_sla').delete().eq('row_id', row_id).execute()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/import-csv', methods=['POST'])
+@login_required
+def api_admin_import_csv():
+    """API: นำเข้าข้อมูลจาก CSV"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'error': 'ไม่พบไฟล์ CSV'}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'ไม่ได้เลือกไฟล์'}), 400
+        
+        if not file.filename.endswith('.csv'):
+            return jsonify({'success': False, 'error': 'กรุณาอัปโหลดไฟล์ .csv เท่านั้น'}), 400
+        
+        # Read CSV
+        stream = io.StringIO(file.stream.read().decode('utf-8-sig'))
+        reader = csv.DictReader(stream)
+        
+        rows = []
+        for row in reader:
+            # Clean row - remove empty values and row_id
+            clean_row = {}
+            for k, v in row.items():
+                if k and k.strip() and k.strip() != 'row_id':
+                    clean_key = k.strip()
+                    if clean_key in ADMIN_ALL_COLUMNS:
+                        clean_row[clean_key] = v.strip() if v and v.strip() else None
+            if clean_row:
+                rows.append(clean_row)
+        
+        if not rows:
+            return jsonify({'success': False, 'error': 'ไม่พบข้อมูลในไฟล์ CSV'}), 400
+        
+        # Insert in batches of 100
+        imported = 0
+        batch_size = 100
+        for i in range(0, len(rows), batch_size):
+            batch = rows[i:i + batch_size]
+            supabase.table('training_sla').insert(batch).execute()
+            imported += len(batch)
+        
+        return jsonify({'success': True, 'imported': imported, 'message': f'นำเข้าข้อมูลสำเร็จ {imported} รายการ'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/admin/record/<int:row_id>')
+@login_required
+def api_admin_get_record(row_id):
+    """API: ดึงข้อมูลรายการเดียว"""
+    try:
+        response = supabase.table('training_sla').select('*').eq('row_id', row_id).execute()
+        if response.data:
+            row = response.data[0]
+            clean_row = {k: (v if v is not None else '') for k, v in row.items()}
+            return jsonify({'success': True, 'data': clean_row})
+        return jsonify({'success': False, 'error': 'ไม่พบข้อมูล'}), 404
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 # ===============================
 # RUN APP

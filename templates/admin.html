@@ -1,0 +1,1029 @@
+{% extends "layout.html" %}
+
+{% block title %}Admin - SLA Dashboard{% endblock %}
+{% block page_title %}แอดมิน{% endblock %}
+{% block page_subtitle %}จัดการข้อมูล Training SLA{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .admin-table {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .admin-table th {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: #f8fafc;
+    }
+
+    .admin-table th,
+    .admin-table td {
+        white-space: nowrap;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .admin-table tr:hover {
+        background-color: #f0f9ff;
+    }
+
+    .admin-table th {
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .admin-table th:hover {
+        background-color: #e2e8f0;
+    }
+
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 100;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(4px);
+    }
+
+    .modal-overlay.active {
+        display: flex;
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: 1rem;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+        animation: modalIn 0.3s ease;
+    }
+
+    @keyframes modalIn {
+        from {
+            opacity: 0;
+            transform: scale(0.95) translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+    }
+
+    .column-dropdown {
+        display: none;
+        position: absolute;
+        right: 0;
+        top: 100%;
+        z-index: 50;
+        max-height: 400px;
+        overflow-y: auto;
+        min-width: 220px;
+    }
+
+    .column-dropdown.active {
+        display: block;
+    }
+
+    .column-dropdown label {
+        display: flex;
+        align-items: center;
+        padding: 0.4rem 0.75rem;
+        cursor: pointer;
+        font-size: 0.8rem;
+    }
+
+    .column-dropdown label:hover {
+        background-color: #f1f5f9;
+    }
+
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.2rem 0.6rem;
+        border-radius: 9999px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+
+    .badge-completed {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .badge-onprocess {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .badge-closed {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .badge-cancel {
+        background: #f3f4f6;
+        color: #4b5563;
+    }
+
+    .btn-action {
+        padding: 0.3rem 0.5rem;
+        border-radius: 0.375rem;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+    }
+
+    .btn-edit {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .btn-edit:hover {
+        background: #bfdbfe;
+    }
+
+    .btn-delete {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+
+    .btn-delete:hover {
+        background: #fecaca;
+    }
+
+    .toast {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        z-index: 200;
+        padding: 1rem 1.5rem;
+        border-radius: 0.75rem;
+        color: white;
+        font-weight: 500;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        transform: translateY(100px);
+        opacity: 0;
+        transition: all 0.4s ease;
+    }
+
+    .toast.show {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    .toast-success {
+        background: linear-gradient(135deg, #10b981, #059669);
+    }
+
+    .toast-error {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+    }
+
+    .form-grid .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .form-grid .form-group label {
+        font-size: 0.75rem;
+        color: #64748b;
+        margin-bottom: 0.25rem;
+        font-weight: 500;
+    }
+
+    .form-grid .form-group input,
+    .form-grid .form-group select {
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        font-size: 0.8rem;
+        transition: border-color 0.2s;
+        outline: none;
+    }
+
+    .form-grid .form-group input:focus,
+    .form-grid .form-group select:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+    }
+
+    .form-section-title {
+        grid-column: 1 / -1;
+        font-weight: 700;
+        color: #1e3a5f;
+        font-size: 0.85rem;
+        border-bottom: 2px solid #e2e8f0;
+        padding-bottom: 0.3rem;
+        margin-top: 0.5rem;
+    }
+
+    .pagination-btn {
+        padding: 0.4rem 0.75rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.375rem;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: white;
+    }
+
+    .pagination-btn:hover:not(:disabled) {
+        background: #f1f5f9;
+        border-color: #3b82f6;
+        color: #3b82f6;
+    }
+
+    .pagination-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    .pagination-btn.active {
+        background: #3b82f6;
+        color: white;
+        border-color: #3b82f6;
+    }
+
+    .loading-spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid #e2e8f0;
+        border-top-color: #3b82f6;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .table-container {
+        overflow-x: auto;
+        max-height: calc(100vh - 340px);
+    }
+
+    .search-input {
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        padding: 0.5rem 0.75rem 0.5rem 2.25rem;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+        outline: none;
+        width: 280px;
+    }
+
+    .search-input:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+    }
+
+    .filter-select {
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        padding: 0.45rem 0.5rem;
+        font-size: 0.8rem;
+        outline: none;
+        background: white;
+        min-width: 120px;
+    }
+
+    .filter-select:focus {
+        border-color: #3b82f6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Top Action Bar -->
+<div class="bg-white rounded-xl shadow-sm border p-4 mb-4">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3 flex-wrap">
+            <!-- Search -->
+            <div class="relative">
+                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                <input type="text" id="searchInput" class="search-input"
+                    placeholder="ค้นหาชื่อ, เลขที่, depot, จังหวัด...">
+            </div>
+            <!-- Filters -->
+            <select id="filterArea" class="filter-select">
+                <option value="">ทุกพื้นที่</option>
+            </select>
+            <select id="filterStatus" class="filter-select">
+                <option value="">ทุกสถานะ</option>
+            </select>
+            <select id="filterResult" class="filter-select">
+                <option value="">ทุกผลลัพธ์</option>
+            </select>
+        </div>
+        <div class="flex items-center gap-2">
+            <!-- Column Toggle -->
+            <div class="relative">
+                <button onclick="toggleColumnDropdown()"
+                    class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm text-gray-700 transition"
+                    title="เลือกคอลัมน์">
+                    <i class="fas fa-columns mr-1"></i> คอลัมน์
+                </button>
+                <div id="columnDropdown" class="column-dropdown bg-white rounded-lg shadow-xl border">
+                    <div class="p-2 border-b flex gap-2">
+                        <button onclick="selectAllColumns()"
+                            class="text-xs text-blue-600 hover:underline">เลือกทั้งหมด</button>
+                        <button onclick="deselectAllColumns()"
+                            class="text-xs text-red-500 hover:underline">ยกเลิกทั้งหมด</button>
+                        <button onclick="resetColumns()" class="text-xs text-gray-500 hover:underline">รีเซ็ต</button>
+                    </div>
+                    <div id="columnCheckboxes"></div>
+                </div>
+            </div>
+            <!-- Import CSV -->
+            <button onclick="openImportModal()"
+                class="px-3 py-2 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg text-sm transition">
+                <i class="fas fa-file-csv mr-1"></i> นำเข้า CSV
+            </button>
+            <!-- Add New -->
+            <button onclick="openAddModal()"
+                class="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm transition shadow-md">
+                <i class="fas fa-plus mr-1"></i> เพิ่มข้อมูล
+            </button>
+            <!-- Logout -->
+            <a href="/admin/logout"
+                class="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm transition"
+                title="ออกจากระบบ">
+                <i class="fas fa-sign-out-alt"></i>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Data Table -->
+<div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+    <!-- Table Info Bar -->
+    <div class="px-4 py-2 bg-gray-50 border-b flex items-center justify-between text-sm text-gray-600">
+        <span id="tableInfo"><span class="loading-spinner"></span> กำลังโหลด...</span>
+        <div class="flex items-center gap-2">
+            <span>แสดง</span>
+            <select id="perPageSelect" class="filter-select" style="min-width:70px;">
+                <option value="10">10</option>
+                <option value="20" selected>20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+            <span>รายการ</span>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-container">
+        <table class="admin-table w-full" id="dataTable">
+            <thead>
+                <tr id="tableHeader"></tr>
+            </thead>
+            <tbody id="tableBody">
+                <tr>
+                    <td colspan="20" class="text-center py-8 text-gray-400"><span class="loading-spinner"></span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="px-4 py-3 border-t flex items-center justify-between bg-gray-50">
+        <div id="paginationInfo" class="text-sm text-gray-600"></div>
+        <div id="paginationControls" class="flex items-center gap-1"></div>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div id="formModal" class="modal-overlay">
+    <div class="modal-content w-full max-w-4xl mx-4">
+        <div class="p-5 border-b flex items-center justify-between">
+            <h3 id="formModalTitle" class="text-lg font-bold text-gray-800"><i
+                    class="fas fa-plus-circle text-blue-500 mr-2"></i>เพิ่มข้อมูลใหม่</h3>
+            <button onclick="closeFormModal()" class="text-gray-400 hover:text-gray-600 text-xl"><i
+                    class="fas fa-times"></i></button>
+        </div>
+        <div class="p-5">
+            <form id="crudForm">
+                <input type="hidden" id="editRowId" value="">
+                <div class="form-grid">
+                    <!-- ข้อมูลช่าง -->
+                    <div class="form-section-title"><i class="fas fa-user mr-1 text-blue-500"></i> ข้อมูลช่าง</div>
+                    <div class="form-group"><label>No</label><input type="text" name="no" id="f_no"></div>
+                    <div class="form-group"><label>ชื่อต้น (ไทย)</label><input type="text" name="first_name_th"
+                            id="f_first_name_th"></div>
+                    <div class="form-group"><label>นามสกุล (ไทย)</label><input type="text" name="last_name_th"
+                            id="f_last_name_th"></div>
+                    <div class="form-group"><label>ชื่อเต็ม (ไทย)</label><input type="text" name="full_name_th"
+                            id="f_full_name_th"></div>
+                    <div class="form-group"><label>ชื่อต้น (EN)</label><input type="text" name="first_name_en"
+                            id="f_first_name_en"></div>
+                    <div class="form-group"><label>นามสกุล (EN)</label><input type="text" name="last_name_en"
+                            id="f_last_name_en"></div>
+                    <div class="form-group"><label>Depot Name</label><input type="text" name="depot_name"
+                            id="f_depot_name"></div>
+                    <div class="form-group"><label>Depot Code</label><input type="text" name="depot_code"
+                            id="f_depot_code"></div>
+                    <div class="form-group"><label>จังหวัด</label><input type="text" name="province" id="f_province">
+                    </div>
+                    <div class="form-group"><label>เลขบัตรประชาชน</label><input type="text" name="national_id"
+                            id="f_national_id"></div>
+                    <div class="form-group"><label>วันเกิด</label><input type="text" name="birth_date_thai"
+                            id="f_birth_date_thai"></div>
+                    <div class="form-group"><label>อายุ</label><input type="number" name="age" id="f_age"></div>
+                    <div class="form-group"><label>วุฒิการศึกษา</label><input type="text" name="education"
+                            id="f_education"></div>
+                    <div class="form-group"><label>สถานะกลุ่มงาน</label><input type="text" name="workgroup_status"
+                            id="f_workgroup_status"></div>
+
+                    <!-- พื้นที่และรอบอบรม -->
+                    <div class="form-section-title"><i class="fas fa-map-marker-alt mr-1 text-green-500"></i>
+                        พื้นที่และรอบอบรม</div>
+                    <div class="form-group"><label>Area</label><input type="text" name="area" id="f_area"></div>
+                    <div class="form-group"><label>รอบอบรม</label><input type="text" name="training_round_date"
+                            id="f_training_round_date"></div>
+                    <div class="form-group"><label>เดือนอบรม</label><input type="text" name="training_month"
+                            id="f_training_month"></div>
+                    <div class="form-group"><label>Training By</label><input type="text" name="training_by"
+                            id="f_training_by"></div>
+
+                    <!-- สถานะและผลลัพธ์ -->
+                    <div class="form-section-title"><i class="fas fa-clipboard-check mr-1 text-purple-500"></i>
+                        สถานะและผลลัพธ์</div>
+                    <div class="form-group"><label>Status</label><input type="text" name="status" id="f_status"></div>
+                    <div class="form-group"><label>Result</label><input type="text" name="result" id="f_result"></div>
+                    <div class="form-group"><label>Status Group</label><input type="text" name="status_group"
+                            id="f_status_group"></div>
+                    <div class="form-group"><label>Remark</label><input type="text" name="remark" id="f_remark"></div>
+
+                    <!--  SLA -->
+                    <div class="form-section-title"><i class="fas fa-clock mr-1 text-orange-500"></i> SLA</div>
+                    <div class="form-group"><label>Start Date</label><input type="text" name="start_date"
+                            id="f_start_date"></div>
+                    <div class="form-group"><label>End Date</label><input type="text" name="end_date" id="f_end_date">
+                    </div>
+                    <div class="form-group"><label>SLA Total</label><input type="number" name="sla_total"
+                            id="f_sla_total"></div>
+                    <div class="form-group"><label>Week</label><input type="text" name="week" id="f_week"></div>
+                    <div class="form-group"><label>Round Month</label><input type="text" name="round_month"
+                            id="f_round_month"></div>
+                    <div class="form-group"><label>Year</label><input type="text" name="year" id="f_year"></div>
+                </div>
+            </form>
+        </div>
+        <div class="p-4 border-t bg-gray-50 flex justify-end gap-3 rounded-b-xl">
+            <button onclick="closeFormModal()"
+                class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm transition">ยกเลิก</button>
+            <button onclick="saveForm()" id="saveBtn"
+                class="px-5 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm transition shadow-md">
+                <i class="fas fa-save mr-1"></i> บันทึก
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="modal-overlay">
+    <div class="modal-content w-full max-w-md mx-4">
+        <div class="p-6 text-center">
+            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-trash-alt text-red-500 text-2xl"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-800 mb-2">ยืนยันการลบ</h3>
+            <p class="text-gray-500 text-sm mb-1">คุณต้องการลบข้อมูลนี้หรือไม่?</p>
+            <p id="deleteRecordName" class="font-semibold text-gray-700 mb-6"></p>
+            <div class="flex justify-center gap-3">
+                <button onclick="closeDeleteModal()"
+                    class="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm transition">ยกเลิก</button>
+                <button onclick="confirmDelete()" id="confirmDeleteBtn"
+                    class="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm transition shadow-md">
+                    <i class="fas fa-trash mr-1"></i> ลบ
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Import CSV Modal -->
+<div id="importModal" class="modal-overlay">
+    <div class="modal-content w-full max-w-lg mx-4">
+        <div class="p-5 border-b flex items-center justify-between">
+            <h3 class="text-lg font-bold text-gray-800"><i
+                    class="fas fa-file-csv text-green-500 mr-2"></i>นำเข้าข้อมูลจาก CSV</h3>
+            <button onclick="closeImportModal()" class="text-gray-400 hover:text-gray-600 text-xl"><i
+                    class="fas fa-times"></i></button>
+        </div>
+        <div class="p-5">
+            <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition"
+                id="dropZone">
+                <div class="mb-4">
+                    <i class="fas fa-cloud-upload-alt text-4xl text-gray-300"></i>
+                </div>
+                <p class="text-gray-600 mb-2">ลากไฟล์ CSV มาวางที่นี่ หรือ</p>
+                <label
+                    class="inline-block px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm cursor-pointer transition shadow-md">
+                    <i class="fas fa-folder-open mr-1"></i> เลือกไฟล์
+                    <input type="file" id="csvFileInput" accept=".csv" class="hidden" onchange="handleFileSelect(this)">
+                </label>
+                <p id="selectedFileName" class="text-sm text-gray-500 mt-3 hidden">
+                    <i class="fas fa-file-csv text-green-500 mr-1"></i>
+                    <span id="fileNameText"></span>
+                </p>
+            </div>
+            <div id="importPreview" class="mt-4 hidden">
+                <p class="text-sm text-gray-600 mb-2"><i class="fas fa-eye mr-1"></i> ตัวอย่างข้อมูล (5 แถวแรก):</p>
+                <div class="overflow-x-auto max-h-48 border rounded-lg">
+                    <table class="admin-table w-full text-xs" id="previewTable"></table>
+                </div>
+            </div>
+        </div>
+        <div class="p-4 border-t bg-gray-50 flex justify-end gap-3 rounded-b-xl">
+            <button onclick="closeImportModal()"
+                class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm transition">ยกเลิก</button>
+            <button onclick="importCSV()" id="importBtn"
+                class="px-5 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm transition shadow-md"
+                disabled>
+                <i class="fas fa-upload mr-1"></i> นำเข้า
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" class="toast"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // ==================== Global State ====================
+    const DEFAULT_COLUMNS = {{ default_columns | tojson }};
+    const ALL_COLUMNS = {{ all_columns | tojson }};
+    let visibleColumns = [...DEFAULT_COLUMNS];
+    let currentPage = 1;
+    let perPage = 20;
+    let searchTimeout = null;
+    let deleteRowId = null;
+    let csvFile = null;
+    let currentSort = { by: 'row_id', order: 'desc' };
+
+    // Column labels (Thai)
+    const COLUMN_LABELS = {
+        'row_id': 'Row ID', 'no': 'No', 'first_name_th': 'ชื่อ(ไทย)', 'last_name_th': 'นามสกุล(ไทย)',
+        'full_name_th': 'ชื่อเต็ม(ไทย)', 'first_name_en': 'ชื่อ(EN)', 'last_name_en': 'นามสกุล(EN)',
+        'depot_name': 'Depot', 'depot_code': 'Depot Code', 'province': 'จังหวัด',
+        'national_id': 'เลขบัตร', 'birth_date_thai': 'วันเกิด', 'age': 'อายุ',
+        'education': 'วุฒิ', 'workgroup_status': 'กลุ่มงาน',
+        'theory_training_result': 'ผลทฤษฎี', 'on_the_job_result': 'ผล OJT',
+        'area': 'พื้นที่', 'training_round_date': 'รอบอบรม', 'training_month': 'เดือนอบรม',
+        'id': 'ID', 'certificate': 'ใบรับรอง', 'date_card': 'วันที่บัตร', 'card': 'บัตร',
+        'result': 'ผลลัพธ์', 'status': 'สถานะ',
+        'start_date': 'วันเริ่ม', 'end_date': 'วันสิ้นสุด', 'sla_total': 'SLA รวม',
+        'training_by': 'ผู้อบรม', 'week': 'สัปดาห์', 'round_month': 'รอบเดือน',
+        'year': 'ปี', 'remark': 'หมายเหตุ', 'model': 'รุ่น', 'update': 'อัปเดต', 'status_group': 'กลุ่มสถานะ',
+        'status_result_round': 'สถานะรอบ', 'result_round': 'ผลรอบ', 'training_start': 'เริ่มอบรม', 'training_end': 'สิ้นสุดอบรม',
+        'sla_training': 'SLA อบรม', 'remark_training': 'หมายเหตุอบรม',
+        'status_result_ojt': 'สถานะ OJT', 'result_round_ojt': 'ผล OJT', 'ojt_start': 'เริ่ม OJT', 'ojt_end': 'สิ้นสุด OJT',
+        'sla_ojt': 'SLA OJT', 'remark_ojt': 'หมายเหตุ OJT',
+        'status_doc': 'สถานะเอกสาร', 'result_doc': 'ผลเอกสาร', 'doc_start': 'เริ่มเอกสาร', 'doc_end': 'สิ้นสุดเอกสาร',
+        'sla_doc': 'SLA เอกสาร', 'remark_doc': 'หมายเหตุเอกสาร',
+        'status_genid': 'สถานะ GenID', 'result_genid': 'ผล GenID',
+        'genid_start': 'เริ่ม GenID', 'genid_end': 'สิ้นสุด GenID',
+        'sla_genid': 'SLA GenID', 'remark_genid': 'หมายเหตุ GenID',
+        'status_printcard': 'สถานะ PrintCard', 'result_printcard': 'ผล PrintCard',
+        'printcard_start': 'เริ่ม PrintCard', 'printcard_end': 'สิ้นสุด PrintCard',
+        'sla_printcard': 'SLA PrintCard', 'remark_genid_card': 'หมายเหตุ PrintCard',
+        'status_inspection': 'สถานะตรวจ', 'result_inspection': 'ผลตรวจ',
+        'inspection_start': 'เริ่มตรวจ', 'inspection_end': 'สิ้นสุดตรวจ',
+        'sla_inspection': 'SLA ตรวจ', 'remark_inspection': 'หมายเหตุตรวจ',
+        'status_dflow': 'สถานะ DFlow', 'result_dflow': 'ผล DFlow',
+        'dflow_start': 'เริ่ม DFlow', 'dflow_end': 'สิ้นสุด DFlow',
+        'sla_dflow': 'SLA DFlow', 'remark_dflow': 'หมายเหตุ DFlow',
+        'status_registration': 'สถานะขึ้นทะเบียน', 'result_registration': 'ผลขึ้นทะเบียน',
+        'registration_start': 'เริ่มขึ้นทะเบียน', 'registration_end': 'สิ้นสุดขึ้นทะเบียน',
+        'sla_registration': 'SLA ขึ้นทะเบียน', 'remark_registration': 'หมายเหตุขึ้นทะเบียน',
+        'technician_profile_file': 'ไฟล์โปรไฟล์', 'id_card_file': 'ไฟล์บัตร',
+        'education_certificate_file': 'ไฟล์วุฒิ', 'technician_photo_status': 'สถานะรูป',
+        'medical_certificate_file': 'ใบแพทย์', 'pole_climbing_training': 'อบรมปีนเสา',
+        'driver_license_file': 'ใบขับขี่', 'criminal_record_document': 'หลักฐานอาชญากรรม',
+        'background_check_status': 'ตรวจประวัติ', 'payment_status': 'สถานะชำระ'
+    };
+
+    // ==================== Data Loading ====================
+    async function loadData() {
+        const search = document.getElementById('searchInput').value;
+        const area = document.getElementById('filterArea').value;
+        const status = document.getElementById('filterStatus').value;
+        const result = document.getElementById('filterResult').value;
+
+        const params = new URLSearchParams({
+            page: currentPage, per_page: perPage,
+            search, area, status, result,
+            sort_by: currentSort.by, sort_order: currentSort.order
+        });
+
+        document.getElementById('tableInfo').innerHTML = '<span class="loading-spinner"></span> กำลังโหลด...';
+
+        try {
+            const res = await fetch(`/api/admin/data?${params}`);
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            renderTable(json.data);
+            renderPagination(json.pagination);
+            updateFilters(json.filters);
+        } catch (e) {
+            document.getElementById('tableBody').innerHTML = `<tr><td colspan="20" class="text-center py-8 text-red-400"><i class="fas fa-exclamation-triangle mr-2"></i>${e.message}</td></tr>`;
+            document.getElementById('tableInfo').textContent = 'เกิดข้อผิดพลาดในการโหลดข้อมูล';
+        }
+    }
+
+    function renderTable(data) {
+        // Header
+        const header = document.getElementById('tableHeader');
+        let headerHtml = '<th class="text-left text-gray-500 text-xs font-semibold px-2" style="width:80px;">จัดการ</th>';
+        visibleColumns.forEach(col => {
+            const sortIcon = currentSort.by === col ? (currentSort.order === 'asc' ? '<i class="fas fa-sort-up ml-1"></i>' : '<i class="fas fa-sort-down ml-1"></i>') : '<i class="fas fa-sort ml-1 text-gray-300"></i>';
+            headerHtml += `<th class="text-left text-gray-500 text-xs font-semibold" onclick="sortColumn('${col}')">${COLUMN_LABELS[col] || col} ${sortIcon}</th>`;
+        });
+        header.innerHTML = headerHtml;
+
+        // Body
+        const tbody = document.getElementById('tableBody');
+        if (!data || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="' + (visibleColumns.length + 1) + '" class="text-center py-12 text-gray-400"><i class="fas fa-inbox text-3xl mb-2 block"></i>ไม่พบข้อมูล</td></tr>';
+            return;
+        }
+
+        let html = '';
+        data.forEach(row => {
+            html += '<tr>';
+            html += `<td class="px-2">
+            <button class="btn-action btn-edit mr-1" onclick="editRow(${row.row_id})" title="แก้ไข"><i class="fas fa-pen"></i></button>
+            <button class="btn-action btn-delete" onclick="deleteRow(${row.row_id}, '${(row.full_name_th || row.no || '').replace(/'/g, "\\'")}')" title="ลบ"><i class="fas fa-trash"></i></button>
+        </td>`;
+            visibleColumns.forEach(col => {
+                let val = row[col] ?? '';
+                // Badge for result column
+                if (col === 'result' && val) {
+                    const cls = val === 'Completed' ? 'badge-completed' : val === 'Onprocess' ? 'badge-onprocess' : val === 'Closed' ? 'badge-closed' : 'badge-cancel';
+                    val = `<span class="badge ${cls}">${val}</span>`;
+                }
+                html += `<td>${val}</td>`;
+            });
+            html += '</tr>';
+        });
+        tbody.innerHTML = html;
+    }
+
+    function renderPagination(p) {
+        document.getElementById('tableInfo').textContent = `แสดง ${((p.page - 1) * p.per_page) + 1}-${Math.min(p.page * p.per_page, p.total)} จาก ${p.total} รายการ`;
+
+        let html = '';
+        html += `<button class="pagination-btn" onclick="goPage(1)" ${p.page <= 1 ? 'disabled' : ''}><i class="fas fa-angle-double-left"></i></button>`;
+        html += `<button class="pagination-btn" onclick="goPage(${p.page - 1})" ${p.page <= 1 ? 'disabled' : ''}><i class="fas fa-angle-left"></i></button>`;
+
+        let start = Math.max(1, p.page - 2);
+        let end = Math.min(p.total_pages, p.page + 2);
+        for (let i = start; i <= end; i++) {
+            html += `<button class="pagination-btn ${i === p.page ? 'active' : ''}" onclick="goPage(${i})">${i}</button>`;
+        }
+
+        html += `<button class="pagination-btn" onclick="goPage(${p.page + 1})" ${p.page >= p.total_pages ? 'disabled' : ''}><i class="fas fa-angle-right"></i></button>`;
+        html += `<button class="pagination-btn" onclick="goPage(${p.total_pages})" ${p.page >= p.total_pages ? 'disabled' : ''}><i class="fas fa-angle-double-right"></i></button>`;
+        document.getElementById('paginationControls').innerHTML = html;
+    }
+
+    function updateFilters(filters) {
+        const areaSelect = document.getElementById('filterArea');
+        const statusSelect = document.getElementById('filterStatus');
+        const resultSelect = document.getElementById('filterResult');
+        const currentArea = areaSelect.value;
+        const currentStatus = statusSelect.value;
+        const currentResult = resultSelect.value;
+
+        // Only update if options are empty (first load)
+        if (areaSelect.options.length <= 1) {
+            filters.areas.forEach(a => { const o = new Option(a, a); areaSelect.add(o); });
+            filters.statuses.forEach(s => { const o = new Option(s, s); statusSelect.add(o); });
+            filters.results.forEach(r => { const o = new Option(r, r); resultSelect.add(o); });
+        }
+        areaSelect.value = currentArea;
+        statusSelect.value = currentStatus;
+        resultSelect.value = currentResult;
+    }
+
+    // ==================== Column Management ====================
+    function initColumnCheckboxes() {
+        const container = document.getElementById('columnCheckboxes');
+        let html = '';
+        ALL_COLUMNS.forEach(col => {
+            if (col === 'row_id') return; // Always hidden in list, used internally
+            const checked = visibleColumns.includes(col) ? 'checked' : '';
+            html += `<label><input type="checkbox" value="${col}" ${checked} onchange="toggleColumn('${col}', this.checked)" class="mr-2 accent-blue-500"> ${COLUMN_LABELS[col] || col}</label>`;
+        });
+        container.innerHTML = html;
+    }
+
+    function toggleColumn(col, show) {
+        if (show && !visibleColumns.includes(col)) visibleColumns.push(col);
+        if (!show) visibleColumns = visibleColumns.filter(c => c !== col);
+        loadData();
+    }
+
+    function toggleColumnDropdown() {
+        document.getElementById('columnDropdown').classList.toggle('active');
+    }
+
+    function selectAllColumns() {
+        visibleColumns = ALL_COLUMNS.filter(c => c !== 'row_id');
+        document.querySelectorAll('#columnCheckboxes input').forEach(cb => cb.checked = true);
+        loadData();
+    }
+
+    function deselectAllColumns() {
+        visibleColumns = ['no', 'full_name_th'];
+        document.querySelectorAll('#columnCheckboxes input').forEach(cb => { cb.checked = visibleColumns.includes(cb.value); });
+        loadData();
+    }
+
+    function resetColumns() {
+        visibleColumns = [...DEFAULT_COLUMNS];
+        document.querySelectorAll('#columnCheckboxes input').forEach(cb => { cb.checked = visibleColumns.includes(cb.value); });
+        loadData();
+    }
+
+    // Close dropdown on outside click
+    document.addEventListener('click', e => {
+        const dd = document.getElementById('columnDropdown');
+        if (!e.target.closest('.relative') || !e.target.closest('.relative').contains(dd)) {
+            dd.classList.remove('active');
+        }
+    });
+
+    // ==================== Sorting ====================
+    function sortColumn(col) {
+        if (currentSort.by === col) {
+            currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSort = { by: col, order: 'asc' };
+        }
+        currentPage = 1;
+        loadData();
+    }
+
+    // ==================== Pagination ====================
+    function goPage(page) { currentPage = page; loadData(); }
+
+    // ==================== Search & Filter ====================
+    document.getElementById('searchInput').addEventListener('input', () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => { currentPage = 1; loadData(); }, 400);
+    });
+
+    document.getElementById('filterArea').addEventListener('change', () => { currentPage = 1; loadData(); });
+    document.getElementById('filterStatus').addEventListener('change', () => { currentPage = 1; loadData(); });
+    document.getElementById('filterResult').addEventListener('change', () => { currentPage = 1; loadData(); });
+    document.getElementById('perPageSelect').addEventListener('change', function () { perPage = parseInt(this.value); currentPage = 1; loadData(); });
+
+    // ==================== Add/Edit Modal ====================
+    function openAddModal() {
+        document.getElementById('formModalTitle').innerHTML = '<i class="fas fa-plus-circle text-blue-500 mr-2"></i>เพิ่มข้อมูลใหม่';
+        document.getElementById('editRowId').value = '';
+        document.getElementById('crudForm').reset();
+        document.getElementById('formModal').classList.add('active');
+    }
+
+    async function editRow(rowId) {
+        console.log('editRow called with rowId:', rowId, typeof rowId);
+        if (!rowId && rowId !== 0) {
+            showToast('error', 'ไม่พบ row_id สำหรับแถวนี้');
+            return;
+        }
+        document.getElementById('formModalTitle').innerHTML = '<i class="fas fa-edit text-yellow-500 mr-2"></i>แก้ไขข้อมูล';
+        document.getElementById('editRowId').value = rowId;
+
+        try {
+            const url = `/api/admin/record/${rowId}`;
+            console.log('Fetching:', url);
+            const res = await fetch(url, { credentials: 'same-origin' });
+            console.log('Response status:', res.status, 'redirected:', res.redirected);
+            if (res.redirected || res.status === 302) {
+                window.location.href = '/admin/login';
+                return;
+            }
+            const text = await res.text();
+            console.log('Response text (first 200):', text.substring(0, 200));
+            let json;
+            try {
+                json = JSON.parse(text);
+            } catch (parseErr) {
+                throw new Error('เซสชันหมดอายุ กรุณา login ใหม่');
+            }
+            if (!json.success) throw new Error(json.error);
+
+            // Populate form fields
+            const data = json.data;
+            const form = document.getElementById('crudForm');
+            for (const [key, val] of Object.entries(data)) {
+                const input = form.querySelector(`[name="${key}"]`);
+                if (input) input.value = val || '';
+            }
+            document.getElementById('formModal').classList.add('active');
+        } catch (e) {
+            showToast('error', 'ไม่สามารถโหลดข้อมูล: ' + e.message);
+        }
+    }
+
+    function closeFormModal() {
+        document.getElementById('formModal').classList.remove('active');
+    }
+
+    async function saveForm() {
+        const btn = document.getElementById('saveBtn');
+        const editId = document.getElementById('editRowId').value;
+        const form = document.getElementById('crudForm');
+        const formData = new FormData(form);
+        const data = {};
+        formData.forEach((val, key) => { data[key] = val; });
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="loading-spinner" style="width:14px;height:14px;border-width:2px;"></span> กำลังบันทึก...';
+
+        try {
+            let res;
+            if (editId) {
+                res = await fetch(`/api/admin/update/${editId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+            } else {
+                res = await fetch('/api/admin/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+            }
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+
+            showToast('success', editId ? 'แก้ไขข้อมูลสำเร็จ' : 'เพิ่มข้อมูลสำเร็จ');
+            closeFormModal();
+            loadData();
+        } catch (e) {
+            showToast('error', 'เกิดข้อผิดพลาด: ' + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save mr-1"></i> บันทึก';
+        }
+    }
+
+    // ==================== Delete ====================
+    function deleteRow(rowId, name) {
+        deleteRowId = rowId;
+        document.getElementById('deleteRecordName').textContent = name || `Row ID: ${rowId}`;
+        document.getElementById('deleteModal').classList.add('active');
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').classList.remove('active');
+        deleteRowId = null;
+    }
+
+    async function confirmDelete() {
+        if (!deleteRowId) return;
+        const btn = document.getElementById('confirmDeleteBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="loading-spinner" style="width:14px;height:14px;border-width:2px;"></span> กำลังลบ...';
+
+        try {
+            const res = await fetch(`/api/admin/delete/${deleteRowId}`, { method: 'DELETE' });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+
+            showToast('success', 'ลบข้อมูลสำเร็จ');
+            closeDeleteModal();
+            loadData();
+        } catch (e) {
+            showToast('error', 'ไม่สามารถลบข้อมูล: ' + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-trash mr-1"></i> ลบ';
+        }
+    }
+
+    // ==================== CSV Import ====================
+    function openImportModal() {
+        csvFile = null;
+        document.getElementById('csvFileInput').value = '';
+        document.getElementById('selectedFileName').classList.add('hidden');
+        document.getElementById('importPreview').classList.add('hidden');
+        document.getElementById('importBtn').disabled = true;
+        document.getElementById('importModal').classList.add('active');
+    }
+
+    function closeImportModal() {
+        document.getElementById('importModal').classList.remove('active');
+    }
+
+    function handleFileSelect(input) {
+        const file = input.files[0];
+        if (!file) return;
+        csvFile = file;
+        document.getElementById('fileNameText').textContent = file.name;
+        document.getElementById('selectedFileName').classList.remove('hidden');
+        document.getElementById('importBtn').disabled = false;
+
+        // Preview
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const text = e.target.result;
+            const lines = text.split('\n').filter(l => l.trim());
+            if (lines.length < 2) return;
+
+            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+            let html = '<thead><tr>';
+            headers.forEach(h => html += `<th class="text-gray-500">${h}</th>`);
+            html += '</tr></thead><tbody>';
+
+            for (let i = 1; i < Math.min(6, lines.length); i++) {
+                html += '<tr>';
+                const vals = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+                vals.forEach(v => html += `<td>${v}</td>`);
+                html += '</tr>';
+            }
+            html += '</tbody>';
+            document.getElementById('previewTable').innerHTML = html;
+            document.getElementById('importPreview').classList.remove('hidden');
+        };
+        reader.readAsText(file);
+    }
+
+    // Drag and drop
+    const dropZone = document.getElementById('dropZone');
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('border-blue-400', 'bg-blue-50'); });
+    dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('border-blue-400', 'bg-blue-50'); });
+    dropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropZone.classList.remove('border-blue-400', 'bg-blue-50');
+        const file = e.dataTransfer.files[0];
+        if (file && file.name.endsWith('.csv')) {
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            document.getElementById('csvFileInput').files = dt.files;
+            handleFileSelect(document.getElementById('csvFileInput'));
+        }
+    });
+
+    async function importCSV() {
+        if (!csvFile) return;
+        const btn = document.getElementById('importBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="loading-spinner" style="width:14px;height:14px;border-width:2px;"></span> กำลังนำเข้า...';
+
+        try {
+            const formData = new FormData();
+            formData.append('file', csvFile);
+
+            const res = await fetch('/api/admin/import-csv', { method: 'POST', body: formData });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+
+            showToast('success', json.message || 'นำเข้าข้อมูลสำเร็จ');
+            closeImportModal();
+            loadData();
+        } catch (e) {
+            showToast('error', 'ไม่สามารถนำเข้าข้อมูล: ' + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-upload mr-1"></i> นำเข้า';
+        }
+    }
+
+    // ==================== Toast ====================
+    function showToast(type, message) {
+        const toast = document.getElementById('toast');
+        toast.className = `toast toast-${type}`;
+        toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} mr-2"></i>${message}`;
+        setTimeout(() => toast.classList.add('show'), 10);
+        setTimeout(() => { toast.classList.remove('show'); }, 3000);
+    }
+
+    // ==================== Init ====================
+    initColumnCheckboxes();
+    loadData();
+</script>
+{% endblock %}

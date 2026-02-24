@@ -651,9 +651,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Update summary cards
-    function updateSummaryCards(data) {
+    function updateSummaryCards(data, summary) {
         const provincesWithData = data.filter(p => p.total > 0);
-        const totalTechnicians = data.reduce((sum, p) => sum + p.total, 0);
+        // ใช้ total จริงจาก summary (รวมช่างที่ไม่มีข้อมูลจังหวัด)
+        const totalTechnicians = summary ? summary.total : data.reduce((sum, p) => sum + p.total, 0);
         const topProvince = data.length > 0 ? data.sort((a, b) => b.total - a.total)[0] : null;
         const avgRate = provincesWithData.length > 0 
             ? (provincesWithData.reduce((sum, p) => sum + p.success_rate, 0) / provincesWithData.length).toFixed(1)
@@ -681,14 +682,16 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             // Load province statistics
             const statsResponse = await fetch('/api/provinces-map');
-            const statsData = await statsResponse.json();
+            const statsResult = await statsResponse.json();
+            const statsData = statsResult.provinces || statsResult;
+            const summaryData = statsResult.summary || null;
             
             statsData.forEach(p => {
                 provinceData[p.province.trim()] = p;
             });
             
             updateProvinceList(statsData);
-            updateSummaryCards(statsData);
+            updateSummaryCards(statsData, summaryData);
             
             // Load Thailand GeoJSON
             const geoResponse = await fetch('https://raw.githubusercontent.com/apisit/thailand.json/master/thailand.json');
