@@ -127,9 +127,9 @@ def process_data(df):
     if df.empty:
         return df
     
-    # แปลงคอลัมน์ SLA เป็นตัวเลข (ไม่รวม sla_doc)
-    sla_columns = ['sla_total', 'sla_training', 'sla_ojt', 
-                   'sla_genid_card', 'sla_inspection', 'sla_dflow', 'sla_registration']
+    # แปลงคอลัมน์ SLA เป็นตัวเลข (ทุกขั้นตอน)
+    sla_columns = ['sla_total', 'sla_doc', 'sla_training', 'sla_ojt', 
+                   'sla_genid', 'sla_printcard', 'sla_inspection', 'sla_dflow', 'sla_registration']
     
     for col in sla_columns:
         if col in df.columns:

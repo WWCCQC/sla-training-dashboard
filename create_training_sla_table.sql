@@ -90,12 +90,20 @@ CREATE TABLE public.training_sla (
     sla_doc INTEGER,
     remark_doc TEXT,
     
-    -- Genid/Card
-    status_genid_card_card TEXT,
-    result_genid_card_card TEXT,
-    genid_card_start TEXT,
-    genid_card_end TEXT,
-    sla_genid_card INTEGER,
+    -- GenID
+    status_genid TEXT,
+    result_genid TEXT,
+    genid_start TEXT,
+    genid_end TEXT,
+    sla_genid INTEGER,
+    remark_genid TEXT,
+    
+    -- PrintCard
+    status_printcard TEXT,
+    result_printcard TEXT,
+    printcard_start TEXT,
+    printcard_end TEXT,
+    sla_printcard INTEGER,
     remark_genid_card TEXT,
     
     -- Inspection
@@ -120,11 +128,7 @@ CREATE TABLE public.training_sla (
     registration_start TEXT,
     registration_end TEXT,
     sla_registration INTEGER,
-    remark_registration TEXT,
-    
-    -- Metadata
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    remark_registration TEXT
 );
 
 -- สร้าง Index สำหรับการค้นหาที่ใช้บ่อย
