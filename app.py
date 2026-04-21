@@ -714,9 +714,14 @@ def get_monthly_stats(df):
             'cancel': cancel
         })
     
-    # เรียงตามลำดับเดือน
-    month_order = ['Oct25', 'Nov25', 'Dec25', 'Jan26', 'Feb26']
-    monthly_stats.sort(key=lambda x: month_order.index(x['month']) if x['month'] in month_order else 99)
+    # เรียงตามลำดับเดือน (dynamic sorting by parsing month string)
+    def parse_month_key(m):
+        try:
+            import datetime
+            return datetime.datetime.strptime(m, '%b%y')
+        except Exception:
+            return datetime.datetime.max
+    monthly_stats.sort(key=lambda x: parse_month_key(x['month']))
     
     return monthly_stats
 
@@ -745,8 +750,14 @@ def get_monthly_area_stats(df):
     if df.empty or 'training_month' not in df.columns or 'area' not in df.columns:
         return []
     
-    import re
-    month_order = ['Oct25', 'Nov25', 'Dec25', 'Jan26', 'Feb26']
+    import re, datetime
+    # สร้าง month_order จากข้อมูลจริง เรียงตาม parse วันที่
+    def parse_month_key(m):
+        try:
+            return datetime.datetime.strptime(m, '%b%y')
+        except Exception:
+            return datetime.datetime.max
+    month_order = sorted(df['training_month'].dropna().unique(), key=parse_month_key)
     
     # รวบรวมข้อมูลแต่ละพื้นที่
     area_monthly_data = []
