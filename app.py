@@ -18,6 +18,7 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'sla-dashboard-secret-key-2025')
+LATEST_DATA_UPDATED_AS = 'N/A'
 
 # ===============================
 # ADMIN CREDENTIALS
@@ -91,10 +92,9 @@ SLA_STEPS = [
 def inject_current_date():
     """ส่งวันที่ปัจจุบันไปทุก template"""
     from datetime import datetime
-    # แสดงวันที่แบบ "24 December 2025"
     now = datetime.now()
     current_date = now.strftime("%d %B %Y")
-    return {'current_date': current_date}
+    return {'current_date': current_date, 'data_updated_as': LATEST_DATA_UPDATED_AS}
 
 # ===============================
 # DATA LOADING & PROCESSING
@@ -102,15 +102,26 @@ def inject_current_date():
 
 def load_data():
     """โหลดข้อมูลจาก Supabase table: training_sla"""
+    global LATEST_DATA_UPDATED_AS
     try:
         # ดึงข้อมูลจาก Supabase
         response = supabase.table('training_sla').select('*').execute()
         
         if response.data:
             df = pd.DataFrame(response.data)
+            if 'created_at' in df.columns:
+                created_at_series = pd.to_datetime(df['created_at'], errors='coerce')
+                latest_created_at = created_at_series.max()
+                if pd.notna(latest_created_at):
+                    LATEST_DATA_UPDATED_AS = latest_created_at.strftime("%d %B %Y %H:%M")
+                else:
+                    LATEST_DATA_UPDATED_AS = 'N/A'
+            else:
+                LATEST_DATA_UPDATED_AS = 'N/A'
             return df
         else:
             print("No data found in training_sla table")
+            LATEST_DATA_UPDATED_AS = 'N/A'
             return pd.DataFrame()
     except Exception as e:
         print(f"Error loading data from Supabase: {e}")
@@ -118,8 +129,18 @@ def load_data():
         try:
             df = pd.read_csv('sla.csv', encoding='utf-8')
             print("Fallback: Using sla.csv")
+            if 'created_at' in df.columns:
+                created_at_series = pd.to_datetime(df['created_at'], errors='coerce')
+                latest_created_at = created_at_series.max()
+                if pd.notna(latest_created_at):
+                    LATEST_DATA_UPDATED_AS = latest_created_at.strftime("%d %B %Y %H:%M")
+                else:
+                    LATEST_DATA_UPDATED_AS = 'N/A'
+            else:
+                LATEST_DATA_UPDATED_AS = 'N/A'
             return df
         except:
+            LATEST_DATA_UPDATED_AS = 'N/A'
             return pd.DataFrame()
 
 def process_data(df):
@@ -138,6 +159,36 @@ def process_data(df):
             df.loc[df[col] < -1000, col] = np.nan
     
     return df
+
+
+def get_latest_created_at_label(df):
+    """ดึงเวลาล่าสุดจากคอลัมน์ created_at (รองรับ timezone, ใช้ string sort)"""
+    if df.empty or 'created_at' not in df.columns:
+        return 'N/A'
+
+    # ดึงค่า string ดิบ, กรอง None/NaN ออก
+    raw_values = df['created_at'].dropna().astype(str).tolist()
+    raw_values = [v for v in raw_values if v.strip() and v.lower() != 'nan' and v.lower() != 'nat']
+    if not raw_values:
+        return 'N/A'
+
+    # ISO 8601 เรียงลำดับตาม string ได้ถูกต้อง
+    latest_str = max(raw_values)
+
+    try:
+        from datetime import timezone, timedelta
+        # รองรับทั้ง "2026-05-19 02:19:45.902899+00" และ "2026-05-19T02:19:45+00:00"
+        dt = datetime.fromisoformat(latest_str.replace(' ', 'T'))
+        # แปลงเป็นเวลาประเทศไทย UTC+7
+        th_tz = timezone(timedelta(hours=7))
+        dt_th = dt.astimezone(th_tz)
+        return dt_th.strftime("%d %B %Y %H:%M")
+    except Exception:
+        # Fallback: ตัดให้เหลือแค่วันที่เวลา
+        try:
+            return latest_str[:16].replace('T', ' ')
+        except Exception:
+            return 'N/A'
 
 # ===============================
 # STATISTICS FUNCTIONS
@@ -1066,6 +1117,7 @@ def dashboard():
     """หน้า Dashboard หลัก"""
     df = load_data()
     df = process_data(df)
+    data_updated_as = get_latest_created_at_label(df)
     
     # รับ parameter filter จาก URL (รองรับ multi-select)
     years_param = request.args.get('years', '')  # format: "2025,2026"
@@ -1182,6 +1234,7 @@ def dashboard():
                          month_list=month_list,
                          selected_years=selected_years,
                          selected_months=selected_months,
+                         data_updated_as=data_updated_as,
                          active_page='dashboard')
 
 @app.route('/technicians')

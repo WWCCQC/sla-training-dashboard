@@ -1,12 +1,14 @@
 {% extends "layout.html" %}
 
-{% block title %}Dashboard - SLA Training{% endblock %}
+{% block title %}Dashboard : สถานะการอบรมเเละการขึ้นทะเบียนช่าง - SLA Training{% endblock %}
+
+{% block page_subtitle %}Data updates as {{ data_updated_as | default('N/A', true) }}{% endblock %}
 
 {% block content %}
 <!-- Header with Filter -->
 <div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
     <div>
-        <h1 class="text-2xl font-bold text-gray-800">SLA Training Dashboard</h1>
+        <h1 class="text-2xl font-bold text-gray-800">Dashboard : สถานะการอบรมเเละการขึ้นทะเบียนช่าง</h1>
         <p class="text-gray-600">ภาพรวมการติดตาม SLA การลงทะเบียนช่าง</p>
     </div>
 
