@@ -646,6 +646,92 @@
     </div>
 </div>
 
+<!-- Onprocess Pivot: แยกตามพื้นที่ (Region) -->
+<div class="bg-white rounded-xl shadow-sm p-5 mb-6">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+        <i class="fas fa-clock text-yellow-500 mr-2"></i>Onprocess: จำนวนช่างแยกตามพื้นที่ (Region) และสถานะ
+    </h3>
+    {% if onprocess_area_pivot.rows|length > 0 %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full text-sm border border-gray-200">
+            <thead class="bg-amber-100 text-amber-900">
+                <tr>
+                    <th class="px-4 py-3 text-left font-medium border border-gray-200">Region</th>
+                    {% for col in onprocess_area_pivot.columns %}
+                    <th class="px-3 py-3 text-center font-medium border border-gray-200 text-xs">{{ col }}</th>
+                    {% endfor %}
+                    <th class="px-4 py-3 text-center font-medium border border-gray-200 bg-amber-200">Grand Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Grand Total Row -->
+                <tr class="bg-gray-100 font-bold border-b-2 border-gray-400">
+                    <td class="px-4 py-3 text-gray-800 border border-gray-200">Grand Total</td>
+                    {% for cell in onprocess_area_pivot.grand_total.cells %}
+                    <td class="px-3 py-3 text-center border border-gray-200">{{ cell if cell > 0 else '' }}</td>
+                    {% endfor %}
+                    <td class="px-4 py-3 text-center border border-gray-200 bg-amber-50 text-amber-800">{{ onprocess_area_pivot.grand_total.total }}</td>
+                </tr>
+                {% for row in onprocess_area_pivot.rows %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 font-medium text-gray-800 border border-gray-200">{{ row.name }}</td>
+                    {% for cell in row.cells %}
+                    <td class="px-3 py-3 text-center border border-gray-200 text-gray-700">{{ cell if cell > 0 else '' }}</td>
+                    {% endfor %}
+                    <td class="px-4 py-3 text-center font-bold border border-gray-200 bg-amber-50 text-amber-800">{{ row.total }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-gray-400 text-sm">ไม่มีข้อมูลช่างในสถานะ Onprocess</p>
+    {% endif %}
+</div>
+
+<!-- Onprocess Pivot: แยกตามจังหวัด (Province) -->
+<div class="bg-white rounded-xl shadow-sm p-5 mb-6">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+        <i class="fas fa-clock text-yellow-500 mr-2"></i>Onprocess: จำนวนช่างแยกตามจังหวัด (Province) และสถานะ
+    </h3>
+    {% if onprocess_province_pivot.rows|length > 0 %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full text-sm border border-gray-200">
+            <thead class="bg-amber-100 text-amber-900">
+                <tr>
+                    <th class="px-4 py-3 text-left font-medium border border-gray-200">Province</th>
+                    {% for col in onprocess_province_pivot.columns %}
+                    <th class="px-3 py-3 text-center font-medium border border-gray-200 text-xs">{{ col }}</th>
+                    {% endfor %}
+                    <th class="px-4 py-3 text-center font-medium border border-gray-200 bg-amber-200">Grand Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Grand Total Row -->
+                <tr class="bg-gray-100 font-bold border-b-2 border-gray-400">
+                    <td class="px-4 py-3 text-gray-800 border border-gray-200">Grand Total</td>
+                    {% for cell in onprocess_province_pivot.grand_total.cells %}
+                    <td class="px-3 py-3 text-center border border-gray-200">{{ cell if cell > 0 else '' }}</td>
+                    {% endfor %}
+                    <td class="px-4 py-3 text-center border border-gray-200 bg-amber-50 text-amber-800">{{ onprocess_province_pivot.grand_total.total }}</td>
+                </tr>
+                {% for row in onprocess_province_pivot.rows %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 font-medium text-gray-800 border border-gray-200">{{ row.name }}</td>
+                    {% for cell in row.cells %}
+                    <td class="px-3 py-3 text-center border border-gray-200 text-gray-700">{{ cell if cell > 0 else '' }}</td>
+                    {% endfor %}
+                    <td class="px-4 py-3 text-center font-bold border border-gray-200 bg-amber-50 text-amber-800">{{ row.total }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-gray-400 text-sm">ไม่มีข้อมูลช่างในสถานะ Onprocess</p>
+    {% endif %}
+</div>
+
 <!-- Depot Agent Stats & Top Provinces -->
 <div class="flex flex-col lg:flex-row gap-6 mb-6">
     <!-- Depot Agent Stats Table - 65% -->

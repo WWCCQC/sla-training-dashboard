@@ -646,6 +646,78 @@ def get_area_step_summary(df):
     
     return sorted(area_summary, key=get_area_sort_key)
 
+def get_onprocess_pivot(df, group_col):
+    """สร้างตาราง pivot ของช่างที่อยู่ในสถานะ Onprocess
+    แยกตาม group_col (area หรือ province) เป็นแถว และสถานะย่อยเป็นคอลัมน์
+    คืนค่า dict { 'columns': [...], 'rows': [...], 'grand_total': {...} }
+    ใช้ข้อมูลชุดเดียวกับ get_area_step_summary แต่เฉพาะ result == 'Onprocess'
+    """
+    import re
+
+    empty = {'columns': [], 'rows': [], 'grand_total': {'cells': [], 'total': 0}}
+    if df.empty or group_col not in df.columns or 'result' not in df.columns:
+        return empty
+
+    onprocess_df = df[df['result'] == 'Onprocess'].copy()
+    if onprocess_df.empty or 'status' not in onprocess_df.columns:
+        return empty
+
+    # ลำดับสถานะย่อยตามที่กำหนด (ให้ตรงกับตารางสรุปด้านบน)
+    preferred_order = [
+        'เอกสารยังไม่ครบ',
+        'อยู่ระหว่างอบรม',
+        'OJT',
+        'Gen ID',
+        'Print/ส่งบัตร',
+        'รอตรวจกองงาน',
+        'พื้นที่ขออนุมัติ',
+        'ขอสิทธิ์เข้าใช้งาน'
+    ]
+
+    # สถานะที่ปรากฏจริงในข้อมูล Onprocess
+    present_statuses = [
+        str(s).strip() for s in onprocess_df['status'].dropna().unique()
+    ]
+
+    # จัดเรียงคอลัมน์: ตาม preferred_order ก่อน แล้วต่อด้วยสถานะอื่น ๆ ที่เหลือ
+    columns = [s for s in preferred_order if s in present_statuses]
+    columns += [s for s in present_statuses if s not in columns]
+
+    # สร้างแถวต่อกลุ่ม
+    rows = []
+    grand_cells = [0] * len(columns)
+    for group_val in onprocess_df[group_col].dropna().unique():
+        group_str = str(group_val).strip()
+        if not group_str:
+            continue
+        group_subset = onprocess_df[onprocess_df[group_col] == group_val]
+        status_counts = group_subset['status'].astype(str).str.strip().value_counts().to_dict()
+        cells = [int(status_counts.get(col, 0)) for col in columns]
+        row_total = sum(cells)
+        if row_total == 0:
+            continue
+        for i, c in enumerate(cells):
+            grand_cells[i] += c
+        rows.append({'name': group_str, 'cells': cells, 'total': row_total})
+
+    # เรียงแถว
+    if group_col == 'area':
+        def sort_key(item):
+            name = item.get('name', '')
+            m = re.search(r'^R(\d+)[_\-]', name)
+            if m:
+                return (0, int(m.group(1)), name)
+            m = re.search(r'RSM(\d+)', name)
+            if m:
+                return (0, int(m.group(1)), name)
+            return (1, 999, name)
+        rows.sort(key=sort_key)
+    else:
+        rows.sort(key=lambda item: item.get('name', ''))
+
+    grand_total = {'cells': grand_cells, 'total': sum(grand_cells)}
+    return {'columns': columns, 'rows': rows, 'grand_total': grand_total}
+
 def get_area_stats(df):
     """สรุปสถิติตามพื้นที่ (area) - นับจากคอลัมน์ result"""
     if df.empty or 'area' not in df.columns:
@@ -1201,6 +1273,8 @@ def dashboard():
     sla_steps = get_sla_by_step_stats(filtered_df)
     areas = get_area_stats(filtered_df)
     area_step_summary = get_area_step_summary(filtered_df)
+    onprocess_area_pivot = get_onprocess_pivot(filtered_df, 'area')
+    onprocess_province_pivot = get_onprocess_pivot(filtered_df, 'province')
     provinces = get_province_stats(filtered_df)
     monthly = get_monthly_stats(filtered_df)
     monthly_area = get_monthly_area_stats(filtered_df)
@@ -1220,6 +1294,8 @@ def dashboard():
                          sla_steps=sla_steps,
                          areas=areas,
                          area_step_summary=area_step_summary,
+                         onprocess_area_pivot=onprocess_area_pivot,
+                         onprocess_province_pivot=onprocess_province_pivot,
                          provinces=provinces,
                          monthly=monthly,
                          monthly_area=monthly_area,
