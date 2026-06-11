@@ -75,7 +75,7 @@
 <!-- KPI Cards Row 1 -->
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
     <!-- Total Technicians -->
-    <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-blue-500">
+    <div class="bg-white rounded-xl shadow-sm p-5 card-hover border-l-4 border-blue-500">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm text-gray-500 mb-1">ลงทะเบียนอบรม</p>
@@ -88,7 +88,7 @@
     </div>
 
     <!-- Closed -->
-    <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-red-500">
+    <div class="bg-white rounded-xl shadow-sm p-5 card-hover border-l-4 border-red-500">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm text-gray-500 mb-1">ไม่ผ่าน</p>
@@ -102,7 +102,7 @@
     </div>
 
     <!-- Cancel -->
-    <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-gray-500">
+    <div class="bg-white rounded-xl shadow-sm p-5 card-hover border-l-4 border-gray-500">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm text-gray-500 mb-1">ลาออก</p>
@@ -116,7 +116,7 @@
     </div>
 
     <!-- On Process -->
-    <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-yellow-500">
+    <div class="bg-white rounded-xl shadow-sm p-5 card-hover border-l-4 border-yellow-500">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm text-gray-500 mb-1">อยู่ระหว่างดำเนินการ</p>
@@ -130,7 +130,7 @@
     </div>
 
     <!-- Completed -->
-    <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-green-500">
+    <div class="bg-white rounded-xl shadow-sm p-5 card-hover border-l-4 border-green-500">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm text-gray-500 mb-1">ขึ้นทะเบียนเรียบร้อย</p>
@@ -199,31 +199,101 @@
     </div>
 </div>
 
-<!-- SLA by Step Section -->
+<!-- Executive Insight Section -->
 <div class="bg-white rounded-xl shadow-sm p-5 mb-6">
-    <h3 class="text-lg font-semibold text-gray-800 mb-4">
-        <i class="fas fa-list-ol text-blue-500 mr-2"></i>SLA แต่ละขั้นตอน (8 ขั้นตอน)
+    <h3 class="text-lg font-semibold text-gray-800 mb-1">
+        <i class="fas fa-lightbulb text-amber-500 mr-2"></i>Summary insight
+        {% if executive_insight.has_data %}
+        <span class="ml-2 bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm">เดือนล่าสุด: {{ executive_insight.latest_month }}</span>
+        {% endif %}
     </h3>
-    <div class="overflow-x-auto">
-        <div class="flex gap-3 pb-2">
-            {% for step in sla_steps %}
-            {% set avg_sla_ceil = (step.avg_sla | round(0, 'ceil')) | int %}
-            <div class="flex-shrink-0 w-40 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-4 border">
-                <div class="text-center">
-                    <div class="text-xs text-gray-500 mb-1">{{ loop.index }}. {{ step.name }}</div>
-                    <div
-                        class="text-2xl font-bold {% if avg_sla_ceil <= 7 %}text-green-600{% elif avg_sla_ceil <= 14 %}text-yellow-600{% else %}text-red-600{% endif %}">
-                        {{ avg_sla_ceil }}
-                    </div>
-                    <div class="text-xs text-gray-400">วันเฉลี่ย</div>
-                    <div class="text-xs text-green-600 mt-2">
-                        <i class="fas fa-check"></i> {{ step.complete }} Complete
+    {% if executive_insight.has_data %}
+    <p class="text-xs text-gray-400 mb-4">เปรียบเทียบกับเดือน {{ executive_insight.prev_month or '-' }} |
+        รุ่นเดือนล่าสุดยังดำเนินการไม่จบ ตัวเลขขึ้นทะเบียนจะทยอยเพิ่มขึ้น</p>
+
+    <!-- ตัวเลขหลักเดือนล่าสุด + เทียบเดือนก่อน -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {% for c in executive_insight.cards %}
+        <div class="rounded-xl border border-gray-100 bg-gradient-to-br from-gray-50 to-white p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 mb-1"><i class="fas {{ c.icon }} mr-1 text-gray-400"></i>{{ c.label }}</p>
+                    <div class="flex items-end gap-2">
+                        <h4 class="text-3xl font-bold text-gray-800">{{ c.value }}</h4>
+                        <span class="text-sm text-gray-400 mb-1">คน</span>
                     </div>
                 </div>
+                {% if c.delta is not none %}
+                {% set is_good = (c.delta > 0 and c.good_when_up) or (c.delta < 0 and not c.good_when_up) %}
+                <div class="text-right">
+                    {% if c.delta == 0 %}
+                    <span class="inline-flex items-center bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full text-xs font-medium">
+                        <i class="fas fa-equals mr-1"></i>เท่าเดิม</span>
+                    {% else %}
+                    <span class="inline-flex items-center {{ 'bg-green-100 text-green-700' if is_good else 'bg-red-100 text-red-700' }} px-2.5 py-1 rounded-full text-xs font-medium">
+                        <i class="fas {{ 'fa-arrow-up' if c.delta > 0 else 'fa-arrow-down' }} mr-1"></i>
+                        {{ c.delta | abs }} คน{% if c.pct is not none %} ({{ c.pct | abs }}%){% endif %}
+                    </span>
+                    {% endif %}
+                    <p class="text-[11px] text-gray-400 mt-1">จากเดือน {{ executive_insight.prev_month }}</p>
+                </div>
+                {% endif %}
             </div>
-            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- คอขวด SLA -->
+        <div>
+            <h4 class="text-sm font-semibold text-gray-700 mb-3">
+                <i class="fas fa-hourglass-half text-red-400 mr-1"></i>ขั้นตอนที่ใช้เวลานานที่สุด
+            </h4>
+            <div class="space-y-3">
+                {% for b in executive_insight.bottlenecks %}
+                <div>
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="text-gray-700">{{ loop.index }}. {{ b.name }}</span>
+                        <span class="font-bold {% if loop.index == 1 %}text-red-600{% elif loop.index == 2 %}text-orange-500{% else %}text-yellow-600{% endif %}">{{ b.avg_sla }} วัน</span>
+                    </div>
+                    <div class="w-full bg-gray-100 rounded-full h-2.5">
+                        <div class="h-2.5 rounded-full {% if loop.index == 1 %}bg-red-500{% elif loop.index == 2 %}bg-orange-400{% else %}bg-yellow-400{% endif %}"
+                            style="width: {{ b.width }}%"></div>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-sm text-gray-400">ยังไม่มีข้อมูล SLA เพียงพอ</p>
+                {% endfor %}
+            </div>
+            {% if executive_insight.top_stuck %}
+            <div class="mt-4 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800">
+                <i class="fas fa-user-clock mr-1"></i>ช่างค้างดำเนินการมากที่สุดที่สถานะ
+                <span class="font-bold">"{{ executive_insight.top_stuck.status }}"</span>
+                จำนวน <span class="font-bold">{{ executive_insight.top_stuck.count }} คน</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- ข้อเสนอแนะ -->
+        <div>
+            <h4 class="text-sm font-semibold text-gray-700 mb-3">
+                <i class="fas fa-clipboard-check text-green-500 mr-1"></i>ข้อเสนอแนะ
+            </h4>
+            <ul class="space-y-2.5">
+                {% for rec in executive_insight.recommendations %}
+                <li class="flex items-start text-sm text-gray-700 bg-gray-50 rounded-lg px-4 py-2.5 border border-gray-100">
+                    <i class="fas fa-angle-right text-blue-400 mr-2 mt-1"></i>
+                    <span>{{ rec }}</span>
+                </li>
+                {% else %}
+                <li class="text-sm text-gray-400">ไม่มีประเด็นที่ต้องเฝ้าระวังในเดือนนี้</li>
+                {% endfor %}
+            </ul>
         </div>
     </div>
+    {% else %}
+    <p class="text-gray-400 text-sm">ยังไม่มีข้อมูลเพียงพอสำหรับสรุป Insight</p>
+    {% endif %}
 </div>
 
 <!-- Charts Row -->
@@ -231,7 +301,7 @@
     <!-- Monthly Trend Line Chart - Total vs Completed -->
     <div class="bg-white rounded-xl shadow-sm p-5">
         <h3 class="text-lg font-semibold text-gray-800 mb-4">
-            <i class="fas fa-chart-line text-purple-500 mr-2"></i>Trend รายเดือน: ลงทะเบียน vs ขึ้นทะเบียนสำเร็จ
+            <i class="fas fa-chart-line text-purple-500 mr-2"></i>Trend รายเดือน: ลงทะเบียน vs ขึ้นทะเบียนสำเร็จ (ปี 2026)
         </h3>
         <div style="position: relative; height: 250px; width: 100%;">
             <canvas id="trendChart"></canvas>
@@ -731,14 +801,127 @@
     {% endif %}
 </div>
 
-<!-- Depot Agent Stats & Top Provinces -->
+<!-- Onprocess Detail: รายละเอียดช่างที่ยังขึ้นทะเบียนไม่เรียบร้อย -->
+<div class="bg-white rounded-xl shadow-sm p-5 mb-6">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+        <i class="fas fa-user-clock text-yellow-500 mr-2"></i>รายละเอียดช่างที่ยังขึ้นทะเบียนไม่เรียบร้อย (Onprocess)
+        <span class="ml-2 bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm">{{ onprocess_details|length }} คน</span>
+    </h3>
+    {% if onprocess_details|length > 0 %}
+    <div class="mb-3 flex flex-col md:flex-row gap-3 md:items-center">
+        <input type="text" id="onprocessDetailSearch"
+            class="w-full md:w-96 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+            placeholder="ค้นหา: ชื่อช่าง / Depot / จังหวัด / พื้นที่ / สถานะ ...">
+        <button id="onprocessExportBtn"
+            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium cursor-pointer whitespace-nowrap">
+            <i class="fas fa-file-excel mr-2"></i>Export Excel
+        </button>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-xs border border-gray-200" id="onprocessDetailTable">
+            <thead class="bg-gray-800 text-white" style="position: sticky; top: 0; z-index: 10;">
+                <tr>
+                    <th class="px-2 py-2 text-center font-medium whitespace-nowrap">ลำดับ</th>
+                    <th class="px-2 py-2 text-left font-medium whitespace-nowrap">ชื่อช่าง</th>
+                    <th class="px-2 py-2 text-left font-medium">Depot</th>
+                    <th class="px-2 py-2 text-left font-medium whitespace-nowrap">รหัส Depot</th>
+                    <th class="px-2 py-2 text-left font-medium whitespace-nowrap">จังหวัด</th>
+                    <th class="px-2 py-2 text-left font-medium whitespace-nowrap">พื้นที่ (Area)</th>
+                    <th class="px-2 py-2 text-center font-medium whitespace-nowrap">ผลอบรมทฤษฎี</th>
+                    <th class="px-2 py-2 text-center font-medium whitespace-nowrap">ผล OJT</th>
+                    <th class="px-2 py-2 text-center font-medium whitespace-nowrap">สถานะ</th>
+                    <th class="px-2 py-2 text-center font-medium whitespace-nowrap">Result</th>
+                    <th class="px-2 py-2 text-center font-medium whitespace-nowrap">รอบอบรม</th>
+                    <th class="px-2 py-2 text-center font-medium whitespace-nowrap">เดือนอบรม</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for t in onprocess_details %}
+                <tr class="hover:bg-yellow-50">
+                    <td class="px-2 py-2 text-center text-gray-600">{{ loop.index }}</td>
+                    <td class="px-2 py-2 font-medium text-gray-800">{{ t.full_name_th }}</td>
+                    <td class="px-2 py-2 text-gray-700">{{ t.depot_name }}</td>
+                    <td class="px-2 py-2 text-gray-700 whitespace-nowrap">{{ t.depot_code }}</td>
+                    <td class="px-2 py-2 text-gray-700">{{ t.province }}</td>
+                    <td class="px-2 py-2 text-gray-700 whitespace-nowrap">{{ t.area }}</td>
+                    {# ผลอบรมทฤษฎี / ผล OJT: ไม่ผ่าน=แดง, ผ่าน=เขียว, Onprocess=เหลือง, อื่นๆ=เทา #}
+                    {% for v in [t.theory_training_result, t.on_the_job_result] %}
+                    <td class="px-2 py-2 text-center whitespace-nowrap">
+                        {% if 'ไม่ผ่าน' in v %}
+                        <span class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-medium">{{ v }}</span>
+                        {% elif 'ผ่าน' in v %}
+                        <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-medium">{{ v }}</span>
+                        {% elif v and v != '-' %}
+                        <span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs font-medium">{{ v }}</span>
+                        {% else %}
+                        <span class="text-gray-400">-</span>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                    <td class="px-2 py-2 text-center whitespace-nowrap">
+                        <span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-xs font-medium">{{ t.status }}</span>
+                    </td>
+                    <td class="px-2 py-2 text-center text-yellow-600 font-medium whitespace-nowrap">{{ t.result }}</td>
+                    <td class="px-2 py-2 text-center text-gray-700 whitespace-nowrap">{{ t.training_round_date }}</td>
+                    <td class="px-2 py-2 text-center text-gray-700 whitespace-nowrap">{{ t.training_month }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-gray-400 text-sm">ไม่มีข้อมูลช่างในสถานะ Onprocess</p>
+    {% endif %}
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+    // ค้นหา + Export Excel ตารางรายละเอียดช่าง Onprocess
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchInput = document.getElementById('onprocessDetailSearch');
+        const detailTable = document.getElementById('onprocessDetailTable');
+        if (searchInput && detailTable) {
+            searchInput.addEventListener('input', function () {
+                const keyword = this.value.trim().toLowerCase();
+                detailTable.querySelectorAll('tbody tr').forEach(function (row) {
+                    row.style.display = row.textContent.toLowerCase().includes(keyword) ? '' : 'none';
+                });
+            });
+        }
+
+        const exportBtn = document.getElementById('onprocessExportBtn');
+        if (exportBtn && detailTable) {
+            exportBtn.addEventListener('click', function () {
+                // ดึงหัวตาราง + เฉพาะแถวที่แสดงอยู่ (เคารพผลการค้นหา)
+                const headers = Array.from(detailTable.querySelectorAll('thead th'))
+                    .map(th => th.textContent.trim());
+                const rows = Array.from(detailTable.querySelectorAll('tbody tr'))
+                    .filter(tr => tr.style.display !== 'none')
+                    .map(tr => Array.from(tr.querySelectorAll('td')).map(td => td.textContent.trim()));
+
+                const ws = XLSX.utils.aoa_to_sheet([headers].concat(rows));
+                // ตั้งความกว้างคอลัมน์ตามเนื้อหาที่ยาวที่สุด
+                ws['!cols'] = headers.map(function (h, i) {
+                    let w = h.length;
+                    rows.forEach(function (r) { w = Math.max(w, (r[i] || '').length); });
+                    return { wch: Math.min(w + 4, 60) };
+                });
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Onprocess');
+                XLSX.writeFile(wb, 'onprocess_technicians.xlsx');
+            });
+        }
+    });
+</script>
+
+<!-- Depot Agent Stats -->
 <div class="flex flex-col lg:flex-row gap-6 mb-6">
-    <!-- Depot Agent Stats Table - 65% -->
-    <div class="bg-white rounded-xl shadow-sm p-5 w-full lg:w-[65%]">
+    <!-- Depot Agent Stats Table -->
+    <div class="bg-white rounded-xl shadow-sm p-5 w-full">
         <h3 class="text-lg font-semibold text-gray-800 mb-4">
             <i class="fas fa-building text-purple-500 mr-2"></i>สรุปจำนวนช่างตามตัวแทน
         </h3>
-        <div class="overflow-x-auto" style="max-height: 400px; overflow-y: auto;">
+        <div class="overflow-x-auto">
             <table class="min-w-full text-sm" id="depotAgentTable">
                 <thead class="bg-gray-800 text-white sticky top-0">
                     <tr>
@@ -805,23 +988,6 @@
         </div>
     </div>
 
-    <!-- Top Provinces - 35% -->
-    <div class="bg-white rounded-xl shadow-sm p-5 w-full lg:w-[35%]">
-        <h3 class="text-lg font-semibold text-gray-800 mb-4">
-            <i class="fas fa-city text-teal-500 mr-2"></i>Top 10 จังหวัด
-        </h3>
-        <div class="space-y-2">
-            {% for prov in provinces[:10] %}
-            <div class="flex items-center justify-between py-2 border-b border-gray-100">
-                <span class="text-gray-700">{{ prov.province }}</span>
-                <div class="flex items-center gap-4">
-                    <span class="text-sm text-gray-500">{{ prov.total }} ลงทะเบียน</span>
-                    <span class="text-sm font-medium text-green-600">{{ prov.completed }} สำเร็จ</span>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
 </div>
 
 {% endblock %}
@@ -1020,9 +1186,18 @@
         }
 
         // ===== กราฟที่ 1: Trend รายเดือน - ลงทะเบียน vs ขึ้นทะเบียนสำเร็จ =====
-        const monthLabels = [{% for m in monthly %}'{{ m.month }}'{% if not loop.last %},{% endif %}{% endfor %}];
-    const monthlyTotals = [{% for m in monthly %}{{ m.total }}{% if not loop.last %},{% endif %}{% endfor %}];
-    const monthlyCompleted = [{% for m in monthly %}{{ m.completed }}{% if not loop.last %},{% endif %}{% endfor %}];
+        const allMonthLabels = [{% for m in monthly %}'{{ m.month }}'{% if not loop.last %},{% endif %}{% endfor %}];
+    const allMonthlyTotals = [{% for m in monthly %}{{ m.total }}{% if not loop.last %},{% endif %}{% endfor %}];
+    const allMonthlyCompleted = [{% for m in monthly %}{{ m.completed }}{% if not loop.last %},{% endif %}{% endfor %}];
+
+    // แสดงเฉพาะปี 2026 (training_month format: MonYY เช่น Jan26)
+    const TREND_YEAR_SUFFIX = '26';
+    const trendIndices = allMonthLabels
+        .map((m, i) => m.endsWith(TREND_YEAR_SUFFIX) ? i : -1)
+        .filter(i => i >= 0);
+    const monthLabels = trendIndices.map(i => allMonthLabels[i]);
+    const monthlyTotals = trendIndices.map(i => allMonthlyTotals[i]);
+    const monthlyCompleted = trendIndices.map(i => allMonthlyCompleted[i]);
 
     // Custom plugin สำหรับแสดงตัวเลขบนจุดกราฟ
     const trendLabelPlugin = {
@@ -1037,7 +1212,7 @@
                         const value = dataset.data[index];
 
                         ctx.save();
-                        ctx.font = 'bold 12px sans-serif';
+                        ctx.font = 'bold 10px sans-serif';
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'bottom';
 
@@ -1055,8 +1230,13 @@
                             displayText = value + ' (' + percentage + '%)';
                         }
 
-                        // แสดงตัวเลขเหนือจุด (ลบ 15 pixels จาก y position)
-                        ctx.fillText(displayText, point.x, point.y - 15);
+                        // บีบตำแหน่ง x ให้ข้อความอยู่ในกรอบกราฟเสมอ (จุดแรก/จุดสุดท้ายไม่ล้นขอบ)
+                        const area = chart.chartArea;
+                        const halfWidth = ctx.measureText(displayText).width / 2;
+                        const textX = Math.max(area.left + halfWidth, Math.min(point.x, area.right - halfWidth));
+
+                        // แสดงตัวเลขเหนือจุด (ลบ 13 pixels จาก y position)
+                        ctx.fillText(displayText, textX, point.y - 13);
                         ctx.restore();
                     });
                 }
@@ -1118,7 +1298,7 @@
                 y: {
                     beginAtZero: true,
                     ticks: {
-                        stepSize: 10
+                        display: false  // ไม่แสดงจำนวนบนแกน y
                     }
                 }
             },
@@ -1236,9 +1416,7 @@
                     beginAtZero: true,
                     max: 100,
                     ticks: {
-                        callback: function (value) {
-                            return value + '%';
-                        }
+                        display: false  // ไม่แสดงจำนวนบนแกน x
                     }
                 }
             }
@@ -1341,7 +1519,7 @@
             maintainAspectRatio: false,
             scales: {
                 x: { stacked: true },
-                y: { stacked: true, beginAtZero: true }
+                y: { stacked: true, beginAtZero: true, ticks: { display: false } }  // ไม่แสดงจำนวนบนแกน y
             },
             plugins: {
                 legend: { position: 'bottom' },
@@ -1423,6 +1601,7 @@
             x: { stacked: true },
             y: {
                 stacked: true,
+                ticks: { display: false },  // ไม่แสดงจำนวนบนแกน y
                 afterFit: function (scaleInstance) {
                     scaleInstance.paddingTop = 25;
                 }

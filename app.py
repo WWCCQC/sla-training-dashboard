@@ -110,10 +110,11 @@ def load_data():
         if response.data:
             df = pd.DataFrame(response.data)
             if 'created_at' in df.columns:
-                created_at_series = pd.to_datetime(df['created_at'], errors='coerce')
+                created_at_series = pd.to_datetime(df['created_at'], errors='coerce', utc=True)
                 latest_created_at = created_at_series.max()
                 if pd.notna(latest_created_at):
-                    LATEST_DATA_UPDATED_AS = latest_created_at.strftime("%d %B %Y %H:%M")
+                    # แปลงเป็นเวลาประเทศไทย UTC+7
+                    LATEST_DATA_UPDATED_AS = latest_created_at.tz_convert('Asia/Bangkok').strftime("%d %B %Y %H:%M")
                 else:
                     LATEST_DATA_UPDATED_AS = 'N/A'
             else:
@@ -130,10 +131,11 @@ def load_data():
             df = pd.read_csv('sla.csv', encoding='utf-8')
             print("Fallback: Using sla.csv")
             if 'created_at' in df.columns:
-                created_at_series = pd.to_datetime(df['created_at'], errors='coerce')
+                created_at_series = pd.to_datetime(df['created_at'], errors='coerce', utc=True)
                 latest_created_at = created_at_series.max()
                 if pd.notna(latest_created_at):
-                    LATEST_DATA_UPDATED_AS = latest_created_at.strftime("%d %B %Y %H:%M")
+                    # แปลงเป็นเวลาประเทศไทย UTC+7
+                    LATEST_DATA_UPDATED_AS = latest_created_at.tz_convert('Asia/Bangkok').strftime("%d %B %Y %H:%M")
                 else:
                     LATEST_DATA_UPDATED_AS = 'N/A'
             else:
@@ -143,13 +145,30 @@ def load_data():
             LATEST_DATA_UPDATED_AS = 'N/A'
             return pd.DataFrame()
 
+# แสดง/คำนวณข้อมูลเฉพาะปีนี้เท่านั้น (training_month format: MonYY เช่น Jan26)
+DATA_YEAR_SUFFIX = '26'  # ปี 2026
+
 def process_data(df):
     """ประมวลผลข้อมูลเบื้องต้น"""
     if df.empty:
         return df
-    
+
+    # กรองข้อมูลเฉพาะปี 2026 เท่านั้น - มีผลกับทุกหน้า ทุกตาราง ทุกกราฟ
+    if 'training_month' in df.columns:
+        df = df[
+            df['training_month'].astype(str).str.strip().str.endswith(DATA_YEAR_SUFFIX)
+        ].copy()
+        if df.empty:
+            return df
+
+    # แก้คำสะกดผิดจากไฟล์ต้นทาง: วรรณยุกต์ซ้ำ เช่น 'ผ่่าน' -> 'ผ่าน'
+    # (่-๋ คือ ่ ้ ๊ ๋ — ตัวซ้ำติดกันเป็นไปไม่ได้ในภาษาไทย ยุบเหลือตัวเดียว)
+    for col in ('theory_training_result', 'on_the_job_result', 'status', 'result'):
+        if col in df.columns:
+            df[col] = df[col].str.replace(r'([่-๋])\1+', r'\1', regex=True)
+
     # แปลงคอลัมน์ SLA เป็นตัวเลข (ทุกขั้นตอน)
-    sla_columns = ['sla_total', 'sla_doc', 'sla_training', 'sla_ojt', 
+    sla_columns = ['sla_total', 'sla_doc', 'sla_training', 'sla_ojt',
                    'sla_genid', 'sla_printcard', 'sla_inspection', 'sla_dflow', 'sla_registration']
     
     for col in sla_columns:
@@ -176,12 +195,10 @@ def get_latest_created_at_label(df):
     latest_str = max(raw_values)
 
     try:
-        from datetime import timezone, timedelta
-        # รองรับทั้ง "2026-05-19 02:19:45.902899+00" และ "2026-05-19T02:19:45+00:00"
-        dt = datetime.fromisoformat(latest_str.replace(' ', 'T'))
+        # ใช้ pandas แปลง (รองรับ microseconds/timezone ทุกรูปแบบ ที่ fromisoformat ของ Python 3.9 parse ไม่ได้)
+        dt = pd.to_datetime(latest_str, utc=True)
         # แปลงเป็นเวลาประเทศไทย UTC+7
-        th_tz = timezone(timedelta(hours=7))
-        dt_th = dt.astimezone(th_tz)
+        dt_th = dt.tz_convert('Asia/Bangkok')
         return dt_th.strftime("%d %B %Y %H:%M")
     except Exception:
         # Fallback: ตัดให้เหลือแค่วันที่เวลา
@@ -717,6 +734,128 @@ def get_onprocess_pivot(df, group_col):
 
     grand_total = {'cells': grand_cells, 'total': sum(grand_cells)}
     return {'columns': columns, 'rows': rows, 'grand_total': grand_total}
+
+def get_onprocess_detail_rows(df):
+    """รายละเอียดช่างที่ยังขึ้นทะเบียนไม่เรียบร้อย (result = 'Onprocess') รายคน
+    คอลัมน์ตรงกับไฟล์ติดตามงาน: ลำดับ, ชื่อช่าง, Depot, รหัส Depot, จังหวัด, พื้นที่,
+    ผลอบรมทฤษฎี, ผล OJT, สถานะ, Result, รอบอบรม, เดือนอบรม"""
+    if df.empty or 'result' not in df.columns:
+        return []
+
+    onprocess_df = df[df['result'] == 'Onprocess']
+    if onprocess_df.empty:
+        return []
+
+    cols = ['no', 'full_name_th', 'depot_name', 'depot_code', 'province', 'area',
+            'theory_training_result', 'on_the_job_result', 'status', 'result',
+            'training_round_date', 'training_month']
+    rows = []
+    for _, r in onprocess_df.iterrows():
+        row = {}
+        for c in cols:
+            v = r[c] if c in r.index else None
+            row[c] = str(v).strip() if pd.notna(v) else ''
+        rows.append(row)
+
+    # เรียงตามเดือนอบรมล่าสุดก่อน (training_month format MonYY เช่น Jun26)
+    # ภายในเดือนเดียวกันเรียงตามเลข no เดิม, แถวที่ไม่มีเลขไปท้ายสุด
+    def no_sort_key(item):
+        try:
+            return (0, int(float(item['no'])))
+        except (ValueError, TypeError):
+            return (1, 0)
+
+    def month_sort_key(item):
+        try:
+            return datetime.strptime(item['training_month'], '%b%y')
+        except (ValueError, TypeError):
+            return datetime.min
+
+    rows.sort(key=no_sort_key)
+    rows.sort(key=month_sort_key, reverse=True)
+    return rows
+
+def get_executive_insight(monthly, sla_steps, onprocess_pivot):
+    """สรุป Insight สำหรับผู้บริหาร:
+    - เดือนล่าสุด: ลงทะเบียน / ขึ้นทะเบียนสำเร็จ / Onprocess เทียบเดือนก่อน (จำนวน + %)
+    - คอขวด SLA: ขั้นตอนที่ใช้เวลาเฉลี่ยนานที่สุด 3 อันดับ
+    - สถานะที่ช่าง Onprocess ค้างมากที่สุด
+    - ข้อเสนอแนะอัตโนมัติจากข้อมูลจริง (rule-based)"""
+    insight = {
+        'has_data': False, 'latest_month': '', 'prev_month': '',
+        'cards': [], 'bottlenecks': [], 'top_stuck': None,
+        'completion_rate': 0, 'recommendations': []
+    }
+    if not monthly:
+        return insight
+
+    latest = monthly[-1]
+    prev = monthly[-2] if len(monthly) >= 2 else None
+    insight['has_data'] = True
+    insight['latest_month'] = latest['month']
+    insight['prev_month'] = prev['month'] if prev else ''
+
+    # การ์ดตัวเลขหลัก พร้อม delta เทียบเดือนก่อน
+    # good_when_up: เพิ่มขึ้นแล้วดี (เขียว) หรือไม่ดี (แดง) — ใช้เลือกสี badge
+    def make_card(label, icon, cur, prev_val, good_when_up):
+        delta, pct = None, None
+        if prev_val is not None:
+            delta = cur - prev_val
+            pct = round(delta / prev_val * 100, 1) if prev_val else None
+        return {'label': label, 'icon': icon, 'value': cur,
+                'delta': delta, 'pct': pct, 'good_when_up': good_when_up}
+
+    insight['cards'] = [
+        make_card('ลงทะเบียนอบรม', 'fa-user-plus', latest['total'],
+                  prev['total'] if prev else None, True),
+        make_card('ขึ้นทะเบียนเรียบร้อย', 'fa-check-circle', latest['completed'],
+                  prev['completed'] if prev else None, True),
+        make_card('อยู่ระหว่างดำเนินการ', 'fa-spinner', latest['onprocess'],
+                  prev['onprocess'] if prev else None, False),
+    ]
+    insight['completion_rate'] = round(latest['completed'] / latest['total'] * 100, 1) if latest['total'] else 0
+
+    # คอขวด SLA: ขั้นตอนที่ใช้เวลาเฉลี่ยนานที่สุด 3 อันดับ
+    steps = [s for s in (sla_steps or []) if s.get('avg_sla', 0) > 0]
+    steps_sorted = sorted(steps, key=lambda s: s['avg_sla'], reverse=True)
+    max_sla = steps_sorted[0]['avg_sla'] if steps_sorted else 0
+    insight['bottlenecks'] = [
+        {'name': s['name'], 'avg_sla': s['avg_sla'],
+         'width': round(s['avg_sla'] / max_sla * 100) if max_sla else 0}
+        for s in steps_sorted[:3]
+    ]
+
+    # สถานะที่ช่าง Onprocess ค้างมากที่สุด (จาก grand total ของ pivot)
+    cols = onprocess_pivot.get('columns', [])
+    cells = onprocess_pivot.get('grand_total', {}).get('cells', [])
+    if cols and cells:
+        i = max(range(len(cols)), key=lambda k: cells[k])
+        if cells[i] > 0:
+            insight['top_stuck'] = {'status': cols[i], 'count': cells[i]}
+
+    # ข้อเสนอแนะอัตโนมัติ
+    recs = []
+    card_reg, card_comp, card_onp = insight['cards']
+    if card_reg['delta'] is not None and prev:
+        pct_txt = f" ({abs(card_reg['pct'])}%)" if card_reg['pct'] is not None else ''
+        if card_reg['delta'] < 0:
+            recs.append(f"ยอดลงทะเบียนเดือน {latest['month']} ลดลง {abs(card_reg['delta'])} คน{pct_txt} "
+                        f"จากเดือน {prev['month']} — ควรทบทวนแผนรับสมัครและจำนวนรอบอบรมให้สอดคล้องกับเป้าหมาย")
+        elif card_reg['delta'] > 0:
+            recs.append(f"ยอดลงทะเบียนเดือน {latest['month']} เพิ่มขึ้น {card_reg['delta']} คน{pct_txt} "
+                        f"จากเดือน {prev['month']} — ควรเตรียมทีมอบรม/ตรวจเอกสารรองรับงานขึ้นทะเบียนที่จะตามมา")
+    if insight['bottlenecks']:
+        top_b = insight['bottlenecks'][0]
+        recs.append(f"ขั้นตอน \"{top_b['name']}\" ใช้เวลานานที่สุด เฉลี่ย {top_b['avg_sla']} วัน — "
+                    f"ควรวิเคราะห์สาเหตุและตั้งเป้า SLA ของขั้นตอนนี้เป็นลำดับแรก")
+    if insight['top_stuck']:
+        recs.append(f"ช่าง Onprocess ค้างที่สถานะ \"{insight['top_stuck']['status']}\" มากที่สุด "
+                    f"{insight['top_stuck']['count']} คน — ควรเร่งติดตามกลุ่มนี้ก่อนเพื่อปิดงานขึ้นทะเบียน")
+    if card_onp['delta'] is not None and card_onp['delta'] > 0:
+        recs.append(f"ช่างค้างดำเนินการเพิ่มขึ้น {card_onp['delta']} คนจากเดือนก่อน — "
+                    f"เฝ้าระวังงานสะสม โดยเฉพาะขั้นตอนเอกสารและการตรวจ")
+    insight['recommendations'] = recs
+    return insight
 
 def get_area_stats(df):
     """สรุปสถิติตามพื้นที่ (area) - นับจากคอลัมน์ result"""
@@ -1275,6 +1414,8 @@ def dashboard():
     area_step_summary = get_area_step_summary(filtered_df)
     onprocess_area_pivot = get_onprocess_pivot(filtered_df, 'area')
     onprocess_province_pivot = get_onprocess_pivot(filtered_df, 'province')
+    onprocess_details = get_onprocess_detail_rows(filtered_df)
+    executive_insight = get_executive_insight(get_monthly_stats(filtered_df), get_sla_by_step_stats(filtered_df), onprocess_area_pivot)
     provinces = get_province_stats(filtered_df)
     monthly = get_monthly_stats(filtered_df)
     monthly_area = get_monthly_area_stats(filtered_df)
@@ -1296,6 +1437,8 @@ def dashboard():
                          area_step_summary=area_step_summary,
                          onprocess_area_pivot=onprocess_area_pivot,
                          onprocess_province_pivot=onprocess_province_pivot,
+                         onprocess_details=onprocess_details,
+                         executive_insight=executive_insight,
                          provinces=provinces,
                          monthly=monthly,
                          monthly_area=monthly_area,
@@ -1514,7 +1657,9 @@ def api_admin_data():
         
         # Build query
         query = supabase.table('training_sla').select('*', count='exact')
-        
+        # เฉพาะปี 2026 เท่านั้น (training_month ลงท้ายด้วย DATA_YEAR_SUFFIX)
+        query = query.like('training_month', f'%{DATA_YEAR_SUFFIX}')
+
         # Apply filters
         if area_filter:
             query = query.eq('area', area_filter)
@@ -1538,8 +1683,9 @@ def api_admin_data():
         total = response.count if response.count else 0
         total_pages = (total + per_page - 1) // per_page if total > 0 else 1
         
-        # Get filter options
-        all_data = supabase.table('training_sla').select('area,status,result').execute()
+        # Get filter options (เฉพาะปี 2026)
+        all_data = supabase.table('training_sla').select('area,status,result') \
+            .like('training_month', f'%{DATA_YEAR_SUFFIX}').execute()
         areas = sorted(set(r['area'] for r in all_data.data if r.get('area'))) if all_data.data else []
         statuses = sorted(set(r['status'] for r in all_data.data if r.get('status'))) if all_data.data else []
         results = sorted(set(r['result'] for r in all_data.data if r.get('result'))) if all_data.data else []

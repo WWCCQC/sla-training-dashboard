@@ -28,14 +28,15 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap');
 
         * {
-            font-family: 'Sarabun', 'Noto Sans Thai', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-family: 'Plus Jakarta Sans', 'IBM Plex Sans Thai', 'Noto Sans Thai', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
         }
 
         .sidebar {
-            background: linear-gradient(180deg, #1e3a5f 0%, #0f2744 100%);
+            background: linear-gradient(180deg, #101a33 0%, #0a1226 60%, #080e1f 100%);
+            border-right: 1px solid rgba(255, 255, 255, 0.06);
             transition: width 0.3s ease, transform 0.3s ease;
             width: 256px;
         }
@@ -84,24 +85,31 @@
 
         .sidebar-item {
             transition: all 0.2s ease;
+            border-radius: 0.65rem;
         }
 
         .sidebar-item:hover {
-            background-color: rgba(255, 255, 255, 0.1);
+            background-color: rgba(255, 255, 255, 0.08);
         }
 
         .sidebar:not(.collapsed) .sidebar-item:hover {
-            transform: translateX(5px);
+            transform: translateX(4px);
         }
 
         .sidebar-item.active {
-            background-color: rgba(255, 255, 255, 0.15);
-            border-left: 4px solid #3b82f6;
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.35) 0%, rgba(99, 102, 241, 0.18) 100%);
+            border-left: 3px solid #60a5fa;
+            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06);
         }
 
         .sidebar.collapsed .sidebar-item.active {
             border-left: none;
-            border-bottom: 3px solid #3b82f6;
+            border-bottom: 3px solid #60a5fa;
+        }
+
+        .sidebar-logo-icon {
+            background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%) !important;
+            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.45);
         }
 
         .main-content {
@@ -214,6 +222,109 @@
         .sidebar.collapsed .sidebar-item:hover::after {
             opacity: 1;
             visibility: visible;
+        }
+
+        /* ===== Modern UI Theme ===== */
+
+        /* พื้นหลังไล่เฉดนุ่มทั้งหน้า */
+        body {
+            background-color: #f3f5fa !important;
+            background-image:
+                radial-gradient(1100px 420px at 85% -10%, rgba(59, 130, 246, 0.07), transparent),
+                radial-gradient(900px 350px at -5% 0%, rgba(99, 102, 241, 0.06), transparent);
+            background-attachment: fixed;
+        }
+
+        /* ตัวเลขเรียงตรงกันในตาราง/การ์ดสถิติ */
+        h1, h2, h3, h4, td, th {
+            font-variant-numeric: tabular-nums;
+        }
+
+        h1, h2, h3 {
+            letter-spacing: -0.01em;
+        }
+
+        /* การ์ดทุกใบ: ขอบโค้งขึ้น เงาหลายชั้น มี hover ยกตัวเบาๆ */
+        .bg-white.rounded-xl {
+            border-radius: 1rem;
+            border: 1px solid #e8edf5;
+            box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 6px rgba(16, 24, 40, 0.04);
+            transition: box-shadow 0.25s ease, transform 0.25s ease;
+        }
+
+        .bg-white.rounded-xl:hover {
+            box-shadow: 0 4px 10px rgba(16, 24, 40, 0.06), 0 10px 28px rgba(16, 24, 40, 0.08);
+        }
+
+        .card-hover {
+            transition: all 0.25s ease;
+        }
+
+        /* หัวตารางสีเข้ม: ไล่เฉด slate + มุมบนโค้ง */
+        thead.bg-gray-800 {
+            background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%) !important;
+        }
+
+        thead.bg-gray-800 tr th:first-child {
+            border-top-left-radius: 0.6rem;
+        }
+
+        thead.bg-gray-800 tr th:last-child {
+            border-top-right-radius: 0.6rem;
+        }
+
+        tbody tr {
+            transition: background-color 0.15s ease;
+        }
+
+        /* Header แบบกระจกเบลอ (glassmorphism) */
+        .main-content > header {
+            background: rgba(255, 255, 255, 0.82) !important;
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-bottom: 1px solid #e6ebf3 !important;
+        }
+
+        /* Footer โปร่งเบา */
+        .main-content footer {
+            background: transparent !important;
+            box-shadow: none;
+        }
+
+        .main-content footer p {
+            color: #94a3b8 !important;
+        }
+
+        /* ปุ่มทุกปุ่ม: ลื่นไหล กดแล้วหดเล็กน้อย */
+        button {
+            transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+        }
+
+        button:active {
+            transform: scale(0.97);
+        }
+
+        /* Scrollbar บางโค้งมน */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 8px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        html {
+            scroll-behavior: smooth;
         }
 
         /* Mobile styles */
