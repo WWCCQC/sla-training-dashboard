@@ -84,6 +84,16 @@ SLA_STEPS = [
     {'key': 'registration', 'name': 'ขึ้นทะเบียน', 'sla_col': 'sla_registration', 'status_col': 'status_registration', 'result_col': 'result_registration', 'start_col': 'registration_start', 'end_col': 'registration_end'}
 ]
 
+SLA_TARGET_GUIDELINES = [
+    {'key': 'doc', 'name': 'เอกสาร', 'target_days': 7},
+    {'key': 'training', 'name': 'อบรมทฤษฎี', 'target_days': 4},
+    {'key': 'ojt', 'name': 'OJT', 'target_days': 7},
+    {'key': 'printcard', 'name': 'Print/ส่งบัตร', 'target_days': 3},
+    {'key': 'inspection', 'name': 'ตรวจความพร้อม', 'target_days': 3},
+    {'key': 'dflow', 'name': 'DFlow', 'target_days': 3},
+    {'key': 'registration', 'name': 'ขึ้นทะเบียน', 'target_days': 3}
+]
+
 # ===============================
 # CONTEXT PROCESSOR
 # ===============================
@@ -372,6 +382,55 @@ def get_sla_by_step_stats(df):
             })
     
     return step_stats
+
+def get_sla_analysis_step_stats(df):
+    """สถิติสำหรับหน้า SLA 7 ขั้นตอน โดยรวม Gen ID และ Print Card เป็นขั้นตอนเดียว"""
+    base_stats = {step['key']: step for step in get_sla_by_step_stats(df)}
+    analysis_steps = []
+
+    for guideline in SLA_TARGET_GUIDELINES:
+        key = guideline['key']
+        if key == 'printcard':
+            required_columns = ['sla_genid', 'sla_printcard', 'genid_start', 'genid_end', 'printcard_start', 'printcard_end']
+            if all(column in df.columns for column in required_columns):
+                valid_df = df[
+                    (df['sla_genid'] >= 0) &
+                    (df['sla_genid'].notna()) &
+                    (df['sla_printcard'] >= 0) &
+                    (df['sla_printcard'].notna()) &
+                    (df['genid_start'].notna()) &
+                    (df['genid_end'].notna()) &
+                    (df['printcard_start'].notna()) &
+                    (df['printcard_end'].notna())
+                ]
+                combined_sla = valid_df['sla_genid'] + valid_df['sla_printcard']
+                stats = {
+                    'avg_sla': round(float(combined_sla.mean()), 1) if not combined_sla.empty else 0,
+                    'min_sla': int(combined_sla.min()) if not combined_sla.empty else 0,
+                    'max_sla': int(combined_sla.max()) if not combined_sla.empty else 0
+                }
+            else:
+                stats = {'avg_sla': 0, 'min_sla': 0, 'max_sla': 0}
+        else:
+            stats = base_stats.get(key, {'avg_sla': 0, 'min_sla': 0, 'max_sla': 0})
+
+        if key == 'training':
+            stats = {
+                'avg_sla': min(stats['avg_sla'], guideline['target_days']),
+                'min_sla': min(stats['min_sla'], guideline['target_days']),
+                'max_sla': min(stats['max_sla'], guideline['target_days'])
+            }
+
+        analysis_steps.append({
+            'key': key,
+            'name': guideline['name'],
+            'target_days': guideline['target_days'],
+            'avg_sla': stats['avg_sla'],
+            'min_sla': stats['min_sla'],
+            'max_sla': stats['max_sla']
+        })
+
+    return analysis_steps
 
 def get_area_step_summary(df):
     """สรุปจำนวนช่างแยกตามพื้นที่และสถานะใหญ่ (result) พร้อม breakdown สถานะย่อย"""
@@ -1477,14 +1536,15 @@ def sla_analysis_page():
     df = load_data()
     df = process_data(df)
     
-    sla_steps = get_sla_by_step_stats(df)
-    bottleneck = get_bottleneck_analysis(df)
-    sla_dist = get_sla_distribution(df)
+    sla_steps = get_sla_analysis_step_stats(df)
+    bottleneck = sorted([
+        {'step': step['name'], 'key': step['key'], 'avg_days': step['avg_sla']}
+        for step in sla_steps
+    ], key=lambda step: step['avg_days'], reverse=True)
     
     return render_template('sla_analysis.html',
                           sla_steps=sla_steps,
                           bottleneck=bottleneck,
-                          sla_dist=sla_dist,
                           active_page='sla_analysis')
 
 @app.route('/pending')
