@@ -125,15 +125,33 @@ def inject_current_date():
 # DATA LOADING & PROCESSING
 # ===============================
 
+def fetch_training_rows(columns='*', year_suffix=None):
+    """โหลดทุกหน้าจาก training_sla โดยเรียง primary key ให้ลำดับคงที่"""
+    rows = []
+    page_size = 1000
+    offset = 0
+    while True:
+        query = supabase.table('training_sla').select(columns)
+        if year_suffix is not None:
+            query = query.like('training_month', f'%{year_suffix}')
+        response = query.order('row_id').range(offset, offset + page_size - 1).execute()
+        page = response.data or []
+        if not page:
+            return rows
+        rows.extend(page)
+        # ใช้จำนวนที่ได้รับจริง เผื่อ server จำกัดต่ำกว่า page_size
+        offset += len(page)
+
+
 def load_data():
     """โหลดข้อมูลจาก Supabase table: training_sla"""
     global LATEST_DATA_UPDATED_AS
     try:
-        # ดึงข้อมูลจาก Supabase
-        response = supabase.table('training_sla').select('*').execute()
+        # ดึงข้อมูลครบทุกหน้าก่อนประมวลผล เพื่อไม่ให้ยอดถูกตัดที่ API row limit
+        rows = fetch_training_rows()
         
-        if response.data:
-            df = pd.DataFrame(response.data)
+        if rows:
+            df = pd.DataFrame(rows)
             if 'created_at' in df.columns:
                 created_at_series = pd.to_datetime(df['created_at'], errors='coerce', utc=True)
                 latest_created_at = created_at_series.max()
@@ -2088,11 +2106,10 @@ def api_admin_data():
         total_pages = (total + per_page - 1) // per_page if total > 0 else 1
         
         # Get filter options (เฉพาะปี 2026)
-        all_data = supabase.table('training_sla').select('area,status,result') \
-            .like('training_month', f'%{DATA_YEAR_SUFFIX}').execute()
-        areas = sorted(set(r['area'] for r in all_data.data if r.get('area'))) if all_data.data else []
-        statuses = sorted(set(r['status'] for r in all_data.data if r.get('status'))) if all_data.data else []
-        results = sorted(set(r['result'] for r in all_data.data if r.get('result'))) if all_data.data else []
+        all_data = fetch_training_rows('area,status,result', year_suffix=DATA_YEAR_SUFFIX)
+        areas = sorted(set(r['area'] for r in all_data if r.get('area')))
+        statuses = sorted(set(r['status'] for r in all_data if r.get('status')))
+        results = sorted(set(r['result'] for r in all_data if r.get('result')))
         
         # Clean data - convert None to empty string for JSON
         clean_data = []
