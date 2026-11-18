@@ -1,0 +1,912 @@
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // ===== Onprocess Expand to Right (แสดงสถานะย่อยเป็นคอลัมน์ทางขวา) =====
+        let onprocessExpanded = false;
+
+        // ไม่ต้อง update header names เพราะมาจาก server แล้ว
+
+        document.querySelectorAll('.toggle-onprocess-expand').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                const icon = this.querySelector('.toggle-icon-onprocess');
+
+                if (!onprocessExpanded) {
+                    // Expand - แสดงคอลัมน์ทางขวาทั้งหมด
+                    onprocessExpanded = true;
+
+                    // แสดงทุก sub-columns
+                    document.querySelectorAll('.onprocess-sub-col').forEach(function (col) {
+                        col.classList.remove('hidden');
+                    });
+
+                    // เปลี่ยน icon ทุกปุ่ม
+                    document.querySelectorAll('.toggle-icon-onprocess').forEach(function (ic) {
+                        ic.classList.remove('fa-caret-right');
+                        ic.classList.add('fa-caret-down');
+                    });
+                } else {
+                    // Collapse - ซ่อนคอลัมน์ทางขวา
+                    onprocessExpanded = false;
+
+                    // ซ่อน sub-status columns
+                    document.querySelectorAll('.onprocess-sub-col').forEach(function (col) {
+                        col.classList.add('hidden');
+                    });
+
+                    // ซ่อน technician detail rows
+                    document.querySelectorAll('.technician-detail-row').forEach(function (row) {
+                        row.classList.add('hidden');
+                    });
+
+                    // เปลี่ยน icon กลับ
+                    document.querySelectorAll('.toggle-icon-onprocess').forEach(function (ic) {
+                        ic.classList.remove('fa-caret-down');
+                        ic.classList.add('fa-caret-right');
+                    });
+
+                    // reset sub icons
+                    document.querySelectorAll('.onprocess-sub-col .toggle-icon-sub').forEach(function (ic) {
+                        ic.classList.remove('fa-caret-down');
+                        ic.classList.add('fa-caret-right');
+                    });
+                }
+            });
+        });
+
+        // ===== Technician Detail Row Toggle (สำหรับ Onprocess sub-status) - ใช้ Event Delegation =====
+        document.addEventListener('click', function (e) {
+            // ตรวจสอบว่าคลิกที่ปุ่มใน onprocess-sub-col หรือไม่
+            const btn = e.target.closest('.onprocess-sub-col .toggle-technician-list');
+            if (btn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const targetId = btn.getAttribute('data-target');
+                const targetRow = document.getElementById(targetId);
+                const icon = btn.querySelector('.toggle-icon-sub');
+
+                if (targetRow) {
+                    if (targetRow.classList.contains('hidden')) {
+                        targetRow.classList.remove('hidden');
+                        if (icon) {
+                            icon.classList.remove('fa-caret-right');
+                            icon.classList.add('fa-caret-down');
+                        }
+                    } else {
+                        targetRow.classList.add('hidden');
+                        if (icon) {
+                            icon.classList.remove('fa-caret-down');
+                            icon.classList.add('fa-caret-right');
+                        }
+                    }
+                } else {
+                    // Fallback: ลองหา row ด้วย attribute selector
+                    const allDetailRows = document.querySelectorAll('.technician-detail-row');
+                    allDetailRows.forEach(function (row) {
+                        if (row.id === targetId) {
+                            row.classList.toggle('hidden');
+                        }
+                    });
+                }
+            }
+        });
+
+        // ===== Status Details Expand/Collapse (สำหรับ Completed, Cancel, Closed) =====
+        document.querySelectorAll('.toggle-status-details').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('data-target');
+                const targetRow = document.getElementById(targetId);
+                const icon = this.querySelector('.toggle-icon');
+
+                if (targetRow) {
+                    if (targetRow.classList.contains('hidden')) {
+                        // Expand
+                        targetRow.classList.remove('hidden');
+                        icon.classList.remove('fa-caret-right');
+                        icon.classList.add('fa-caret-down');
+                    } else {
+                        // Collapse
+                        targetRow.classList.add('hidden');
+                        icon.classList.remove('fa-caret-down');
+                        icon.classList.add('fa-caret-right');
+                    }
+                }
+            });
+        });
+
+        // ===== Technician List Expand/Collapse (สำหรับสถานะย่อย Completed, Cancel, Closed) =====
+        // ใช้สำหรับปุ่มที่ไม่ได้อยู่ใน onprocess-sub-col
+        document.querySelectorAll('.toggle-technician-list:not(.onprocess-sub-col .toggle-technician-list)').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('data-target');
+                const targetDiv = document.getElementById(targetId);
+                const icon = this.querySelector('.toggle-icon-sub');
+
+                if (targetDiv) {
+                    if (targetDiv.classList.contains('hidden')) {
+                        // Expand
+                        targetDiv.classList.remove('hidden');
+                        if (icon) {
+                            icon.classList.remove('fa-chevron-down');
+                            icon.classList.add('fa-chevron-up');
+                        }
+                    } else {
+                        // Collapse
+                        targetDiv.classList.add('hidden');
+                        if (icon) {
+                            icon.classList.remove('fa-chevron-up');
+                            icon.classList.add('fa-chevron-down');
+                        }
+                    }
+                }
+            });
+        });
+
+        // ===== Area Table Expand/Collapse =====
+        document.querySelectorAll('.toggle-breakdown').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('data-target');
+                const targetRow = document.getElementById(targetId);
+                const icon = this.querySelector('.toggle-icon');
+
+                if (targetRow) {
+                    if (targetRow.classList.contains('hidden')) {
+                        // Expand
+                        targetRow.classList.remove('hidden');
+                        icon.classList.remove('fa-plus-circle');
+                        icon.classList.add('fa-minus-circle');
+                    } else {
+                        // Collapse
+                        targetRow.classList.add('hidden');
+                        icon.classList.remove('fa-minus-circle');
+                        icon.classList.add('fa-plus-circle');
+                    }
+                }
+            });
+        });
+
+        // Store chart instances
+        let chartInstances = {};
+
+        // Helper to create chart safely
+        function createChart(canvasId, config) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return null;
+
+            // Destroy existing chart on this canvas
+            if (chartInstances[canvasId]) {
+                chartInstances[canvasId].destroy();
+            }
+
+            const ctx = canvas.getContext('2d');
+            config.options = config.options || {};
+            config.options.animation = false;
+            config.options.responsive = true;
+            config.options.maintainAspectRatio = false;
+
+            chartInstances[canvasId] = new Chart(ctx, config);
+            return chartInstances[canvasId];
+        }
+
+        // ===== กราฟที่ 1: Trend รายเดือน - ลงทะเบียน vs ขึ้นทะเบียนสำเร็จ =====
+        const allMonthLabels = [{% for m in monthly %}'{{ m.month }}'{% if not loop.last %},{% endif %}{% endfor %}];
+    const allMonthlyTotals = [{% for m in monthly %}{{ m.total }}{% if not loop.last %},{% endif %}{% endfor %}];
+    const allMonthlyCompleted = [{% for m in monthly %}{{ m.completed }}{% if not loop.last %},{% endif %}{% endfor %}];
+
+    // แสดงเฉพาะปี 2026 (training_month format: MonYY เช่น Jan26)
+    const TREND_YEAR_SUFFIX = '26';
+    const trendIndices = allMonthLabels
+        .map((m, i) => m.endsWith(TREND_YEAR_SUFFIX) ? i : -1)
+        .filter(i => i >= 0);
+    const monthLabels = trendIndices.map(i => allMonthLabels[i]);
+    const monthlyTotals = trendIndices.map(i => allMonthlyTotals[i]);
+    const monthlyCompleted = trendIndices.map(i => allMonthlyCompleted[i]);
+
+    // Custom plugin สำหรับแสดงตัวเลขบนจุดกราฟ
+    const trendLabelPlugin = {
+        id: 'trendLabelPlugin',
+        afterDatasetsDraw: function (chart) {
+            const ctx = chart.ctx;
+
+            chart.data.datasets.forEach((dataset, datasetIndex) => {
+                const meta = chart.getDatasetMeta(datasetIndex);
+                if (!meta.hidden) {
+                    meta.data.forEach((point, index) => {
+                        const value = dataset.data[index];
+
+                        ctx.save();
+                        ctx.font = 'bold 10px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'bottom';
+
+                        let displayText = value.toString();
+
+                        // กำหนดสีและข้อความตามชุดข้อมูล
+                        if (datasetIndex === 0) {
+                            // ลงทะเบียน - สีน้ำเงิน
+                            ctx.fillStyle = '#3B82F6';
+                        } else if (datasetIndex === 1) {
+                            // ขึ้นทะเบียนสำเร็จ - สีเขียว + แสดง %
+                            ctx.fillStyle = '#10B981';
+                            const totalRegistered = monthlyTotals[index];
+                            const percentage = totalRegistered > 0 ? (value / totalRegistered * 100).toFixed(1) : 0;
+                            displayText = value + ' (' + percentage + '%)';
+                        }
+
+                        // บีบตำแหน่ง x ให้ข้อความอยู่ในกรอบกราฟเสมอ (จุดแรก/จุดสุดท้ายไม่ล้นขอบ)
+                        const area = chart.chartArea;
+                        const halfWidth = ctx.measureText(displayText).width / 2;
+                        const textX = Math.max(area.left + halfWidth, Math.min(point.x, area.right - halfWidth));
+
+                        // แสดงตัวเลขเหนือจุด (ลบ 13 pixels จาก y position)
+                        ctx.fillText(displayText, textX, point.y - 13);
+                        ctx.restore();
+                    });
+                }
+            });
+        }
+    };
+
+    createChart('trendChart', {
+        type: 'line',
+        plugins: [trendLabelPlugin],
+        data: {
+            labels: monthLabels,
+            datasets: [
+                {
+                    label: 'ลงทะเบียน',
+                    data: monthlyTotals,
+                    borderColor: '#3B82F6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 3,
+                    tension: 0.3,
+                    fill: true,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    pointBackgroundColor: '#3B82F6',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2
+                },
+                {
+                    label: 'ขึ้นทะเบียนสำเร็จ',
+                    data: monthlyCompleted,
+                    borderColor: '#10B981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderWidth: 3,
+                    tension: 0.3,
+                    fill: true,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    pointBackgroundColor: '#10B981',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2
+                }
+            ]
+        },
+        options: {
+            layout: {
+                padding: { top: 25 }
+            },
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false
+                },
+                datalabels: {
+                    display: false  // ปิด datalabels plugin เพื่อไม่ให้แสดงตัวเลขสีดำทับ
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        display: false  // ไม่แสดงจำนวนบนแกน y
+                    }
+                }
+            },
+            interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false
+            }
+        }
+    });
+
+    // ===== กราฟที่ 2: Overall Success Rate Ranking (แท่งแนวนอน) =====
+    // จัดเรียงพื้นที่ตาม success_rate จากมากไปน้อย
+    const areaRankingData = [
+        {% for a in areas %}
+        { area: '{{ a.area }}', successRate: {{ a.success_rate }}, completed: {{ a.completed }}, total: {{ a.total }} }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ].sort((a, b) => b.successRate - a.successRate);
+
+    const areaRankingLabels = areaRankingData.map(d => d.area);
+    const areaRankingRates = areaRankingData.map(d => d.successRate);
+
+    // Custom plugin สำหรับแสดงจำนวนในแท่งและ % ที่ปลายแท่ง
+    const areaRankingLabelPlugin = {
+        id: 'areaRankingLabelPlugin',
+        afterDatasetsDraw: function (chart) {
+            const ctx = chart.ctx;
+            const meta = chart.getDatasetMeta(0);
+            const chartArea = chart.chartArea;
+
+            meta.data.forEach((bar, index) => {
+                const data = areaRankingData[index];
+                const barWidth = bar.x - bar.base;
+
+                ctx.save();
+                ctx.textBaseline = 'middle';
+
+                // คำนวณตำแหน่งจริงของแท่ง (bar.base = ตำแหน่งเริ่มต้น, bar.x = ตำแหน่งสิ้นสุด)
+                const textToDisplay = data.completed + '/' + data.total;
+
+                // วัดความกว้างของข้อความ
+                ctx.font = 'bold 10px sans-serif';
+                const textWidth = ctx.measureText(textToDisplay).width;
+
+                // ถ้าแท่งกว้างพอ แสดงตัวเลขในแท่ง (สีขาว)
+                // ถ้าแท่งแคบเกินไป แสดงตัวเลขนอกแท่ง (สีดำ)
+                if (barWidth > textWidth + 10) {
+                    // แสดงในแท่ง - กึ่งกลางระหว่าง base กับ x
+                    ctx.fillStyle = '#fff';
+                    ctx.textAlign = 'center';
+                    const centerX = bar.base + (barWidth / 2);
+                    ctx.fillText(textToDisplay, centerX, bar.y);
+                } else {
+                    // แสดงนอกแท่ง (ด้านซ้ายของแกน Y)
+                    ctx.fillStyle = '#1F2937';
+                    ctx.textAlign = 'right';
+                    ctx.fillText(textToDisplay, bar.base - 5, bar.y);
+                }
+
+                // แสดง % ที่ปลายแท่ง (สีดำ) - ตรวจสอบว่าไม่เกินขอบ chart
+                ctx.fillStyle = '#1F2937';
+                ctx.font = 'bold 11px sans-serif';
+                ctx.textAlign = 'left';
+                const percentText = data.successRate.toFixed(1) + '%';
+                const percentX = Math.min(bar.x + 5, chartArea.right - ctx.measureText(percentText).width - 5);
+                ctx.fillText(percentText, percentX, bar.y);
+
+                ctx.restore();
+            });
+        }
+    };
+
+    createChart('areaSuccessRateChart', {
+        type: 'bar',
+        plugins: [areaRankingLabelPlugin],
+        data: {
+            labels: areaRankingLabels,
+            datasets: [{
+                label: 'Success Rate (%)',
+                data: areaRankingRates,
+                backgroundColor: areaRankingRates.map((rate, idx) => {
+                    // ไล่สีจากเขียว (สูงสุด) ไปเหลือง/แดง (ต่ำสุด)
+                    if (rate >= 70) return '#10B981';  // เขียว
+                    if (rate >= 50) return '#F59E0B';  // เหลือง
+                    return '#EF4444';  // แดง
+                }),
+                borderWidth: 1,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            indexAxis: 'y',  // แท่งแนวนอน
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            const idx = context.dataIndex;
+                            const data = areaRankingData[idx];
+                            return [
+                                'Success Rate: ' + data.successRate.toFixed(1) + '%',
+                                'สำเร็จ: ' + data.completed + ' / ' + data.total + ' คน'
+                            ];
+                        }
+                    }
+                },
+                datalabels: {
+                    display: false  // ปิด datalabels plugin ใช้ custom plugin แทน
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        display: false  // ไม่แสดงจำนวนบนแกน x
+                    }
+                }
+            }
+        }
+    });
+
+    // Status by Area Stacked Bar Chart
+    const areaLabels = [{% for a in areas %}'{{ a.area }}'{% if not loop.last %},{% endif %}{% endfor %}];
+    const areaCompleted = [{% for a in areas %}{{ a.completed }}{% if not loop.last %},{% endif %}{% endfor %}];
+    const areaOnprocess = [{% for a in areas %}{{ a.onprocess }}{% if not loop.last %},{% endif %}{% endfor %}];
+    const areaClosed = [{% for a in areas %}{{ a.closed }}{% if not loop.last %},{% endif %}{% endfor %}];
+    const areaCancel = [{% for a in areas %}{{ a.cancel }}{% if not loop.last %},{% endif %}{% endfor %}];
+    const areaTotals = [{% for a in areas %}{{ a.total }}{% if not loop.last %},{% endif %}{% endfor %}];
+
+    // Custom plugin สำหรับแสดง total บน top ของ stack
+    const stackTotalPlugin = {
+        id: 'stackTotalPlugin',
+        afterDatasetsDraw: function (chart) {
+            const ctx = chart.ctx;
+            const datasets = chart.data.datasets;
+
+            chart.data.labels.forEach((label, i) => {
+                let total = 0;
+                let maxY = null;
+
+                datasets.forEach((dataset, j) => {
+                    const meta = chart.getDatasetMeta(j);
+                    if (!meta.hidden) {
+                        total += dataset.data[i] || 0;
+                        const bar = meta.data[i];
+                        if (bar && (maxY === null || bar.y < maxY)) {
+                            maxY = bar.y;
+                        }
+                    }
+                });
+
+                if (total > 0 && maxY !== null) {
+                    ctx.save();
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+                    ctx.font = 'bold 12px sans-serif';
+                    ctx.fillStyle = '#374151';
+                    ctx.fillText(total, chart.getDatasetMeta(0).data[i].x, maxY - 5);
+                    ctx.restore();
+                }
+            });
+        }
+    };
+
+    new Chart(document.getElementById('statusChart'), {
+        type: 'bar',
+        plugins: [ChartDataLabels, stackTotalPlugin],
+        data: {
+            labels: areaLabels,
+            datasets: [
+                {
+                    label: 'ขึ้นทะเบียนเรียบร้อย',
+                    data: areaCompleted,
+                    backgroundColor: '#10B981',
+                    datalabels: {
+                        color: '#fff',
+                        font: { weight: 'bold', size: 11 },
+                        formatter: function (value) { return value > 0 ? value : ''; }
+                    }
+                },
+                {
+                    label: 'อยู่ระหว่างดำเนินการ',
+                    data: areaOnprocess,
+                    backgroundColor: '#F59E0B',
+                    datalabels: {
+                        color: '#fff',
+                        font: { weight: 'bold', size: 11 },
+                        formatter: function (value) { return value > 0 ? value : ''; }
+                    }
+                },
+                {
+                    label: 'ไม่ผ่าน',
+                    data: areaClosed,
+                    backgroundColor: '#EF4444',
+                    datalabels: {
+                        color: '#fff',
+                        font: { weight: 'bold', size: 11 },
+                        formatter: function (value) { return value > 0 ? value : ''; }
+                    }
+                },
+                {
+                    label: 'ยกเลิก',
+                    data: areaCancel,
+                    backgroundColor: '#6B7280',
+                    datalabels: {
+                        color: '#fff',
+                        font: { weight: 'bold', size: 11 },
+                        formatter: function (value) { return value > 0 ? value : ''; }
+                    }
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { stacked: true },
+                y: { stacked: true, beginAtZero: true, ticks: { display: false } }  // ไม่แสดงจำนวนบนแกน y
+            },
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        afterTitle: function (context) {
+                            const idx = context[0].dataIndex;
+                            return 'รวม: ' + areaTotals[idx] + ' คน';
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Monthly Trend Chart - ข้อมูลยอดรวมแต่ละเดือน
+    const barMonthlyTotals = [{% for m in monthly %}{{ m.total }}{% if not loop.last %},{% endif %}{% endfor %}];
+    const barMonthlyCompleted = [{% for m in monthly %}{{ m.completed }}{% if not loop.last %},{% endif %}{% endfor %}];
+    const barMonthlyOnprocess = [{% for m in monthly %}{{ m.onprocess }}{% if not loop.last %},{% endif %}{% endfor %}];
+    const barMonthlyClosed = [{% for m in monthly %}{{ m.closed }}{% if not loop.last %},{% endif %}{% endfor %}];
+    const barMonthlyCancel = [{% for m in monthly %}{{ m.cancel }}{% if not loop.last %},{% endif %}{% endfor %}];
+
+    createChart('monthlyChart', {
+        type: 'bar',
+        data: {
+            labels: [{% for m in monthly %}'{{ m.month }}'{% if not loop.last %},{% endif %}{% endfor %}],
+        datasets: [
+        {
+            label: 'ขึ้นทะเบียนเรียบร้อย',
+            data: barMonthlyCompleted,
+            backgroundColor: '#10B981',
+            datalabels: {
+                color: '#fff',
+                font: { weight: 'bold', size: 11 },
+                formatter: function (value) { return value > 0 ? value : ''; }
+            }
+        },
+        {
+            label: 'อยู่ระหว่างดำเนินการ',
+            data: barMonthlyOnprocess,
+            backgroundColor: '#F59E0B',
+            datalabels: {
+                color: '#fff',
+                font: { weight: 'bold', size: 11 },
+                formatter: function (value) { return value > 0 ? value : ''; }
+            }
+        },
+        {
+            label: 'ไม่ผ่าน',
+            data: barMonthlyClosed,
+            backgroundColor: '#EF4444',
+            datalabels: {
+                color: '#fff',
+                font: { weight: 'bold', size: 11 },
+                formatter: function (value) { return value > 0 ? value : ''; }
+            }
+        },
+        {
+            label: 'ยกเลิก',
+            data: barMonthlyCancel,
+            backgroundColor: '#6B7280',
+            datalabels: {
+                color: '#fff',
+                font: { weight: 'bold', size: 11 },
+                formatter: function (value) { return value > 0 ? value : ''; }
+            }
+        }
+    ]
+        },
+        options: {
+        layout: {
+            padding: { top: 25 }
+        },
+        plugins: {
+            legend: { position: 'bottom' },
+            datalabels: { display: true }
+        },
+        scales: {
+            x: { stacked: true },
+            y: {
+                stacked: true,
+                ticks: { display: false },  // ไม่แสดงจำนวนบนแกน y
+                afterFit: function (scaleInstance) {
+                    scaleInstance.paddingTop = 25;
+                }
+            }
+        }
+    },
+        plugins: [{
+            // Custom plugin เพื่อแสดงยอดรวมบนแท่ง
+            id: 'totalLabels',
+            afterDatasetsDraw: function (chart) {
+                const ctx = chart.ctx;
+                const datasets = chart.data.datasets;
+                const meta = chart.getDatasetMeta(datasets.length - 1);
+
+                ctx.save();
+                ctx.font = 'bold 13px sans-serif';
+                ctx.fillStyle = '#1F2937';
+                ctx.textAlign = 'center';
+
+                meta.data.forEach((bar, index) => {
+                    const total = barMonthlyTotals[index];
+                    if (total > 0) {
+                        ctx.fillText(total, bar.x, bar.y - 12);
+                    }
+                });
+                ctx.restore();
+            }
+        }]
+    });
+
+    // ===== Depot Agent Table Sorting =====
+    let currentSort = { column: 'total', direction: 'desc' };
+
+    document.querySelectorAll('.sortable-header').forEach(function (header) {
+        header.addEventListener('click', function () {
+            const sortColumn = this.getAttribute('data-sort');
+            const tbody = document.getElementById('depotAgentTableBody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+
+            // Toggle direction if same column
+            if (currentSort.column === sortColumn) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = sortColumn;
+                currentSort.direction = 'asc';
+            }
+
+            // Update icons
+            document.querySelectorAll('.sortable-header i').forEach(function (icon) {
+                icon.className = 'fas fa-sort text-gray-400 ml-1';
+            });
+            const icon = this.querySelector('i');
+            icon.className = currentSort.direction === 'asc'
+                ? 'fas fa-sort-up text-white ml-1'
+                : 'fas fa-sort-down text-white ml-1';
+
+            // Sort rows
+            rows.sort(function (a, b) {
+                let aVal = a.getAttribute('data-' + sortColumn) || '';
+                let bVal = b.getAttribute('data-' + sortColumn) || '';
+
+                // Check if numeric
+                if (['total', 'completed', 'success_rate'].includes(sortColumn)) {
+                    aVal = parseFloat(aVal) || 0;
+                    bVal = parseFloat(bVal) || 0;
+                } else {
+                    aVal = aVal.toLowerCase();
+                    bVal = bVal.toLowerCase();
+                }
+
+                if (currentSort.direction === 'asc') {
+                    return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+                } else {
+                    return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+                }
+            });
+
+            // Re-append rows and update index
+            rows.forEach(function (row, index) {
+                row.querySelector('.row-index').textContent = index + 1;
+                tbody.appendChild(row);
+            });
+        });
+    });
+});
+
+    // Multi-Select Dropdown Filter
+    document.addEventListener('DOMContentLoaded', function () {
+        // เก็บค่าที่เลือกไว้
+        let selectedYears = [];
+        let selectedMonths = [];
+
+        const yearDropdownBtn = document.getElementById('yearDropdownBtn');
+        const monthDropdownBtn = document.getElementById('monthDropdownBtn');
+        const yearDropdown = document.getElementById('yearDropdown');
+        const monthDropdown = document.getElementById('monthDropdown');
+        const applyFilterBtn = document.getElementById('applyFilterBtn');
+        const resetFilterBtn = document.getElementById('resetFilterBtn');
+        const yearSelectAll = document.getElementById('yearSelectAll');
+        const monthSelectAll = document.getElementById('monthSelectAll');
+
+        // Initialize จากค่าที่ checked อยู่แล้ว
+        function init() {
+            selectedYears = [];
+            selectedMonths = [];
+            document.querySelectorAll('.yearCheckbox:checked').forEach(function (cb) {
+                selectedYears.push(cb.value);
+            });
+            document.querySelectorAll('.monthCheckbox:checked').forEach(function (cb) {
+                selectedMonths.push(cb.value);
+            });
+            updateDisplayText();
+        }
+
+        function updateDisplayText() {
+            const yearText = document.getElementById('yearSelectedText');
+            const monthText = document.getElementById('monthSelectedText');
+
+            if (selectedYears.length === 0) {
+                yearText.textContent = 'ทั้งหมด';
+            } else if (selectedYears.length <= 2) {
+                yearText.textContent = selectedYears.join(', ');
+            } else {
+                yearText.textContent = selectedYears.length + ' รายการ';
+            }
+
+            if (selectedMonths.length === 0) {
+                monthText.textContent = 'ทั้งหมด';
+            } else if (selectedMonths.length <= 2) {
+                monthText.textContent = selectedMonths.join(', ');
+            } else {
+                monthText.textContent = selectedMonths.length + ' รายการ';
+            }
+        }
+
+        function toggleDropdown(dropdownId) {
+            var dropdown = document.getElementById(dropdownId);
+            var otherDropdowns = document.querySelectorAll('#yearDropdown, #monthDropdown');
+            otherDropdowns.forEach(function (d) {
+                if (d.id !== dropdownId) d.classList.add('hidden');
+            });
+            dropdown.classList.toggle('hidden');
+        }
+
+        // Year dropdown button
+        if (yearDropdownBtn) {
+            yearDropdownBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                toggleDropdown('yearDropdown');
+            });
+        }
+
+        // Month dropdown button
+        if (monthDropdownBtn) {
+            monthDropdownBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                toggleDropdown('monthDropdown');
+            });
+        }
+
+        // Year checkboxes
+        document.querySelectorAll('.yearCheckbox').forEach(function (cb) {
+            cb.addEventListener('change', function () {
+                if (this.checked) {
+                    if (selectedYears.indexOf(this.value) === -1) {
+                        selectedYears.push(this.value);
+                    }
+                } else {
+                    selectedYears = selectedYears.filter(function (v) { return v !== cb.value; });
+                }
+                updateDisplayText();
+
+                // Update select all checkbox
+                var allYearCbs = document.querySelectorAll('.yearCheckbox');
+                var checkedYearCbs = document.querySelectorAll('.yearCheckbox:checked');
+                if (yearSelectAll) {
+                    yearSelectAll.checked = allYearCbs.length === checkedYearCbs.length;
+                }
+            });
+        });
+
+        // Month checkboxes
+        document.querySelectorAll('.monthCheckbox').forEach(function (cb) {
+            cb.addEventListener('change', function () {
+                if (this.checked) {
+                    if (selectedMonths.indexOf(this.value) === -1) {
+                        selectedMonths.push(this.value);
+                    }
+                } else {
+                    selectedMonths = selectedMonths.filter(function (v) { return v !== cb.value; });
+                }
+                updateDisplayText();
+
+                // Update select all checkbox
+                var allMonthCbs = document.querySelectorAll('.monthCheckbox');
+                var checkedMonthCbs = document.querySelectorAll('.monthCheckbox:checked');
+                if (monthSelectAll) {
+                    monthSelectAll.checked = allMonthCbs.length === checkedMonthCbs.length;
+                }
+            });
+        });
+
+        // Select all year
+        if (yearSelectAll) {
+            yearSelectAll.addEventListener('change', function () {
+                var checkboxes = document.querySelectorAll('.yearCheckbox');
+                var isChecked = this.checked;
+                selectedYears = [];
+                checkboxes.forEach(function (cb) {
+                    cb.checked = isChecked;
+                    if (isChecked) selectedYears.push(cb.value);
+                });
+                updateDisplayText();
+            });
+        }
+
+        // Select all month
+        if (monthSelectAll) {
+            monthSelectAll.addEventListener('change', function () {
+                var checkboxes = document.querySelectorAll('.monthCheckbox');
+                var isChecked = this.checked;
+                selectedMonths = [];
+                checkboxes.forEach(function (cb) {
+                    cb.checked = isChecked;
+                    if (isChecked) selectedMonths.push(cb.value);
+                });
+                updateDisplayText();
+            });
+        }
+
+        // Apply filter button
+        if (applyFilterBtn) {
+            applyFilterBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                // อ่านค่าจาก checkboxes โดยตรง ณ ตอนกดปุ่ม
+                var years = [];
+                var months = [];
+                document.querySelectorAll('.yearCheckbox:checked').forEach(function (cb) {
+                    years.push(cb.value);
+                });
+                document.querySelectorAll('.monthCheckbox:checked').forEach(function (cb) {
+                    months.push(cb.value);
+                });
+
+                var params = [];
+                var currentSearch = new URLSearchParams(window.location.search);
+                if (currentSearch.get('view') === 'legacy') {
+                    params.push('view=legacy');
+                }
+                if (years.length > 0) {
+                    params.push('years=' + encodeURIComponent(years.join(',')));
+                }
+                if (months.length > 0) {
+                    params.push('months=' + encodeURIComponent(months.join(',')));
+                }
+
+                var basePath = window.location.pathname || '/';
+                var url = params.length > 0 ? basePath + '?' + params.join('&') : basePath;
+                console.log('Filter URL:', url);
+                console.log('Selected years:', years);
+                console.log('Selected months:', months);
+                window.location.href = url;
+            });
+        }
+
+        // Reset filter button
+        if (resetFilterBtn) {
+            resetFilterBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                var currentSearch = new URLSearchParams(window.location.search);
+                var basePath = window.location.pathname || '/';
+                window.location.href = currentSearch.get('view') === 'legacy' ? basePath + '?view=legacy' : basePath;
+            });
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function (e) {
+            if (yearDropdown && yearDropdownBtn && !yearDropdown.contains(e.target) && !yearDropdownBtn.contains(e.target)) {
+                yearDropdown.classList.add('hidden');
+            }
+            if (monthDropdown && monthDropdownBtn && !monthDropdown.contains(e.target) && !monthDropdownBtn.contains(e.target)) {
+                monthDropdown.classList.add('hidden');
+            }
+        });
+
+        // Prevent dropdown from closing when clicking inside
+        if (yearDropdown) {
+            yearDropdown.addEventListener('click', function (e) {
+                e.stopPropagation();
+            });
+        }
+        if (monthDropdown) {
+            monthDropdown.addEventListener('click', function (e) {
+                e.stopPropagation();
+            });
+        }
+
+        // Initialize on page load
+        init();
+    });
+</script>

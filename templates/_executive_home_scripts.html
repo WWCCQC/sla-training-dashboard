@@ -1,0 +1,829 @@
+{% set selected_areas = selected_areas if selected_areas is defined else (request.args.get('areas', '').split(',') | reject('equalto', '') | list) %}
+{% set latest_month_short = latest_month_short if latest_month_short is defined else (month_list[-1] if month_list else '') %}
+{% set recent_3_months = recent_3_months if recent_3_months is defined else (month_list[-3:] if month_list else []) %}
+{% if exec_insight is not defined and selected_areas %}
+    {% set f_areas = [] %}
+    {% for a in areas %}{% if a.area in selected_areas %}{% set _ = f_areas.append(a) %}{% endif %}{% endfor %}
+    {% set areas = f_areas %}
+{% endif %}
+{% set tot_reg = (areas | sum(attribute='total')) if (exec_insight is not defined and selected_areas) else (summary.total | default(0, true)) %}
+{% set comp_reg = (areas | sum(attribute='completed')) if (exec_insight is not defined and selected_areas) else (summary.completed | default(0, true)) %}
+{% set comp_rate_reg = (((comp_reg / tot_reg * 100) | round(1)) if tot_reg > 0 else 0) %}
+{% if sla_analysis_steps is not defined %}
+    {% set step_map = {} %}
+    {% for s in (sla_steps | default([], true)) %}
+        {% set _ = step_map.update({s.key: s}) %}
+    {% endfor %}
+    {% set gen_avg = step_map.get('genid', {}).get('avg_sla', 0) %}
+    {% set prt_avg = step_map.get('printcard', {}).get('avg_sla', 0) %}
+    {% set trn_avg = step_map.get('training', {}).get('avg_sla', 0) %}
+    {% set sla_analysis_steps = [
+        {'key': 'doc', 'name': 'เอกสาร', 'target_days': 7, 'avg_sla': step_map.get('doc', {}).get('avg_sla', 0)},
+        {'key': 'training', 'name': 'อบรมทฤษฎี', 'target_days': 4, 'avg_sla': (4 if trn_avg > 4 else trn_avg)},
+        {'key': 'ojt', 'name': 'OJT', 'target_days': 7, 'avg_sla': step_map.get('ojt', {}).get('avg_sla', 0)},
+        {'key': 'printcard', 'name': 'Print/ส่งบัตร', 'target_days': 3, 'avg_sla': ((gen_avg + prt_avg) | round(1))},
+        {'key': 'inspection', 'name': 'ตรวจความพร้อม', 'target_days': 3, 'avg_sla': step_map.get('inspection', {}).get('avg_sla', 0)},
+        {'key': 'dflow', 'name': 'DFlow', 'target_days': 3, 'avg_sla': step_map.get('dflow', {}).get('avg_sla', 0)},
+        {'key': 'registration', 'name': 'ขึ้นทะเบียน', 'target_days': 3, 'avg_sla': step_map.get('registration', {}).get('avg_sla', 0)}
+    ] %}
+{% endif %}
+{% if funnel is defined and funnel.stages is defined %}
+    {% set funnel_stages = funnel.stages %}
+{% else %}
+    {% set funnel_stages = [
+        {'label': 'ลงทะเบียนอบรม', 'count': tot_reg, 'pct_total': (100.0 if tot_reg > 0 else 0.0), 'sub_label': 'ฐานผู้สมัครทั้งหมด'},
+        {'label': 'ผ่านอบรมทฤษฎี', 'count': summary.theory_pass, 'pct_total': (((summary.theory_pass / tot_reg * 100) | round(1)) if tot_reg > 0 else 0.0), 'sub_label': 'อัตราผ่านผู้เข้าสอบ ' ~ summary.theory_rate ~ '%'},
+        {'label': 'ผ่าน OJT', 'count': summary.ojt_pass, 'pct_total': (((summary.ojt_pass / tot_reg * 100) | round(1)) if tot_reg > 0 else 0.0), 'sub_label': 'อัตราผ่านผู้เข้า OJT ' ~ summary.ojt_rate ~ '%'},
+        {'label': 'ขึ้นทะเบียนสำเร็จ', 'count': comp_reg, 'pct_total': comp_rate_reg, 'sub_label': 'พร้อมปฏิบัติงาน'}
+    ] %}
+{% endif %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const RECENT_3_MONTHS = {{ recent_3_months | tojson }};
+    const LATEST_MONTH = {{ latest_month_short | tojson }};
+    const SELECTED_MONTHS = {{ selected_months | tojson }};
+    const FUNNEL_STAGES = {{ funnel_stages | tojson }};
+    const SLA_STEPS = {{ sla_analysis_steps | tojson }};
+    const RAW_MONTHLY_DATA = {{ (all_monthly if all_monthly is defined else monthly) | tojson }};
+    const TOTAL_REGISTERED = {{ tot_reg | tojson }};
+
+    // Preserve full-year monthly trend in sessionStorage so single-month filters still have full-year context
+    let MONTHLY_DATA = RAW_MONTHLY_DATA;
+    try {
+        if (RAW_MONTHLY_DATA && RAW_MONTHLY_DATA.length > 1 && SELECTED_MONTHS.length === 0) {
+            sessionStorage.setItem('sla_all_monthly_2026', JSON.stringify(RAW_MONTHLY_DATA));
+        } else if (RAW_MONTHLY_DATA && RAW_MONTHLY_DATA.length <= 1) {
+            const cached = JSON.parse(sessionStorage.getItem('sla_all_monthly_2026') || '[]');
+            if (cached && cached.length > RAW_MONTHLY_DATA.length) {
+                MONTHLY_DATA = cached;
+            }
+        }
+    } catch (e) {}
+
+    // Populate MoM comparison badges when 1 month is selected and full monthly history is available
+    if (SELECTED_MONTHS.length === 1 && MONTHLY_DATA && MONTHLY_DATA.length >= 2) {
+        const selPrefix = SELECTED_MONTHS[0];
+        const idx = MONTHLY_DATA.findIndex(m => String(m.month || '').startsWith(selPrefix));
+        if (idx > 0) {
+            const curM = MONTHLY_DATA[idx];
+            const prevM = MONTHLY_DATA[idx - 1];
+            const regDelta = curM.total - prevM.total;
+            const regPct = prevM.total > 0 ? ((regDelta / prevM.total) * 100).toFixed(1) : null;
+            const onpDelta = curM.onprocess - prevM.onprocess;
+            const prevCompRate = prevM.total > 0 ? ((prevM.completed / prevM.total) * 100).toFixed(1) : '0.0';
+
+            const kpiBadge = document.getElementById('kpiRegMoMBadge');
+            if (kpiBadge) {
+                const cls = regDelta >= 0 ? 'text-emerald-600 font-semibold' : 'text-rose-600 font-semibold';
+                const sign = regDelta > 0 ? '+' : '';
+                kpiBadge.className = cls;
+                kpiBadge.textContent = sign + regDelta + ' คน เทียบ ' + prevM.month;
+            }
+            const regDeltaEl = document.getElementById('execSummaryRegDelta');
+            if (regDeltaEl && !regDeltaEl.textContent.trim()) {
+                const cls = regDelta >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700';
+                const sign = regDelta > 0 ? '+' : '';
+                regDeltaEl.innerHTML = '<span class="px-2 py-0.5 rounded-full ' + cls + '">' + sign + regDelta + ' คน' + (regPct !== null ? ' (' + regPct + '%)' : '') + '</span>';
+            }
+            const regSubEl = document.getElementById('execSummaryRegSub');
+            if (regSubEl) {
+                regSubEl.textContent = 'เทียบเดือน ' + prevM.month + ' (' + prevM.total + ' คน)';
+            }
+            const compSubEl = document.getElementById('execSummaryCompSub');
+            if (compSubEl) {
+                compSubEl.textContent = 'เดือนก่อน (' + prevM.month + ') สำเร็จ ' + prevCompRate + '% (' + prevM.completed + '/' + prevM.total + ' คน)';
+            }
+            const onpDeltaEl = document.getElementById('execSummaryOnpDelta');
+            if (onpDeltaEl && !onpDeltaEl.textContent.trim()) {
+                const cls = onpDelta > 0 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-700';
+                const sign = onpDelta > 0 ? '+' : '';
+                onpDeltaEl.innerHTML = '<span class="px-2 py-0.5 rounded-full ' + cls + '">' + sign + onpDelta + ' คน</span>';
+            }
+        }
+    }
+
+    // ===== 1. Presentation Mode Toggle =====
+    const presBtn = document.getElementById('presentationToggleBtn');
+    const presText = document.getElementById('presentationToggleText');
+    if (presBtn) {
+        presBtn.addEventListener('click', function () {
+            document.body.classList.toggle('presentation-mode');
+            const active = document.body.classList.contains('presentation-mode');
+            presText.textContent = active ? 'ออกจากโหมดนำเสนอ' : 'โหมดนำเสนอ';
+            const icon = presBtn.querySelector('i');
+            if (icon) {
+                icon.className = active ? 'fas fa-compress' : 'fas fa-expand';
+            }
+            window.dispatchEvent(new Event('resize'));
+        });
+    }
+
+    // ===== 2. Multi-Select Filter Bar =====
+    const monthBtn = document.getElementById('execMonthDropdownBtn');
+    const monthDrop = document.getElementById('execMonthDropdown');
+    const areaBtn = document.getElementById('execAreaDropdownBtn');
+    const areaDrop = document.getElementById('execAreaDropdown');
+    const monthSelectAll = document.getElementById('execMonthSelectAll');
+    const areaSelectAll = document.getElementById('execAreaSelectAll');
+
+    function getCheckedValues(selector) {
+        return Array.from(document.querySelectorAll(selector + ':checked')).map(cb => cb.value);
+    }
+
+    function updateFilterLabels() {
+        const months = getCheckedValues('.execMonthCheckbox');
+        const areas = getCheckedValues('.execAreaCheckbox');
+        const mLabel = document.getElementById('execMonthSelectedText');
+        const aLabel = document.getElementById('execAreaSelectedText');
+        const allM = document.querySelectorAll('.execMonthCheckbox');
+        if (mLabel) {
+            if (months.length === 0 || (allM.length > 0 && months.length === allM.length)) {
+                mLabel.textContent = 'ทั้งปี 2026';
+            } else if (months.length <= 2) {
+                mLabel.textContent = months.join(', ');
+            } else {
+                mLabel.textContent = months.length + ' เดือน';
+            }
+        }
+        if (aLabel) {
+            aLabel.textContent = areas.length === 0 ? 'ทุกพื้นที่' : (areas.length === 1 ? areas[0] : areas.length + ' พื้นที่');
+        }
+        if (monthSelectAll) {
+            monthSelectAll.checked = allM.length > 0 && months.length === allM.length;
+        }
+        if (areaSelectAll) {
+            const allA = document.querySelectorAll('.execAreaCheckbox');
+            areaSelectAll.checked = allA.length > 0 && areas.length === allA.length;
+        }
+    }
+
+    function navigateWithFilters(monthsOverride, areasOverride, forceAllMonths) {
+        const months = monthsOverride !== undefined ? monthsOverride : getCheckedValues('.execMonthCheckbox');
+        const areas = areasOverride !== undefined ? areasOverride : getCheckedValues('.execAreaCheckbox');
+        const allM = document.querySelectorAll('.execMonthCheckbox');
+        const allA = document.querySelectorAll('.execAreaCheckbox');
+        const isAllSelected = forceAllMonths || months.length === 0 || (allM.length > 0 && months.length === allM.length);
+        const isAllAreasSelected = areas.length === 0 || (allA.length > 0 && areas.length === allA.length);
+        const params = [];
+        if (isAllSelected) {
+            params.push('all_months=1');
+        } else {
+            params.push('months=' + encodeURIComponent(months.join(',')));
+        }
+        if (!isAllAreasSelected) {
+            params.push('areas=' + encodeURIComponent(areas.join(',')));
+        }
+        window.location.href = '/?' + params.join('&');
+    }
+
+    if (monthBtn && monthDrop) {
+        monthBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (areaDrop) areaDrop.classList.add('hidden');
+            monthDrop.classList.toggle('hidden');
+        });
+        monthDrop.addEventListener('click', e => e.stopPropagation());
+    }
+    if (areaBtn && areaDrop) {
+        areaBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (monthDrop) monthDrop.classList.add('hidden');
+            areaDrop.classList.toggle('hidden');
+        });
+        areaDrop.addEventListener('click', e => e.stopPropagation());
+    }
+    document.addEventListener('click', function () {
+        if (monthDrop) monthDrop.classList.add('hidden');
+        if (areaDrop) areaDrop.classList.add('hidden');
+    });
+
+    document.querySelectorAll('.execMonthCheckbox, .execAreaCheckbox').forEach(cb => {
+        cb.addEventListener('change', updateFilterLabels);
+    });
+    if (monthSelectAll) {
+        monthSelectAll.addEventListener('change', function () {
+            document.querySelectorAll('.execMonthCheckbox').forEach(cb => cb.checked = this.checked);
+            updateFilterLabels();
+        });
+    }
+    if (areaSelectAll) {
+        areaSelectAll.addEventListener('change', function () {
+            document.querySelectorAll('.execAreaCheckbox').forEach(cb => cb.checked = this.checked);
+            updateFilterLabels();
+        });
+    }
+
+    const applyBtn = document.getElementById('execApplyFilterBtn');
+    const resetBtn = document.getElementById('execResetFilterBtn');
+    if (applyBtn) applyBtn.addEventListener('click', () => navigateWithFilters());
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            if (LATEST_MONTH) {
+                window.location.href = '/?months=' + encodeURIComponent(LATEST_MONTH);
+            } else {
+                window.location.href = '/';
+            }
+        });
+    }
+
+    const presetAllBtn = document.getElementById('presetAllMonthsBtn');
+    const presetRecent3Btn = document.getElementById('presetRecent3Btn');
+    const presetLatestBtn = document.getElementById('presetLatestMonthBtn');
+    if (presetAllBtn) presetAllBtn.addEventListener('click', () => navigateWithFilters([], undefined, true));
+    if (presetRecent3Btn) presetRecent3Btn.addEventListener('click', () => navigateWithFilters(RECENT_3_MONTHS, undefined, false));
+    if (presetLatestBtn) presetLatestBtn.addEventListener('click', () => navigateWithFilters([LATEST_MONTH], undefined, false));
+
+    updateFilterLabels();
+
+    // ===== 3. Charts =====
+    const chartInstances = {};
+    function createChart(canvasId, config) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return null;
+        if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+        config.options = config.options || {};
+        config.options.animation = false;
+        config.options.responsive = true;
+        config.options.maintainAspectRatio = false;
+        chartInstances[canvasId] = new Chart(canvas.getContext('2d'), config);
+        return chartInstances[canvasId];
+    }
+
+    // Chart 1: Conversion Funnel
+    if (TOTAL_REGISTERED > 0 && FUNNEL_STAGES.length > 0) {
+        createChart('execFunnelChart', {
+            type: 'bar',
+            data: {
+                labels: FUNNEL_STAGES.map(s => s.label),
+                datasets: [{
+                    label: 'จำนวนช่าง',
+                    data: FUNNEL_STAGES.map(s => s.pct_total),
+                    backgroundColor: ['#3B82F6', '#6366F1', '#8B5CF6', '#10B981'],
+                    borderRadius: 8,
+                    barThickness: 28
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                layout: { padding: { right: 110 } },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                const stage = FUNNEL_STAGES[ctx.dataIndex];
+                                return [
+                                    stage.count + ' คน (' + stage.pct_total.toFixed(1) + '% ของทั้งหมด)',
+                                    stage.sub_label
+                                ];
+                            }
+                        }
+                    },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'end',
+                        color: '#1E293B',
+                        font: { weight: 'bold', size: 11 },
+                        formatter: function (val, ctx) {
+                            const stage = FUNNEL_STAGES[ctx.dataIndex];
+                            return stage.count + ' คน (' + stage.pct_total.toFixed(1) + '%)';
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { color: '#F1F5F9' },
+                        ticks: { display: false }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#334155', font: { size: 12, weight: '600' } }
+                    }
+                }
+            }
+        });
+    }
+
+    // Chart 2: 7-Step SLA vs Target
+    if (SLA_STEPS.length > 0) {
+        const maxSlaVal = Math.max(
+            ...SLA_STEPS.map(s => Math.max(s.avg_sla || 0, s.target_days || 0)),
+            10
+        );
+        const slaTargetMarkerPlugin = {
+            id: 'slaTargetMarkerPlugin',
+            afterDatasetsDraw: function (chart) {
+                const ctx = chart.ctx;
+                const xScale = chart.scales.x;
+                const meta = chart.getDatasetMeta(0);
+                meta.data.forEach((bar, idx) => {
+                    const step = SLA_STEPS[idx];
+                    if (!step || !step.target_days) return;
+                    const targetX = xScale.getPixelForValue(step.target_days);
+                    const topY = bar.y - bar.height / 2 - 3;
+                    const botY = bar.y + bar.height / 2 + 3;
+                    ctx.save();
+                    ctx.strokeStyle = '#0F172A';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([3, 2]);
+                    ctx.beginPath();
+                    ctx.moveTo(targetX, topY);
+                    ctx.lineTo(targetX, botY);
+                    ctx.stroke();
+                    ctx.restore();
+                });
+            }
+        };
+
+        createChart('execSlaStepsChart', {
+            type: 'bar',
+            plugins: [slaTargetMarkerPlugin],
+            data: {
+                labels: SLA_STEPS.map((s, idx) => (idx + 1) + '. ' + s.name),
+                datasets: [{
+                    label: 'SLA เฉลี่ยจริง (วัน)',
+                    data: SLA_STEPS.map(s => s.avg_sla),
+                    backgroundColor: SLA_STEPS.map(s => {
+                        if (s.avg_sla <= s.target_days) return '#10B981';
+                        if (s.avg_sla <= s.target_days * 1.5) return '#F59E0B';
+                        return '#EF4444';
+                    }),
+                    borderRadius: 6,
+                    barThickness: 20
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                layout: { padding: { right: 98 } },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                const step = SLA_STEPS[ctx.dataIndex];
+                                const diff = (step.avg_sla - step.target_days).toFixed(1);
+                                const diffText = step.avg_sla > step.target_days ? 'เกินเป้า +' + diff + ' วัน' : 'อยู่ในเป้าหมาย';
+                                return [
+                                    'เฉลี่ยจริง: ' + step.avg_sla + ' วัน',
+                                    'เป้าหมาย: ' + step.target_days + ' วัน (' + diffText + ')'
+                                ];
+                            }
+                        }
+                    },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'end',
+                        color: '#1E293B',
+                        font: { weight: 'bold', size: 10 },
+                        formatter: function (val, ctx) {
+                            const step = SLA_STEPS[ctx.dataIndex];
+                            return val + ' วัน (เป้า ' + step.target_days + ')';
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        suggestedMax: Math.ceil(maxSlaVal * 1.15),
+                        grid: { color: '#F1F5F9' },
+                        ticks: { color: '#64748B', font: { size: 10 } }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#334155', font: { size: 11, weight: '600' } }
+                    }
+                }
+            }
+        });
+    }
+
+    // Chart 3: Monthly Trend & Completion Rate Combo
+    if (MONTHLY_DATA.length > 0) {
+        const monthlySuccessRates = MONTHLY_DATA.map(m =>
+            m.total > 0 ? Number((m.completed / m.total * 100).toFixed(1)) : 0
+        );
+        const monthlyTotalPlugin = {
+            id: 'monthlyTotalPlugin',
+            afterDatasetsDraw: function (chart) {
+                const ctx = chart.ctx;
+                const datasets = chart.data.datasets;
+                chart.data.labels.forEach((label, idx) => {
+                    let visibleTotal = 0;
+                    let minY = null;
+                    for (let d = 0; d < 4; d++) {
+                        const meta = chart.getDatasetMeta(d);
+                        if (!meta.hidden && meta.data[idx]) {
+                            const val = datasets[d].data[idx] || 0;
+                            visibleTotal += val;
+                            if (val > 0) {
+                                const barY = meta.data[idx].y;
+                                if (minY === null || barY < minY) minY = barY;
+                            }
+                        }
+                    }
+                    if (visibleTotal > 0 && minY !== null) {
+                        ctx.save();
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'bottom';
+                        ctx.font = 'bold 11px sans-serif';
+                        ctx.fillStyle = '#1E293B';
+                        ctx.fillText(visibleTotal, chart.getDatasetMeta(0).data[idx].x, minY - 4);
+                        ctx.restore();
+                    }
+                });
+            }
+        };
+
+        createChart('execMonthlyComboChart', {
+            type: 'bar',
+            plugins: [monthlyTotalPlugin],
+            data: {
+                labels: MONTHLY_DATA.map(m => m.month),
+                datasets: [
+                    {
+                        label: 'ขึ้นทะเบียนสำเร็จ',
+                        data: MONTHLY_DATA.map(m => m.completed),
+                        backgroundColor: '#10B981',
+                        stack: 'headcount',
+                        order: 2,
+                        datalabels: {
+                            color: '#fff',
+                            font: { weight: 'bold', size: 10 },
+                            formatter: v => v > 0 ? v : ''
+                        }
+                    },
+                    {
+                        label: 'อยู่ระหว่างดำเนินการ',
+                        data: MONTHLY_DATA.map(m => m.onprocess),
+                        backgroundColor: '#F59E0B',
+                        stack: 'headcount',
+                        order: 2,
+                        datalabels: {
+                            color: '#fff',
+                            font: { weight: 'bold', size: 10 },
+                            formatter: v => v > 0 ? v : ''
+                        }
+                    },
+                    {
+                        label: 'ไม่ผ่าน',
+                        data: MONTHLY_DATA.map(m => m.closed),
+                        backgroundColor: '#EF4444',
+                        stack: 'headcount',
+                        order: 2,
+                        datalabels: {
+                            color: '#fff',
+                            font: { weight: 'bold', size: 10 },
+                            formatter: v => v > 0 ? v : ''
+                        }
+                    },
+                    {
+                        label: 'ลาออก',
+                        data: MONTHLY_DATA.map(m => m.cancel),
+                        backgroundColor: '#6B7280',
+                        stack: 'headcount',
+                        order: 2,
+                        datalabels: {
+                            color: '#fff',
+                            font: { weight: 'bold', size: 10 },
+                            formatter: v => v > 0 ? v : ''
+                        }
+                    },
+                    {
+                        type: 'line',
+                        label: 'อัตราสำเร็จ (%)',
+                        data: monthlySuccessRates,
+                        yAxisID: 'y1',
+                        borderColor: '#4F46E5',
+                        backgroundColor: '#4F46E5',
+                        borderWidth: 2.5,
+                        borderDash: [5, 4],
+                        tension: 0.25,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#4F46E5',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 1.5,
+                        order: 1,
+                        datalabels: {
+                            display: true,
+                            align: 'top',
+                            offset: 4,
+                            color: '#4338CA',
+                            backgroundColor: 'rgba(255,255,255,0.85)',
+                            borderRadius: 4,
+                            padding: { top: 1, bottom: 1, left: 3, right: 3 },
+                            font: { weight: 'bold', size: 10 },
+                            formatter: v => v + '%'
+                        }
+                    }
+                ]
+            },
+            options: {
+                layout: { padding: { top: 22 } },
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            afterTitle: function (items) {
+                                const idx = items[0].dataIndex;
+                                return 'ลงทะเบียนรวม: ' + MONTHLY_DATA[idx].total + ' คน';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { stacked: true, grid: { display: false } },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        grace: '15%',
+                        grid: { color: '#F1F5F9' },
+                        ticks: { display: false }
+                    },
+                    y1: {
+                        position: 'right',
+                        beginAtZero: true,
+                        max: 115,
+                        grid: { display: false },
+                        ticks: {
+                            color: '#6366F1',
+                            font: { size: 10 },
+                            callback: v => v <= 100 ? v + '%' : ''
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // ===== 4. Tab Switching (Zone 5) =====
+    document.querySelectorAll('.exec-tab-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const targetId = this.getAttribute('data-tab');
+            document.querySelectorAll('.exec-tab-btn').forEach(b => {
+                b.classList.remove('border-blue-600', 'text-blue-700', 'bg-white', 'font-semibold');
+                b.classList.add('border-transparent', 'text-slate-600', 'font-medium');
+            });
+            this.classList.add('border-blue-600', 'text-blue-700', 'bg-white', 'font-semibold');
+            this.classList.remove('border-transparent', 'text-slate-600', 'font-medium');
+
+            document.querySelectorAll('.exec-tab-panel').forEach(panel => {
+                panel.classList.toggle('hidden', panel.id !== targetId);
+            });
+        });
+    });
+
+    // Pivot Area / Province sub-toggle inside Tab 2
+    const pivotAreaBtn = document.getElementById('pivotAreaBtn');
+    const pivotProvinceBtn = document.getElementById('pivotProvinceBtn');
+    const pivotAreaCont = document.getElementById('pivotAreaContainer');
+    const pivotProvCont = document.getElementById('pivotProvinceContainer');
+    if (pivotAreaBtn && pivotProvinceBtn) {
+        pivotAreaBtn.addEventListener('click', function () {
+            pivotAreaCont.classList.remove('hidden');
+            pivotProvCont.classList.add('hidden');
+            pivotAreaBtn.classList.add('bg-white', 'text-slate-800', 'shadow-sm', 'font-semibold');
+            pivotProvinceBtn.classList.remove('bg-white', 'text-slate-800', 'shadow-sm', 'font-semibold');
+        });
+        pivotProvinceBtn.addEventListener('click', function () {
+            pivotProvCont.classList.remove('hidden');
+            pivotAreaCont.classList.add('hidden');
+            pivotProvinceBtn.classList.add('bg-white', 'text-slate-800', 'shadow-sm', 'font-semibold');
+            pivotAreaBtn.classList.remove('bg-white', 'text-slate-800', 'shadow-sm', 'font-semibold');
+        });
+    }
+
+    // ===== 5. Depot Tab Filter & Sorting =====
+    const depotSearch = document.getElementById('execDepotSearch');
+    const depotModeFilter = document.getElementById('execDepotModeFilter');
+    const depotBody = document.getElementById('execDepotTableBody');
+
+    function filterDepotRows() {
+        if (!depotBody) return;
+        const kw = (depotSearch ? depotSearch.value : '').trim().toLowerCase();
+        const mode = depotModeFilter ? depotModeFilter.value : 'all';
+        let visibleIdx = 1;
+        depotBody.querySelectorAll('tr[data-depot_name]').forEach(row => {
+            const textMatch = !kw || row.textContent.toLowerCase().includes(kw);
+            const onp = parseInt(row.getAttribute('data-onprocess') || '0', 10);
+            const rate = parseFloat(row.getAttribute('data-success_rate') || '0');
+            let modeMatch = true;
+            if (mode === 'onprocess') modeMatch = onp > 0;
+            else if (mode === 'low') modeMatch = rate < 50;
+            const show = textMatch && modeMatch;
+            row.style.display = show ? '' : 'none';
+            if (show) {
+                const idxCell = row.querySelector('.exec-row-index');
+                if (idxCell) idxCell.textContent = visibleIdx++;
+            }
+        });
+    }
+    if (depotSearch) depotSearch.addEventListener('input', filterDepotRows);
+    if (depotModeFilter) depotModeFilter.addEventListener('change', filterDepotRows);
+
+    let depotSort = { column: 'total', direction: 'desc' };
+    document.querySelectorAll('.exec-sortable-header').forEach(header => {
+        header.addEventListener('click', function () {
+            if (!depotBody) return;
+            const sortCol = this.getAttribute('data-sort');
+            if (depotSort.column === sortCol) {
+                depotSort.direction = depotSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                depotSort.column = sortCol;
+                depotSort.direction = ['total', 'completed', 'onprocess', 'success_rate'].includes(sortCol) ? 'desc' : 'asc';
+            }
+            document.querySelectorAll('.exec-sortable-header i').forEach(ic => {
+                ic.className = 'fas fa-sort text-gray-400 ml-1';
+            });
+            const ic = this.querySelector('i');
+            if (ic) ic.className = depotSort.direction === 'asc' ? 'fas fa-sort-up text-white ml-1' : 'fas fa-sort-down text-white ml-1';
+
+            const rows = Array.from(depotBody.querySelectorAll('tr[data-depot_name]'));
+            rows.sort((a, b) => {
+                let aVal = a.getAttribute('data-' + sortCol) || '';
+                let bVal = b.getAttribute('data-' + sortCol) || '';
+                if (['total', 'completed', 'onprocess', 'success_rate'].includes(sortCol)) {
+                    aVal = parseFloat(aVal) || 0;
+                    bVal = parseFloat(bVal) || 0;
+                } else {
+                    aVal = aVal.toLowerCase();
+                    bVal = bVal.toLowerCase();
+                }
+                if (aVal === bVal) return 0;
+                return depotSort.direction === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
+            });
+            rows.forEach(r => depotBody.appendChild(r));
+            filterDepotRows();
+        });
+    });
+
+    // ===== 6. Tab 4 Onprocess List Search, Filters & Excel Export =====
+    const onpSearch = document.getElementById('execOnprocessSearch');
+    const onpArea = document.getElementById('execOnprocessAreaFilter');
+    const onpStatus = document.getElementById('execOnprocessStatusFilter');
+    const onpTable = document.getElementById('execOnprocessTable');
+
+    function filterOnprocessTabRows() {
+        if (!onpTable) return;
+        const kw = (onpSearch ? onpSearch.value : '').trim().toLowerCase();
+        const area = onpArea ? onpArea.value : '';
+        const status = onpStatus ? onpStatus.value : '';
+        let visibleIdx = 1;
+        onpTable.querySelectorAll('tbody tr').forEach(row => {
+            const matchKw = !kw || row.textContent.toLowerCase().includes(kw);
+            const matchArea = !area || (row.getAttribute('data-area') || '') === area;
+            const matchStatus = !status || (row.getAttribute('data-status') || '') === status;
+            const show = matchKw && matchArea && matchStatus;
+            row.style.display = show ? '' : 'none';
+            if (show) {
+                const idxCell = row.querySelector('td:first-child');
+                if (idxCell) idxCell.textContent = visibleIdx++;
+            }
+        });
+    }
+    if (onpSearch) onpSearch.addEventListener('input', filterOnprocessTabRows);
+    if (onpArea) onpArea.addEventListener('change', filterOnprocessTabRows);
+    if (onpStatus) onpStatus.addEventListener('change', filterOnprocessTabRows);
+
+    function exportAoAToExcel(headers, rows, filename) {
+        const ws = XLSX.utils.aoa_to_sheet([headers].concat(rows));
+        ws['!cols'] = headers.map((h, i) => {
+            let w = h.length;
+            rows.forEach(r => { w = Math.max(w, String(r[i] == null ? '' : r[i]).length); });
+            return { wch: Math.min(w + 4, 60) };
+        });
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Onprocess');
+        XLSX.writeFile(wb, filename);
+    }
+
+    const onpExportBtn = document.getElementById('execOnprocessExportBtn');
+    if (onpExportBtn && onpTable) {
+        onpExportBtn.addEventListener('click', function () {
+            const headers = Array.from(onpTable.querySelectorAll('thead th')).map(th => th.textContent.trim());
+            const rows = Array.from(onpTable.querySelectorAll('tbody tr'))
+                .filter(tr => tr.style.display !== 'none')
+                .map(tr => Array.from(tr.querySelectorAll('td')).map(td => td.textContent.trim()));
+            exportAoAToExcel(headers, rows, 'onprocess_technicians.xlsx');
+        });
+    }
+
+    // ===== 7. Drill-down Modal (Status or Area) =====
+    let onprocessData = [];
+    try {
+        onprocessData = JSON.parse(document.getElementById('execOnprocessDataJson').textContent || '[]');
+    } catch (e) { onprocessData = []; }
+
+    const modal = document.getElementById('execOnprocessModal');
+    const modalBody = document.getElementById('execModalBody');
+    const modalTitle = document.getElementById('execModalTitle');
+    const modalCount = document.getElementById('execModalCount');
+    const modalSearch = document.getElementById('execModalSearchInput');
+    let baseModalRows = [];
+    let visibleModalRows = [];
+    let modalFileSuffix = 'all';
+
+    function escapeHtml(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function resultBadge(v) {
+        if (!v || v === '-') return '<span class="text-slate-300">-</span>';
+        const safe = escapeHtml(v);
+        if (v.indexOf('ไม่ผ่าน') !== -1) return '<span class="bg-rose-100 text-rose-700 px-2 py-0.5 rounded font-medium">' + safe + '</span>';
+        if (v.indexOf('ผ่าน') !== -1) return '<span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-medium">' + safe + '</span>';
+        return '<span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-medium">' + safe + '</span>';
+    }
+
+    function renderModalRows() {
+        const kw = (modalSearch ? modalSearch.value : '').trim().toLowerCase();
+        visibleModalRows = !kw ? baseModalRows : baseModalRows.filter(t =>
+            [t.full_name_th, t.depot_name, t.depot_code, t.province, t.area, t.status, t.remark]
+                .some(v => String(v || '').toLowerCase().includes(kw))
+        );
+        modalCount.textContent = visibleModalRows.length;
+        modalBody.innerHTML = visibleModalRows.map((t, i) => (
+            '<tr class="hover:bg-amber-50/50">' +
+            '<td class="px-2.5 py-2 text-center text-slate-500">' + (i + 1) + '</td>' +
+            '<td class="px-2.5 py-2 font-medium text-slate-800">' + escapeHtml(t.full_name_th) + '</td>' +
+            '<td class="px-2.5 py-2 text-slate-700">' + escapeHtml(t.depot_name) + '</td>' +
+            '<td class="px-2.5 py-2 text-slate-600 whitespace-nowrap">' + escapeHtml(t.depot_code) + '</td>' +
+            '<td class="px-2.5 py-2 text-slate-700">' + escapeHtml(t.province) + '</td>' +
+            '<td class="px-2.5 py-2 text-slate-700 whitespace-nowrap">' + escapeHtml(t.area) + '</td>' +
+            '<td class="px-2.5 py-2 text-center whitespace-nowrap">' + resultBadge(t.theory_training_result) + '</td>' +
+            '<td class="px-2.5 py-2 text-center whitespace-nowrap">' + resultBadge(t.on_the_job_result) + '</td>' +
+            '<td class="px-2.5 py-2 text-center whitespace-nowrap"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-medium">' + escapeHtml(t.status) + '</span></td>' +
+            '<td class="px-2.5 py-2 text-slate-700">' + (t.remark ? escapeHtml(t.remark) : '<span class="text-slate-300">-</span>') + '</td>' +
+            '<td class="px-2.5 py-2 text-center text-slate-600 whitespace-nowrap">' + escapeHtml(t.training_round_date) + '</td>' +
+            '<td class="px-2.5 py-2 text-center text-slate-600 whitespace-nowrap">' + escapeHtml(t.training_month) + '</td>' +
+            '</tr>'
+        )).join('') || '<tr><td colspan="12" class="px-4 py-8 text-center text-slate-400">ไม่มีข้อมูล</td></tr>';
+    }
+
+    function openExecModal(opts) {
+        const status = opts.status || '';
+        const area = opts.area || '';
+        baseModalRows = onprocessData.filter(t => {
+            const matchStatus = !status || status === '__all__' || (t.status || '') === status;
+            const matchArea = !area || (t.area || '') === area;
+            return matchStatus && matchArea;
+        });
+        if (area && (!status || status === '__all__')) {
+            modalTitle.textContent = 'พื้นที่ ' + area;
+            modalFileSuffix = area;
+        } else if (status && status !== '__all__') {
+            modalTitle.textContent = 'สถานะ ' + status;
+            modalFileSuffix = status;
+        } else {
+            modalTitle.textContent = 'ทั้งหมด';
+            modalFileSuffix = 'all';
+        }
+        if (modalSearch) modalSearch.value = '';
+        renderModalRows();
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeExecModal() {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.body.style.overflow = '';
+    }
+
+    document.querySelectorAll('.onprocess-status-link').forEach(btn => {
+        btn.addEventListener('click', function () {
+            openExecModal({ status: this.getAttribute('data-status') });
+        });
+    });
+    document.querySelectorAll('.onprocess-area-link').forEach(btn => {
+        btn.addEventListener('click', function () {
+            openExecModal({ area: this.getAttribute('data-area') });
+        });
+    });
+
+    if (modalSearch) modalSearch.addEventListener('input', renderModalRows);
+    document.getElementById('execModalCloseBtn').addEventListener('click', closeExecModal);
+    document.getElementById('execModalBackdrop').addEventListener('click', closeExecModal);
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeExecModal();
+    });
+    document.getElementById('execModalExportBtn').addEventListener('click', function () {
+        const headers = ['ลำดับ', 'ชื่อช่าง', 'Depot', 'รหัส Depot', 'จังหวัด', 'พื้นที่',
+            'ทฤษฎี', 'OJT', 'สถานะ', 'หมายเหตุ (ติดที่อะไร)', 'รอบอบรม', 'เดือนอบรม'];
+        const rows = visibleModalRows.map((t, i) => [
+            i + 1, t.full_name_th, t.depot_name, t.depot_code, t.province, t.area,
+            t.theory_training_result, t.on_the_job_result, t.status, t.remark, t.training_round_date, t.training_month
+        ]);
+        exportAoAToExcel(headers, rows, 'onprocess_' + modalFileSuffix.replace(/[\\/?*:\[\]]/g, '_') + '.xlsx');
+    });
+});
+</script>

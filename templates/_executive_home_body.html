@@ -1,0 +1,1213 @@
+{% set sla_total_target = sla_total_target | default(30, true) %}
+{% set is_all_months = (request.args.get('all_months') == '1') %}
+{% set selected_areas = selected_areas if selected_areas is defined else (request.args.get('areas', '').split(',') | reject('equalto', '') | list) %}
+{% set latest_month_short = latest_month_short if latest_month_short is defined else (month_list[-1] if month_list else '') %}
+{% set recent_3_months = recent_3_months if recent_3_months is defined else (month_list[-3:] if month_list else []) %}
+{% if exec_insight is not defined and not selected_months and not is_all_months and latest_month_short %}
+<script>
+(function () {
+    try {
+        var allM = {{ monthly | tojson }};
+        if (allM && allM.length > 1) {
+            sessionStorage.setItem('sla_all_monthly_2026', JSON.stringify(allM));
+        }
+    } catch (e) {}
+    var p = new URLSearchParams(window.location.search);
+    if (!p.has('months') && p.get('all_months') !== '1') {
+        p.set('months', {{ latest_month_short | tojson }});
+        window.location.replace(window.location.pathname + '?' + p.toString());
+    }
+})();
+</script>
+{% endif %}
+{% if exec_insight is not defined and selected_areas %}
+    {% set f_areas = [] %}
+    {% for a in areas %}{% if a.area in selected_areas %}{% set _ = f_areas.append(a) %}{% endif %}{% endfor %}
+    {% set areas = f_areas %}
+    {% set f_onp = [] %}
+    {% for t in onprocess_details %}{% if t.area in selected_areas %}{% set _ = f_onp.append(t) %}{% endif %}{% endfor %}
+    {% set onprocess_details = f_onp %}
+    {% set f_depots = [] %}
+    {% for d in depot_agents %}{% if d.area in selected_areas %}{% set _ = f_depots.append(d) %}{% endif %}{% endfor %}
+    {% set depot_agents = f_depots %}
+    {% set f_tot = areas | sum(attribute='total') %}
+    {% set f_comp = areas | sum(attribute='completed') %}
+    {% set f_onp_cnt = areas | sum(attribute='onprocess') %}
+    {% set f_closed = areas | sum(attribute='closed') %}
+    {% set f_cancel = areas | sum(attribute='cancel') %}
+    {% set summary = {
+        'total': f_tot,
+        'completed': f_comp,
+        'onprocess': f_onp_cnt,
+        'closed': f_closed,
+        'cancel': f_cancel,
+        'dropoff': f_closed + f_cancel,
+        'completed_rate': (((f_comp / f_tot * 100) | round(1)) if f_tot > 0 else 0),
+        'onprocess_rate': (((f_onp_cnt / f_tot * 100) | round(1)) if f_tot > 0 else 0),
+        'closed_rate': (((f_closed / f_tot * 100) | round(1)) if f_tot > 0 else 0),
+        'cancel_rate': (((f_cancel / f_tot * 100) | round(1)) if f_tot > 0 else 0),
+        'dropoff_rate': ((((f_closed + f_cancel) / f_tot * 100) | round(1)) if f_tot > 0 else 0),
+        'theory_pass': summary.theory_pass,
+        'theory_fail': summary.theory_fail,
+        'theory_rate': summary.theory_rate,
+        'ojt_pass': summary.ojt_pass,
+        'ojt_fail': summary.ojt_fail,
+        'ojt_rate': summary.ojt_rate,
+        'avg_sla_total': (areas[0].avg_sla if areas|length == 1 else summary.avg_sla_total)
+    } %}
+{% endif %}
+{% set is_current_month_selected = (selected_months == [latest_month_short]) %}
+{% set is_single_month_selected = (selected_months|length == 1) %}
+{% if is_current_month_selected %}
+    {% set active_period_badge = 'เดือนปัจจุบัน: ' ~ latest_month_short ~ ' 2026' %}
+    {% set active_period_short = 'เดือน ' ~ latest_month_short ~ ' 2026' %}
+{% elif is_single_month_selected %}
+    {% set active_period_badge = 'เดือนที่เลือก: ' ~ selected_months[0] ~ ' 2026' %}
+    {% set active_period_short = 'เดือน ' ~ selected_months[0] ~ ' 2026' %}
+{% elif selected_months|length > 1 %}
+    {% set active_period_badge = 'เดือนที่เลือก: ' ~ (selected_months|join(', ')) ~ ' 2026 (' ~ (selected_months|length) ~ ' เดือน)' %}
+    {% set active_period_short = 'เดือน ' ~ (selected_months|join(', ')) ~ ' 2026' %}
+{% else %}
+    {% set active_period_badge = 'ภาพรวมสะสมทั้งปี 2026 (' ~ (month_list|length) ~ ' เดือน)' %}
+    {% set active_period_short = 'ทั้งปี 2026 (' ~ (month_list|length) ~ ' เดือน)' %}
+{% endif %}
+{% set sum_dropoff = summary.dropoff if summary.dropoff is defined else (summary.closed + summary.cancel) %}
+{% set sum_dropoff_rate = summary.dropoff_rate if summary.dropoff_rate is defined else (((sum_dropoff / summary.total * 100) | round(1)) if summary.total > 0 else 0) %}
+{% set dist_30 = (sla_dist | selectattr('range', 'equalto', '0-30 วัน') | list) if (sla_dist is defined and sla_dist) else [] %}
+{% set sum_sla_valid = summary.sla_valid_count if summary.sla_valid_count is defined else ((sla_dist | sum(attribute='count')) if (sla_dist is defined and sla_dist) else (summary.completed if summary.avg_sla_total > 0 else 0)) %}
+{% set sum_sla_within_cnt = summary.sla_within_target_count if summary.sla_within_target_count is defined else (dist_30[0].count if dist_30 else 0) %}
+{% set sum_sla_within_rate = summary.sla_within_target_rate if summary.sla_within_target_rate is defined else (((sum_sla_within_cnt / sum_sla_valid * 100) | round(1)) if sum_sla_valid > 0 else 0) %}
+{% if sla_analysis_steps is not defined %}
+    {% set step_map = {} %}
+    {% for s in (sla_steps | default([], true)) %}
+        {% set _ = step_map.update({s.key: s}) %}
+    {% endfor %}
+    {% set gen_avg = step_map.get('genid', {}).get('avg_sla', 0) %}
+    {% set prt_avg = step_map.get('printcard', {}).get('avg_sla', 0) %}
+    {% set trn_avg = step_map.get('training', {}).get('avg_sla', 0) %}
+    {% set sla_analysis_steps = [
+        {'key': 'doc', 'name': 'เอกสาร', 'target_days': 7, 'avg_sla': step_map.get('doc', {}).get('avg_sla', 0)},
+        {'key': 'training', 'name': 'อบรมทฤษฎี', 'target_days': 4, 'avg_sla': (4 if trn_avg > 4 else trn_avg)},
+        {'key': 'ojt', 'name': 'OJT', 'target_days': 7, 'avg_sla': step_map.get('ojt', {}).get('avg_sla', 0)},
+        {'key': 'printcard', 'name': 'Print/ส่งบัตร', 'target_days': 3, 'avg_sla': ((gen_avg + prt_avg) | round(1))},
+        {'key': 'inspection', 'name': 'ตรวจความพร้อม', 'target_days': 3, 'avg_sla': step_map.get('inspection', {}).get('avg_sla', 0)},
+        {'key': 'dflow', 'name': 'DFlow', 'target_days': 3, 'avg_sla': step_map.get('dflow', {}).get('avg_sla', 0)},
+        {'key': 'registration', 'name': 'ขึ้นทะเบียน', 'target_days': 3, 'avg_sla': step_map.get('registration', {}).get('avg_sla', 0)}
+    ] %}
+{% endif %}
+{% set depot_onp_map = {} %}
+{% for t in (onprocess_details | default([], true)) %}
+    {% set dname = t.depot_name | default('', true) %}
+    {% if dname %}
+        {% set _ = depot_onp_map.update({dname: depot_onp_map.get(dname, 0) + 1}) %}
+    {% endif %}
+{% endfor %}
+{% set enriched_depots = [] %}
+{% for agent in (depot_agents | default([], true)) %}
+    {% set onp_val = agent.onprocess if agent.onprocess is defined else depot_onp_map.get(agent.depot_name, 0) %}
+    {% set _ = enriched_depots.append({
+        'area': agent.area,
+        'depot_code': agent.depot_code,
+        'depot_name': agent.depot_name,
+        'province': agent.province,
+        'total': agent.total,
+        'completed': agent.completed,
+        'onprocess': onp_val,
+        'success_rate': agent.success_rate
+    }) %}
+{% endfor %}
+{% set depot_agents = enriched_depots %}
+{% if exec_insight is not defined %}
+    {% set latest_m = monthly[-1] if (monthly and monthly|length > 0) else none %}
+    {% set prev_m = monthly[-2] if (monthly and monthly|length >= 2) else none %}
+    {% set m_cnt = monthly|length if monthly else 1 %}
+    {% set l_cohort = {
+        'month': (latest_m.month if (is_single_month_selected and latest_m) else active_period_short),
+        'total': summary.total,
+        'completed': summary.completed,
+        'onprocess': summary.onprocess,
+        'closed': summary.closed,
+        'cancel': summary.cancel,
+        'completion_rate': summary.completed_rate,
+        'month_count': m_cnt,
+        'avg_per_month': (((summary.total / m_cnt) | round(1)) if m_cnt > 0 else 0)
+    } %}
+    {% set p_cohort = {
+        'month': prev_m.month,
+        'total': prev_m.total,
+        'completed': prev_m.completed,
+        'onprocess': prev_m.onprocess,
+        'completion_rate': (((prev_m.completed / prev_m.total * 100) | round(1)) if prev_m.total > 0 else 0)
+    } if (is_single_month_selected and prev_m) else none %}
+    {% set r_delta = (summary.total - prev_m.total) if (is_single_month_selected and prev_m) else none %}
+    {% set r_pct = (((r_delta / prev_m.total * 100) | round(1)) if (r_delta is not none and prev_m.total > 0) else none) %}
+    {% set o_delta = (summary.onprocess - prev_m.onprocess) if (is_single_month_selected and prev_m) else none %}
+    {% set step_diffs = [] %}
+    {% for s in sla_analysis_steps %}
+        {% if s.avg_sla > 0 %}
+            {% set d = (s.avg_sla - s.target_days) | round(1) %}
+            {% set _ = step_diffs.append({'name': s.name, 'avg_sla': s.avg_sla, 'target_days': s.target_days, 'diff': d, 'is_over': (s.avg_sla > s.target_days), 'max_pair': ([s.avg_sla, s.target_days] | max)}) %}
+        {% endif %}
+    {% endfor %}
+    {% set top3_raw = (step_diffs | sort(attribute='diff', reverse=true))[:3] %}
+    {% set max_b = (top3_raw | map(attribute='max_pair') | max) if top3_raw else 0 %}
+    {% set b_list = [] %}
+    {% for b in top3_raw %}
+        {% set _ = b_list.append({
+            'name': b.name,
+            'avg_sla': b.avg_sla,
+            'target_days': b.target_days,
+            'diff': b.diff,
+            'is_over': b.is_over,
+            'width': (((b.avg_sla / max_b * 100) | round(0) | int) if max_b > 0 else 0),
+            'target_pos': (((b.target_days / max_b * 100) | round(0) | int) if max_b > 0 else 0)
+        }) %}
+    {% endfor %}
+    {% set t_stuck = executive_insight.top_stuck if (executive_insight is defined and executive_insight.top_stuck is defined) else none %}
+    {% set f_recs = [] %}
+    {% set _ = f_recs.append('ภาพรวม' ~ active_period_short ~ ': ลงทะเบียน ' ~ summary.total ~ ' คน • ขึ้นทะเบียนสำเร็จ ' ~ summary.completed ~ ' คน (' ~ summary.completed_rate ~ '%) • อยู่ระหว่างดำเนินการ ' ~ summary.onprocess ~ ' คน (' ~ summary.onprocess_rate ~ '%)') %}
+    {% if summary.avg_sla_total > 0 %}
+        {% if summary.avg_sla_total > sla_total_target %}
+            {% set _ = f_recs.append('SLA เฉลี่ยรวมของ' ~ active_period_short ~ 'อยู่ที่ ' ~ summary.avg_sla_total ~ ' วัน (เกินเป้าหมาย ' ~ sla_total_target ~ ' วันอยู่ +' ~ ((summary.avg_sla_total - sla_total_target) | round(1)) ~ ' วัน) — เสร็จทันเกณฑ์ ' ~ sum_sla_within_rate ~ '%') %}
+        {% else %}
+            {% set _ = f_recs.append('SLA เฉลี่ยรวมของ' ~ active_period_short ~ 'อยู่ที่ ' ~ summary.avg_sla_total ~ ' วัน อยู่ในเป้าหมาย ≤ ' ~ sla_total_target ~ ' วัน (เสร็จทันเกณฑ์ ' ~ sum_sla_within_rate ~ '%)') %}
+        {% endif %}
+    {% endif %}
+    {% if b_list and b_list[0].is_over %}
+        {% set _ = f_recs.append('คอขวดเวลาหลักใน' ~ active_period_short ~ 'คือขั้นตอน "' ~ b_list[0].name ~ '" เฉลี่ย ' ~ b_list[0].avg_sla ~ ' วัน (เป้า ' ~ b_list[0].target_days ~ ' วัน, เกิน +' ~ b_list[0].diff ~ ' วัน)') %}
+    {% elif b_list %}
+        {% set _ = f_recs.append('ทุกขั้นตอนใน' ~ active_period_short ~ 'อยู่ในเป้าหมาย โดย "' ~ b_list[0].name ~ '" ใช้เวลาเฉลี่ยสูงสุดที่ ' ~ b_list[0].avg_sla ~ ' วัน (เป้า ' ~ b_list[0].target_days ~ ' วัน)') %}
+    {% endif %}
+    {% if t_stuck %}
+        {% set _ = f_recs.append('จุดค้างสะสมสูงสุดใน' ~ active_period_short ~ 'อยู่ที่สถานะ "' ~ t_stuck.status ~ '" จำนวน ' ~ t_stuck.count ~ ' คน — ควรเร่งติดตามเพื่อปิดงานขึ้นทะเบียน') %}
+    {% endif %}
+    {% set exec_insight = {
+        'has_data': (summary.total > 0 or monthly|length > 0),
+        'is_single_month': is_single_month_selected,
+        'period_label': active_period_short,
+        'latest_month': (latest_m.month if (is_single_month_selected and latest_m) else active_period_short),
+        'prev_month': (prev_m.month if (is_single_month_selected and prev_m) else ''),
+        'latest_cohort': l_cohort,
+        'prev_cohort': p_cohort,
+        'reg_delta': r_delta,
+        'reg_pct': r_pct,
+        'onp_delta': o_delta,
+        'bottlenecks': b_list,
+        'top_stuck': t_stuck,
+        'recommendations': f_recs
+    } %}
+{% endif %}
+
+<!-- Zone 1: Modern Executive Control & Period Filter Bar -->
+<div class="no-print bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white rounded-2xl shadow-lg p-4 sm:p-5 mb-6 border border-slate-800">
+    <div class="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+        <!-- Left: Active Period Status & Quick Switchers -->
+        <div class="flex flex-wrap items-center gap-2.5">
+            <div class="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/15 px-3.5 py-1.5 rounded-xl text-xs font-semibold">
+                <span class="w-2 h-2 rounded-full {{ 'bg-emerald-400 animate-pulse' if is_current_month_selected else 'bg-blue-400' }}"></span>
+                <span>{{ active_period_badge }}</span>
+            </div>
+
+            <div class="h-5 w-px bg-white/15 hidden sm:block"></div>
+
+            <span class="text-xs text-blue-200/80 font-medium">เลือกช่วงเวลา:</span>
+            {% if latest_month_short %}
+            <button type="button" id="presetLatestMonthBtn"
+                class="px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer {% if is_current_month_selected %}bg-emerald-500 text-white shadow-md shadow-emerald-500/25{% else %}bg-white/10 hover:bg-white/20 text-white/85{% endif %}">
+                <i class="fas fa-bolt mr-1"></i>เดือนปัจจุบัน ({{ latest_month_short }})
+            </button>
+            {% endif %}
+            {% if recent_3_months|length > 1 %}
+            <button type="button" id="presetRecent3Btn"
+                class="px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer {% if selected_months == recent_3_months %}bg-blue-500 text-white shadow-md shadow-blue-500/25{% else %}bg-white/10 hover:bg-white/20 text-white/85{% endif %}">
+                3 เดือนล่าสุด
+            </button>
+            {% endif %}
+            <button type="button" id="presetAllMonthsBtn"
+                class="px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer {% if not selected_months %}bg-blue-500 text-white shadow-md shadow-blue-500/25{% else %}bg-white/10 hover:bg-white/20 text-white/85{% endif %}">
+                ทั้งปี 2026
+            </button>
+        </div>
+
+        <!-- Right: Multi-Select Month & Area Dropdowns -->
+        <div class="flex flex-wrap items-center gap-2.5">
+            <!-- Month Multi-Select -->
+            <div class="relative">
+                <button type="button" id="execMonthDropdownBtn"
+                    class="inline-flex items-center justify-between min-w-[155px] border border-white/20 rounded-xl px-3.5 py-1.5 text-xs font-medium bg-white/10 hover:bg-white/15 text-white cursor-pointer">
+                    <span class="flex items-center gap-1.5">
+                        <i class="fas fa-calendar-alt text-blue-300"></i>
+                        <span>เดือน: <strong id="execMonthSelectedText">{{ selected_months|join(', ') if selected_months else 'ทั้งปี 2026' }}</strong></span>
+                    </span>
+                    <i class="fas fa-chevron-down ml-2 text-blue-200 text-[10px]"></i>
+                </button>
+                <div id="execMonthDropdown"
+                    class="hidden absolute right-0 z-50 mt-1.5 w-52 bg-white text-slate-800 border border-slate-200 rounded-xl shadow-2xl max-h-64 overflow-y-auto">
+                    <label class="flex items-center px-3 py-2 hover:bg-slate-50 cursor-pointer border-b border-slate-100">
+                        <input type="checkbox" id="execMonthSelectAll" class="mr-2 rounded text-blue-600">
+                        <span class="text-xs font-semibold text-slate-700">เลือกทุกเดือน (ทั้งปี)</span>
+                    </label>
+                    {% for month in month_list %}
+                    <label class="flex items-center justify-between px-3 py-2 hover:bg-slate-50 cursor-pointer">
+                        <span class="flex items-center">
+                            <input type="checkbox" class="execMonthCheckbox mr-2 rounded text-blue-600" value="{{ month }}" {% if month in selected_months %}checked{% endif %}>
+                            <span class="text-xs text-slate-700">{{ month }} 2026</span>
+                        </span>
+                        {% if month == latest_month_short %}
+                        <span class="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-semibold">ปัจจุบัน</span>
+                        {% endif %}
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Area Multi-Select -->
+            <div class="relative">
+                <button type="button" id="execAreaDropdownBtn"
+                    class="inline-flex items-center justify-between min-w-[165px] border border-white/20 rounded-xl px-3.5 py-1.5 text-xs font-medium bg-white/10 hover:bg-white/15 text-white cursor-pointer">
+                    <span class="flex items-center gap-1.5">
+                        <i class="fas fa-map-marker-alt text-blue-300"></i>
+                        <span>พื้นที่: <strong id="execAreaSelectedText">{{ selected_areas|join(', ') if selected_areas|length == 1 else ((selected_areas|length) ~ ' พื้นที่' if selected_areas else 'ทุกพื้นที่') }}</strong></span>
+                    </span>
+                    <i class="fas fa-chevron-down ml-2 text-blue-200 text-[10px]"></i>
+                </button>
+                <div id="execAreaDropdown"
+                    class="hidden absolute right-0 z-50 mt-1.5 w-64 bg-white text-slate-800 border border-slate-200 rounded-xl shadow-2xl max-h-72 overflow-y-auto">
+                    <label class="flex items-center px-3 py-2 hover:bg-slate-50 cursor-pointer border-b border-slate-100">
+                        <input type="checkbox" id="execAreaSelectAll" class="mr-2 rounded text-blue-600">
+                        <span class="text-xs font-semibold text-slate-700">เลือกทุกพื้นที่</span>
+                    </label>
+                    {% for area in area_list %}
+                    <label class="flex items-center px-3 py-2 hover:bg-slate-50 cursor-pointer">
+                        <input type="checkbox" class="execAreaCheckbox mr-2 rounded text-blue-600" value="{{ area }}" {% if area in selected_areas %}checked{% endif %}>
+                        <span class="text-xs text-slate-700">{{ area }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <button type="button" id="execApplyFilterBtn"
+                class="bg-blue-500 hover:bg-blue-400 text-white px-4 py-1.5 rounded-xl text-xs font-semibold shadow-sm transition cursor-pointer">
+                <i class="fas fa-check mr-1"></i>แสดงผลตามที่เลือก
+            </button>
+            {% if not is_current_month_selected or selected_areas %}
+            <button type="button" id="execResetFilterBtn"
+                class="bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer"
+                title="กลับไปค่าเริ่มต้น (เดือนปัจจุบัน)">
+                <i class="fas fa-undo mr-1"></i>เดือนปัจจุบัน
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Zone 2: Modern Status Cards Header + 5 Cards (Dynamic by Selected Month) -->
+<div class="mb-6">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3 px-1">
+        <div class="flex items-center gap-2">
+            <h2 class="text-base font-bold text-slate-800">
+                <i class="fas fa-chart-pie text-blue-600 mr-1.5"></i>การ์ดแสดงสถานะ{{ 'ปัจจุบัน' if is_current_month_selected else 'ตามช่วงเวลาที่เลือก' }}
+            </h2>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold {{ 'bg-emerald-100 text-emerald-800' if is_current_month_selected else 'bg-blue-100 text-blue-800' }}">
+                <i class="fas {{ 'fa-calendar-check' if is_current_month_selected else 'fa-filter' }} text-[10px]"></i>
+                {{ active_period_badge }}
+            </span>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <!-- 1. Total Registered -->
+        <div class="relative overflow-hidden bg-white rounded-2xl shadow-sm p-5 border border-slate-200/90 flex flex-col justify-between">
+            <div class="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-blue-500/10 to-transparent rounded-bl-full pointer-events-none"></div>
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-slate-500">ลงทะเบียนอบรม</p>
+                    <div class="flex items-baseline gap-1.5 mt-1.5">
+                        <h3 class="text-3xl font-extrabold text-slate-900 tracking-tight">{{ summary.total }}</h3>
+                        <span class="text-xs font-medium text-slate-400">คน</span>
+                    </div>
+                </div>
+                <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md shadow-blue-500/20 flex items-center justify-center">
+                    <i class="fas fa-user-plus text-base"></i>
+                </div>
+            </div>
+            <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span class="text-slate-500 font-medium">{{ active_period_short }}</span>
+                <span id="kpiRegMoMBadge" class="text-slate-400">{{ depot_agents|length }} ตัวแทน</span>
+            </div>
+        </div>
+
+        <!-- 2. Completed -->
+        <div class="relative overflow-hidden bg-white rounded-2xl shadow-sm p-5 border border-slate-200/90 flex flex-col justify-between">
+            <div class="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-emerald-500/10 to-transparent rounded-bl-full pointer-events-none"></div>
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-slate-500">ขึ้นทะเบียนสำเร็จ</p>
+                    <div class="flex items-baseline gap-2 mt-1.5">
+                        <h3 class="text-3xl font-extrabold text-emerald-600 tracking-tight">{{ summary.completed }}</h3>
+                        <span class="text-xs font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+                            {{ summary.completed_rate }}%
+                        </span>
+                    </div>
+                </div>
+                <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/20 flex items-center justify-center">
+                    <i class="fas fa-check-circle text-base"></i>
+                </div>
+            </div>
+            <div class="mt-3 pt-2.5 border-t border-slate-100">
+                <div class="w-full bg-slate-100 rounded-full h-1.5 mb-1.5">
+                    <div class="bg-gradient-to-r from-emerald-500 to-teal-500 h-1.5 rounded-full" style="width: {{ summary.completed_rate }}%"></div>
+                </div>
+                <div class="flex items-center justify-between text-xs text-slate-500">
+                    <span>อัตราความสำเร็จ</span>
+                    <span class="font-semibold text-emerald-700">{{ summary.completed }}/{{ summary.total }} คน</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Onprocess -->
+        <div class="relative overflow-hidden bg-white rounded-2xl shadow-sm p-5 border border-slate-200/90 flex flex-col justify-between">
+            <div class="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-amber-500/10 to-transparent rounded-bl-full pointer-events-none"></div>
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-slate-500">อยู่ระหว่างดำเนินการ</p>
+                    <div class="flex items-baseline gap-2 mt-1.5">
+                        <h3 class="text-3xl font-extrabold text-amber-600 tracking-tight">{{ summary.onprocess }}</h3>
+                        <span class="text-xs font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
+                            {{ summary.onprocess_rate }}%
+                        </span>
+                    </div>
+                </div>
+                <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-md shadow-amber-500/20 flex items-center justify-center">
+                    <i class="fas fa-hourglass-half text-base"></i>
+                </div>
+            </div>
+            <div class="mt-3 pt-2.5 border-t border-slate-100 text-xs">
+                {% if exec_insight.top_stuck %}
+                <button type="button"
+                    class="onprocess-status-link w-full text-left text-amber-700 hover:text-amber-900 font-semibold flex items-center justify-between cursor-pointer"
+                    data-status="{{ exec_insight.top_stuck.status }}">
+                    <span class="truncate">ติดมากสุด: {{ exec_insight.top_stuck.status }} ({{ exec_insight.top_stuck.count }})</span>
+                    <i class="fas fa-arrow-up-right-from-square text-[10px] ml-1 flex-shrink-0"></i>
+                </button>
+                {% else %}
+                <span class="text-slate-400">ไม่มีงานค้างในเดือนที่เลือก</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- 4. Drop-off (Failed + Resigned) -->
+        <div class="relative overflow-hidden bg-white rounded-2xl shadow-sm p-5 border border-slate-200/90 flex flex-col justify-between">
+            <div class="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-rose-500/10 to-transparent rounded-bl-full pointer-events-none"></div>
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-slate-500">ไม่ผ่าน / ลาออก</p>
+                    <div class="flex items-baseline gap-2 mt-1.5">
+                        <h3 class="text-3xl font-extrabold text-rose-600 tracking-tight">{{ sum_dropoff }}</h3>
+                        <span class="text-xs font-bold bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full">
+                            {{ sum_dropoff_rate }}%
+                        </span>
+                    </div>
+                </div>
+                <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-rose-500 to-red-600 text-white shadow-md shadow-rose-500/20 flex items-center justify-center">
+                    <i class="fas fa-user-times text-base"></i>
+                </div>
+            </div>
+            <div class="mt-3 pt-2.5 border-t border-slate-100 grid grid-cols-2 gap-1.5 text-[11px]">
+                <div class="bg-rose-50/80 text-rose-700 px-2 py-1 rounded-lg font-medium text-center">
+                    ไม่ผ่าน {{ summary.closed }} ({{ summary.closed_rate }}%)
+                </div>
+                <div class="bg-slate-100 text-slate-700 px-2 py-1 rounded-lg font-medium text-center">
+                    ลาออก {{ summary.cancel }} ({{ summary.cancel_rate }}%)
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Average SLA vs 30-Day Target -->
+        {% set sla_val = summary.avg_sla_total %}
+        {% set sla_diff = (sla_val - sla_total_target) | round(1) %}
+        {% if sum_sla_valid == 0 %}
+            {% set sla_grad = 'from-slate-500 to-slate-600' %}
+            {% set sla_text = 'text-slate-600' %}
+            {% set sla_badge_bg = 'bg-slate-100 text-slate-600' %}
+            {% set sla_status_label = 'รอปิดจบขั้นตอน' %}
+        {% elif sla_val <= sla_total_target %}
+            {% set sla_grad = 'from-emerald-500 to-teal-600' %}
+            {% set sla_text = 'text-emerald-600' %}
+            {% set sla_badge_bg = 'bg-emerald-100 text-emerald-800' %}
+            {% set sla_status_label = 'ตามเป้า (เร็วกว่า ' ~ (sla_diff | abs) ~ ' วัน)' if sla_diff < 0 else 'ตามเป้า 30 วัน' %}
+        {% elif sla_val <= sla_total_target + 5 %}
+            {% set sla_grad = 'from-amber-500 to-orange-500' %}
+            {% set sla_text = 'text-amber-600' %}
+            {% set sla_badge_bg = 'bg-amber-100 text-amber-800' %}
+            {% set sla_status_label = 'ใกล้เกินเป้า (+' ~ sla_diff ~ ' วัน)' %}
+        {% else %}
+            {% set sla_grad = 'from-rose-500 to-red-600' %}
+            {% set sla_text = 'text-rose-600' %}
+            {% set sla_badge_bg = 'bg-rose-100 text-rose-800' %}
+            {% set sla_status_label = 'เกินเป้า (+' ~ sla_diff ~ ' วัน)' %}
+        {% endif %}
+        <div class="relative overflow-hidden bg-white rounded-2xl shadow-sm p-5 border border-slate-200/90 flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+                <div>
+                    <div class="flex items-center gap-1.5">
+                        <p class="text-xs font-semibold text-slate-500">SLA เฉลี่ยรวม</p>
+                        <span class="text-[10px] font-bold bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">เป้า ≤ {{ sla_total_target }} วัน</span>
+                    </div>
+                    <div class="flex items-baseline gap-1.5 mt-1.5">
+                        <h3 class="text-3xl font-extrabold {{ sla_text }} tracking-tight">{{ sla_val if sum_sla_valid > 0 else '-' }}</h3>
+                        {% if sum_sla_valid > 0 %}<span class="text-xs font-medium text-slate-400">วัน</span>{% endif %}
+                    </div>
+                </div>
+                <div class="w-11 h-11 rounded-2xl bg-gradient-to-br {{ sla_grad }} text-white shadow-md flex items-center justify-center">
+                    <i class="fas fa-stopwatch text-base"></i>
+                </div>
+            </div>
+            <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span class="px-2 py-0.5 rounded-full font-semibold text-[11px] {{ sla_badge_bg }}">{{ sla_status_label }}</span>
+                <span class="text-slate-500">ทันเป้า <strong class="text-slate-800">{{ sum_sla_within_rate }}%</strong></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Zone 3: Modern Executive Summary & Key Bottlenecks (Dynamic by Selected Month) -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-200/90 overflow-hidden mb-6">
+    <!-- Modern Header Strip -->
+    <div class="bg-gradient-to-r from-slate-50 via-blue-50/50 to-indigo-50/40 px-5 py-4 border-b border-slate-200/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-sm flex items-center justify-center flex-shrink-0">
+                <i class="fas fa-lightbulb text-base"></i>
+            </div>
+            <div>
+                <h3 class="text-base font-bold text-slate-900">Summary insight</h3>
+            </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold {{ 'bg-emerald-100 text-emerald-800 border border-emerald-200' if is_current_month_selected else 'bg-blue-100 text-blue-800 border border-blue-200' }}">
+                <i class="fas fa-calendar-day"></i>
+                {{ active_period_badge }}
+            </span>
+        </div>
+    </div>
+
+    <div class="p-5">
+        {% if exec_insight.has_data %}
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Left (7 cols): Selected Period Snapshot + 7-Step Mini Pipeline + Top 3 Bottlenecks -->
+            <div class="lg:col-span-7 space-y-5">
+                <!-- 3 Dynamic Period Summary Cards (Always matches selected month(s)) -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <!-- Tile 1: Registration Volume -->
+                    <div class="rounded-xl bg-gradient-to-br from-blue-50/70 to-white border border-blue-100 p-3.5">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-semibold text-slate-600">ยอดลงทะเบียน</span>
+                            <span class="text-[11px] font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">{{ active_period_short }}</span>
+                        </div>
+                        <div class="flex items-baseline justify-between mt-1">
+                            <span class="text-2xl font-extrabold text-slate-900">{{ summary.total }} <span class="text-xs font-normal text-slate-400">คน</span></span>
+                            <span id="execSummaryRegDelta" class="text-xs font-semibold">
+                                {% if exec_insight.reg_delta is not none and exec_insight.prev_month %}
+                                <span class="px-2 py-0.5 rounded-full {{ 'bg-emerald-100 text-emerald-700' if exec_insight.reg_delta >= 0 else 'bg-rose-100 text-rose-700' }}">
+                                    {{ '+' if exec_insight.reg_delta > 0 else '' }}{{ exec_insight.reg_delta }} คน
+                                </span>
+                                {% endif %}
+                            </span>
+                        </div>
+                        <p id="execSummaryRegSub" class="text-[11px] text-slate-500 mt-1.5">
+                            {% if exec_insight.prev_month %}
+                            เทียบเดือน {{ exec_insight.prev_month }} ({{ exec_insight.prev_cohort.total }} คน)
+                            {% elif monthly|length > 1 %}
+                            เฉลี่ย {{ (summary.total / (monthly|length)) | round(1) }} คน/เดือน
+                            {% else %}
+                            ผ่านทฤษฎี {{ summary.theory_rate }}% • ผ่าน OJT {{ summary.ojt_rate }}%
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <!-- Tile 2: Completion & Output -->
+                    <div class="rounded-xl bg-gradient-to-br from-emerald-50/70 to-white border border-emerald-100 p-3.5">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-semibold text-slate-600">ขึ้นทะเบียนสำเร็จ</span>
+                            <span class="text-xs font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">{{ summary.completed_rate }}%</span>
+                        </div>
+                        <div class="flex items-baseline justify-between mt-1">
+                            <span class="text-2xl font-extrabold text-emerald-600">{{ summary.completed }} <span class="text-xs font-normal text-slate-400">คน</span></span>
+                            <span class="text-xs text-rose-600 font-medium">ไม่ผ่าน/ออก {{ sum_dropoff }}</span>
+                        </div>
+                        <p id="execSummaryCompSub" class="text-[11px] text-slate-500 mt-1.5">
+                            {% if exec_insight.prev_cohort %}
+                            เดือนก่อน ({{ exec_insight.prev_cohort.month }}) สำเร็จ {{ exec_insight.prev_cohort.completion_rate }}%
+                            {% else %}
+                            ไม่ผ่าน {{ summary.closed }} คน • ลาออก {{ summary.cancel }} คน
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <!-- Tile 3: Active Backlog & SLA -->
+                    <div class="rounded-xl bg-gradient-to-br from-amber-50/70 to-white border border-amber-100 p-3.5">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-semibold text-slate-600">ค้างดำเนินการ</span>
+                            <span class="text-xs font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">{{ summary.onprocess_rate }}%</span>
+                        </div>
+                        <div class="flex items-baseline justify-between mt-1">
+                            <span class="text-2xl font-extrabold text-amber-600">{{ summary.onprocess }} <span class="text-xs font-normal text-slate-400">คน</span></span>
+                            <span id="execSummaryOnpDelta" class="text-xs font-semibold">
+                                {% if exec_insight.onp_delta is not none and exec_insight.prev_month %}
+                                <span class="px-2 py-0.5 rounded-full {{ 'bg-amber-100 text-amber-800' if exec_insight.onp_delta > 0 else 'bg-emerald-100 text-emerald-700' }}">
+                                    {{ '+' if exec_insight.onp_delta > 0 else '' }}{{ exec_insight.onp_delta }} คน
+                                </span>
+                                {% endif %}
+                            </span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-1.5">
+                            SLA เฉลี่ย: <strong class="text-slate-700">{{ summary.avg_sla_total if sum_sla_valid > 0 else '-' }}</strong> วัน (เป้า ≤ {{ sla_total_target }})
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 7-Step Mini Status Pipeline for Selected Period -->
+                <div class="bg-slate-50/90 border border-slate-200/80 rounded-xl p-3.5">
+                    <div class="flex items-center justify-between mb-2.5">
+                        <span class="text-xs font-bold text-slate-700">
+                            <i class="fas fa-project-diagram text-blue-500 mr-1.5"></i>สถานะ SLA ทั้ง 7 ขั้นตอน ({{ active_period_short }})
+                        </span>
+                        <a href="/sla-analysis" class="no-print text-xs text-blue-600 hover:text-blue-800 font-medium">
+                            วิเคราะห์เชิงลึก <i class="fas fa-arrow-right ml-0.5 text-[10px]"></i>
+                        </a>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-2">
+                        {% for step in sla_analysis_steps %}
+                        {% set is_over_step = step.avg_sla > step.target_days %}
+                        {% set is_warn_step = is_over_step and step.avg_sla <= (step.target_days * 1.5) %}
+                        <div class="rounded-lg p-2 text-center border {{ 'bg-rose-50/80 border-rose-200' if (is_over_step and not is_warn_step) else ('bg-amber-50/80 border-amber-200' if is_warn_step else ('bg-emerald-50/70 border-emerald-200' if step.avg_sla > 0 else 'bg-white border-slate-200')) }}">
+                            <div class="text-[10px] font-semibold text-slate-500 truncate" title="{{ step.name }}">{{ loop.index }}. {{ step.name }}</div>
+                            <div class="text-sm font-extrabold mt-0.5 {{ 'text-rose-600' if (is_over_step and not is_warn_step) else ('text-amber-600' if is_warn_step else ('text-emerald-600' if step.avg_sla > 0 else 'text-slate-400')) }}">
+                                {{ step.avg_sla if step.avg_sla > 0 else '-' }} <span class="text-[10px] font-normal">วัน</span>
+                            </div>
+                            <div class="text-[10px] text-slate-400">เป้า {{ step.target_days }} วัน</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Top 3 Bottlenecks Progress Bars -->
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wide text-slate-600 mb-2.5">
+                        <i class="fas fa-fire text-rose-500 mr-1.5"></i>3 อันดับขั้นตอนที่ใช้เวลานานที่สุดเทียบเป้าหมาย ({{ active_period_short }})
+                    </h4>
+                    <div class="space-y-2.5">
+                        {% for b in exec_insight.bottlenecks %}
+                        <div class="bg-white border border-slate-200/80 rounded-xl px-3.5 py-2.5">
+                            <div class="flex flex-wrap items-center justify-between text-xs mb-1.5 gap-1">
+                                <span class="font-semibold text-slate-800">{{ loop.index }}. {{ b.name }}</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-slate-400">เป้าหมาย {{ b.target_days }} วัน</span>
+                                    <span class="px-2 py-0.5 rounded-full font-bold {{ 'bg-rose-100 text-rose-700' if b.is_over else 'bg-emerald-100 text-emerald-700' }}">
+                                        เฉลี่ย {{ b.avg_sla }} วัน {% if b.is_over %}(เกิน +{{ b.diff }}){% else %}(ตามเป้า){% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="relative w-full bg-slate-100 rounded-full h-2.5 overflow-visible">
+                                <div class="h-2.5 rounded-full {{ 'bg-gradient-to-r from-rose-500 to-red-500' if b.is_over and b.diff > 3 else ('bg-gradient-to-r from-amber-400 to-orange-500' if b.is_over else 'bg-gradient-to-r from-emerald-500 to-teal-500') }}"
+                                    style="width: {{ b.width }}%"></div>
+                                <div class="absolute -top-0.5 bottom-0 w-0.5 bg-slate-800" style="left: {{ b.target_pos }}%"
+                                    title="เป้าหมาย {{ b.target_days }} วัน"></div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <p class="text-xs text-slate-400 bg-slate-50 rounded-xl p-4 text-center">ยังไม่มีข้อมูลระยะเวลา SLA ที่ปิดจบใน{{ active_period_short }}</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right (5 cols): Executive Key Takeaways & Stuck Bottleneck Callout -->
+            <div class="lg:col-span-5 flex flex-col justify-between bg-gradient-to-b from-slate-50 to-slate-100/60 rounded-2xl p-4 border border-slate-200/90">
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="text-xs font-bold uppercase tracking-wide text-slate-700">
+                            <i class="fas fa-clipboard-check text-emerald-600 mr-1.5"></i>บทสรุปและข้อเสนอแนะ ({{ active_period_short }})
+                        </h4>
+                    </div>
+                    <ul class="space-y-2.5">
+                        {% for rec in exec_insight.recommendations %}
+                        <li class="flex items-start gap-2.5 text-xs leading-relaxed text-slate-700 bg-white rounded-xl p-3 border border-slate-200/80 shadow-2xs">
+                            <span class="w-5 h-5 rounded-lg bg-blue-600 text-white font-bold flex items-center justify-center flex-shrink-0 text-[11px] mt-0.5">
+                                {{ loop.index }}
+                            </span>
+                            <span>{{ rec }}</span>
+                        </li>
+                        {% else %}
+                        <li class="text-xs text-slate-400">ไม่มีประเด็นเฝ้าระวังเพิ่มเติมในช่วงที่เลือก</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                {% if exec_insight.top_stuck %}
+                <div class="mt-4 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/5 border border-amber-300/80 rounded-xl p-3.5 flex items-center justify-between gap-3">
+                    <div class="text-xs text-amber-950">
+                        <div class="font-bold flex items-center gap-1.5 text-amber-900">
+                            <i class="fas fa-exclamation-circle text-amber-600"></i>
+                            <span>จุดค้างสะสมสูงสุด ({{ active_period_short }})</span>
+                        </div>
+                        <p class="mt-0.5 text-amber-800">
+                            ขั้นตอน <strong>"{{ exec_insight.top_stuck.status }}"</strong> จำนวน <strong>{{ exec_insight.top_stuck.count }} คน</strong>
+                        </p>
+                    </div>
+                    <button type="button"
+                        class="no-print onprocess-status-link flex-shrink-0 bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm cursor-pointer"
+                        data-status="{{ exec_insight.top_stuck.status }}">
+                        ดูรายชื่อช่าง
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <p class="text-sm text-slate-400 text-center py-6">ไม่มีข้อมูลในช่วงเวลาหรือพื้นที่ที่เลือก</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Zone 4: Core Executive Visuals (2x2 Grid - Zero Redundancy) -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Chart 1: Conversion Funnel -->
+    <div class="bg-white rounded-2xl shadow-sm p-5 border border-slate-200 flex flex-col justify-between">
+        <div>
+            <div class="flex items-center justify-between mb-3">
+                <div>
+                    <h3 class="text-base font-bold text-slate-800">
+                        <i class="fas fa-filter text-blue-500 mr-2"></i>Funnel ประสิทธิภาพการคัดกรอง ({{ active_period_short }})
+                    </h3>
+                </div>
+                <span class="text-xs font-semibold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full">
+                    สำเร็จ {{ summary.completed_rate }}%
+                </span>
+            </div>
+            <div style="position: relative; height: 225px; width: 100%;">
+                {% if summary.total > 0 %}
+                <canvas id="execFunnelChart"></canvas>
+                {% else %}
+                <div class="h-full flex items-center justify-center text-sm text-slate-400">ไม่มีข้อมูลสำหรับแสดงกราฟ</div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+            <div class="bg-slate-50 rounded-lg p-2">
+                <p class="text-slate-400">ไม่ผ่านทฤษฎี</p>
+                <p class="font-bold text-rose-600">{{ summary.theory_fail }} คน</p>
+            </div>
+            <div class="bg-slate-50 rounded-lg p-2">
+                <p class="text-slate-400">ไม่ผ่าน OJT</p>
+                <p class="font-bold text-rose-600">{{ summary.ojt_fail }} คน</p>
+            </div>
+            <div class="bg-slate-50 rounded-lg p-2">
+                <p class="text-slate-400">ลาออก</p>
+                <p class="font-bold text-slate-600">{{ summary.cancel }} คน</p>
+            </div>
+            <div class="bg-slate-50 rounded-lg p-2">
+                <p class="text-slate-400">อยู่ระหว่างดำเนินการ</p>
+                <p class="font-bold text-amber-600">{{ summary.onprocess }} คน</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 2: 7-Step SLA vs Target -->
+    <div class="bg-white rounded-2xl shadow-sm p-5 border border-slate-200 flex flex-col justify-between">
+        <div>
+            <div class="flex items-center justify-between mb-3">
+                <div>
+                    <h3 class="text-base font-bold text-slate-800">
+                        <i class="fas fa-tachometer-alt text-rose-500 mr-2"></i>SLA เฉลี่ย 7 ขั้นตอน เทียบเป้าหมาย ({{ active_period_short }})
+                    </h3>
+                </div>
+                <span class="text-xs font-semibold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full">
+                    หน่วย: วัน
+                </span>
+            </div>
+            <div style="position: relative; height: 245px; width: 100%;">
+                {% if sla_analysis_steps|length > 0 %}
+                <canvas id="execSlaStepsChart"></canvas>
+                {% else %}
+                <div class="h-full flex items-center justify-center text-sm text-slate-400">ไม่มีข้อมูลสำหรับแสดงกราฟ</div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="mt-2 pt-2 border-t border-slate-100 flex flex-wrap items-center justify-center gap-4 text-[11px] text-slate-500">
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block"></span> ตามเป้า</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-amber-500 inline-block"></span> เกินเป้าเล็กน้อย</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-rose-500 inline-block"></span> เกินเป้ามาก (คอขวด)</span>
+            <span class="flex items-center gap-1"><span class="w-0.5 h-3 bg-slate-800 inline-block"></span> เป้าหมายขั้นตอน</span>
+        </div>
+    </div>
+
+    <!-- Chart 3: Monthly Trend & Completion Rate Combo -->
+    <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm p-5 border border-slate-200">
+        <div class="flex items-center justify-between mb-3">
+            <div>
+                <h3 class="text-base font-bold text-slate-800">
+                    <i class="fas fa-chart-line text-indigo-500 mr-2"></i>แนวโน้มรายเดือนและอัตราความสำเร็จ (ปี 2026)
+                </h3>
+                <p class="text-xs text-slate-400">เปรียบเทียบแนวโน้มรายเดือนทั้งปี • เส้นประแสดงอัตราขึ้นทะเบียนสำเร็จ (%)</p>
+            </div>
+        </div>
+        <div style="position: relative; height: 270px; width: 100%;">
+            {% if monthly|length > 0 %}
+            <canvas id="execMonthlyComboChart"></canvas>
+            {% else %}
+            <div class="h-full flex items-center justify-center text-sm text-slate-400">ไม่มีข้อมูลสำหรับแสดงกราฟ</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Zone 5: Tabbed Detail & Drill-down Hub (Default: Tab 1 Area Summary) -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+    <!-- Tab Navigation -->
+    <div class="no-print border-b border-slate-200 bg-slate-50/70 px-4 pt-3 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex flex-wrap gap-1.5" role="tablist">
+            <button type="button" class="exec-tab-btn px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-t-lg border-b-2 border-blue-600 text-blue-700 bg-white cursor-pointer"
+                data-tab="tab-area">
+                <i class="fas fa-layer-group mr-1.5"></i>สรุปตามพื้นที่
+                <span class="ml-1 bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full text-[11px]">{{ areas|length }}</span>
+            </button>
+            <button type="button" class="exec-tab-btn px-4 py-2.5 text-xs sm:text-sm font-medium rounded-t-lg border-b-2 border-transparent text-slate-600 hover:text-slate-900 hover:bg-white/60 cursor-pointer"
+                data-tab="tab-bottleneck">
+                <i class="fas fa-clock mr-1.5 text-amber-500"></i>คอขวดงานค้าง (Onprocess)
+                <span class="ml-1 bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full text-[11px]">{{ summary.onprocess }}</span>
+            </button>
+            <button type="button" class="exec-tab-btn px-4 py-2.5 text-xs sm:text-sm font-medium rounded-t-lg border-b-2 border-transparent text-slate-600 hover:text-slate-900 hover:bg-white/60 cursor-pointer"
+                data-tab="tab-depot">
+                <i class="fas fa-building mr-1.5 text-indigo-500"></i>สรุปตามตัวแทน (Depot)
+                <span class="ml-1 bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded-full text-[11px]">{{ depot_agents|length }}</span>
+            </button>
+            <button type="button" class="exec-tab-btn px-4 py-2.5 text-xs sm:text-sm font-medium rounded-t-lg border-b-2 border-transparent text-slate-600 hover:text-slate-900 hover:bg-white/60 cursor-pointer"
+                data-tab="tab-onprocess-list">
+                <i class="fas fa-user-clock mr-1.5 text-rose-500"></i>รายชื่อช่าง Onprocess
+                <span class="ml-1 bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded-full text-[11px]">{{ onprocess_details|length }}</span>
+            </button>
+        </div>
+        <a href="/technicians" class="text-xs text-blue-600 hover:text-blue-800 font-medium pb-2 hidden sm:inline-flex items-center gap-1">
+            <span>ไปหน้ารายชื่อช่างทั้งหมด</span>
+            <i class="fas fa-external-link-alt text-[10px]"></i>
+        </a>
+    </div>
+
+    <div class="p-5">
+        <!-- Tab 1: Area Summary (Default Visible) -->
+        <div id="tab-area" class="exec-tab-panel">
+            <div class="flex items-center justify-end mb-3">
+                <span class="text-xs text-slate-400">เกณฑ์สี SLA เฉลี่ย: ≤ {{ sla_total_target }} วัน = ตามเป้า</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-gray-800 text-white">
+                        <tr>
+                            <th class="px-4 py-3 text-left font-medium">พื้นที่ (Area)</th>
+                            <th class="px-4 py-3 text-center font-medium">ลงทะเบียน</th>
+                            <th class="px-4 py-3 text-center font-medium bg-emerald-700">ขึ้นทะเบียนสำเร็จ</th>
+                            <th class="px-4 py-3 text-center font-medium bg-amber-600">อยู่ระหว่างดำเนินการ</th>
+                            <th class="px-4 py-3 text-center font-medium bg-rose-700">ไม่ผ่าน</th>
+                            <th class="px-4 py-3 text-center font-medium bg-slate-600">ลาออก</th>
+                            <th class="px-4 py-3 text-center font-medium">SLA เฉลี่ย (วัน)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                        <tr class="bg-slate-100 font-bold border-b-2 border-slate-300">
+                            <td class="px-4 py-3 text-slate-800">รวมทั้งหมด</td>
+                            <td class="px-4 py-3 text-center text-slate-800">{{ summary.total }}</td>
+                            <td class="px-4 py-3 text-center text-emerald-700">
+                                {{ summary.completed }} <span class="text-xs font-semibold">({{ summary.completed_rate }}%)</span>
+                            </td>
+                            <td class="px-4 py-3 text-center text-amber-700">
+                                {% if summary.onprocess > 0 %}
+                                <button type="button" class="onprocess-status-link hover:bg-amber-200 px-2.5 py-1 rounded-lg cursor-pointer" data-status="__all__">
+                                    {{ summary.onprocess }} ({{ summary.onprocess_rate }}%)
+                                    <i class="fas fa-arrow-up-right-from-square ml-1 text-[10px] opacity-60"></i>
+                                </button>
+                                {% else %}0{% endif %}
+                            </td>
+                            <td class="px-4 py-3 text-center text-rose-700">{{ summary.closed }}</td>
+                            <td class="px-4 py-3 text-center text-slate-600">{{ summary.cancel }}</td>
+                            <td class="px-4 py-3 text-center">
+                                {% if sum_sla_valid > 0 %}
+                                <span class="px-2.5 py-1 rounded-full text-xs font-bold {{ 'bg-emerald-100 text-emerald-800' if summary.avg_sla_total <= sla_total_target else ('bg-amber-100 text-amber-800' if summary.avg_sla_total <= sla_total_target + 5 else 'bg-rose-100 text-rose-800') }}">
+                                    {{ summary.avg_sla_total }} วัน
+                                </span>
+                                {% else %}
+                                <span class="text-slate-400">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% for a in areas %}
+                        <tr class="hover:bg-slate-50">
+                            <td class="px-4 py-3 font-semibold text-slate-800">{{ a.area }}</td>
+                            <td class="px-4 py-3 text-center font-medium text-slate-700">{{ a.total }}</td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="text-emerald-700 font-semibold">{{ a.completed }}</span>
+                                <span class="text-xs text-slate-400 ml-1">({{ a.success_rate }}%)</span>
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                {% if a.onprocess > 0 %}
+                                <button type="button"
+                                    class="onprocess-area-link bg-amber-50 hover:bg-amber-100 text-amber-800 font-semibold px-2.5 py-1 rounded-lg text-xs cursor-pointer"
+                                    data-area="{{ a.area }}">
+                                    {{ a.onprocess }} คน
+                                    <i class="fas fa-arrow-up-right-from-square ml-1 text-[10px] opacity-60"></i>
+                                </button>
+                                {% else %}
+                                <span class="text-slate-300">0</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-3 text-center {{ 'text-rose-600 font-medium' if a.closed > 0 else 'text-slate-300' }}">{{ a.closed }}</td>
+                            <td class="px-4 py-3 text-center {{ 'text-slate-700 font-medium' if a.cancel > 0 else 'text-slate-300' }}">{{ a.cancel }}</td>
+                            <td class="px-4 py-3 text-center">
+                                {% if a.avg_sla > 0 %}
+                                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold {{ 'bg-emerald-100 text-emerald-700' if a.avg_sla <= sla_total_target else ('bg-amber-100 text-amber-700' if a.avg_sla <= sla_total_target + 5 else 'bg-rose-100 text-rose-700') }}">
+                                    {{ a.avg_sla }} วัน
+                                </span>
+                                {% else %}
+                                <span class="text-slate-300">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="px-4 py-8 text-center text-slate-400">ไม่มีข้อมูลพื้นที่</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab 2: Onprocess Bottleneck Matrix (Region / Province Toggle) -->
+        <div id="tab-bottleneck" class="exec-tab-panel hidden">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <div class="inline-flex rounded-lg bg-slate-100 p-1">
+                    <button type="button" id="pivotAreaBtn"
+                        class="pivot-toggle-btn px-3 py-1.5 rounded-md text-xs font-semibold bg-white text-slate-800 shadow-sm cursor-pointer">
+                        แยกตามพื้นที่ ({{ onprocess_area_pivot.rows|length }})
+                    </button>
+                    <button type="button" id="pivotProvinceBtn"
+                        class="pivot-toggle-btn px-3 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 cursor-pointer">
+                        แยกตามจังหวัด ({{ onprocess_province_pivot.rows|length }})
+                    </button>
+                </div>
+                <p class="text-xs text-slate-500">คลิกตัวเลขในแถวรวมทั้งหมด เพื่อเปิดดูรายชื่อช่างที่ค้างในขั้นตอนนั้น</p>
+            </div>
+
+            <!-- Pivot by Area -->
+            <div id="pivotAreaContainer">
+                {% if onprocess_area_pivot.rows|length > 0 %}
+                <div class="overflow-x-auto max-h-[460px] overflow-y-auto border border-slate-200 rounded-lg">
+                    <table class="min-w-full text-xs">
+                        <thead class="bg-amber-100 text-amber-900 sticky top-0 z-10">
+                            <tr>
+                                <th class="px-3 py-2.5 text-left font-semibold border-b border-amber-200">พื้นที่ (Area)</th>
+                                {% for col in onprocess_area_pivot.columns %}
+                                <th class="px-2.5 py-2.5 text-center font-semibold border-b border-amber-200">{{ col }}</th>
+                                {% endfor %}
+                                <th class="px-3 py-2.5 text-center font-semibold border-b border-amber-200 bg-amber-200">รวมทั้งหมด</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200">
+                            <tr class="bg-slate-100 font-bold">
+                                <td class="px-3 py-2.5 text-slate-800">รวมทั้งหมด</td>
+                                {% for cell in onprocess_area_pivot.grand_total.cells %}
+                                <td class="px-2.5 py-2.5 text-center">
+                                    {% if cell > 0 %}
+                                    <button type="button" class="onprocess-status-link text-amber-700 font-bold hover:bg-amber-200 px-2 py-0.5 rounded cursor-pointer"
+                                        data-status="{{ onprocess_area_pivot.columns[loop.index0] }}">
+                                        {{ cell }}<i class="fas fa-arrow-up-right-from-square ml-1 text-[9px] opacity-60"></i>
+                                    </button>
+                                    {% else %}-{% endif %}
+                                </td>
+                                {% endfor %}
+                                <td class="px-3 py-2.5 text-center bg-amber-50 text-amber-800">
+                                    <button type="button" class="onprocess-status-link hover:bg-amber-200 px-2 py-0.5 rounded cursor-pointer" data-status="__all__">
+                                        {{ onprocess_area_pivot.grand_total.total }}
+                                    </button>
+                                </td>
+                            </tr>
+                            {% for row in onprocess_area_pivot.rows %}
+                            <tr class="hover:bg-slate-50">
+                                <td class="px-3 py-2 font-medium text-slate-800">{{ row.name }}</td>
+                                {% for cell in row.cells %}
+                                <td class="px-2.5 py-2 text-center text-slate-700">{{ cell if cell > 0 else '' }}</td>
+                                {% endfor %}
+                                <td class="px-3 py-2 text-center font-bold bg-amber-50/70 text-amber-800">{{ row.total }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-sm text-slate-400 py-6 text-center">ไม่มีข้อมูลช่างค้างดำเนินการ (Onprocess)</p>
+                {% endif %}
+            </div>
+
+            <!-- Pivot by Province -->
+            <div id="pivotProvinceContainer" class="hidden">
+                {% if onprocess_province_pivot.rows|length > 0 %}
+                <div class="overflow-x-auto max-h-[460px] overflow-y-auto border border-slate-200 rounded-lg">
+                    <table class="min-w-full text-xs">
+                        <thead class="bg-amber-100 text-amber-900 sticky top-0 z-10">
+                            <tr>
+                                <th class="px-3 py-2.5 text-left font-semibold border-b border-amber-200">จังหวัด</th>
+                                {% for col in onprocess_province_pivot.columns %}
+                                <th class="px-2.5 py-2.5 text-center font-semibold border-b border-amber-200">{{ col }}</th>
+                                {% endfor %}
+                                <th class="px-3 py-2.5 text-center font-semibold border-b border-amber-200 bg-amber-200">รวมทั้งหมด</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200">
+                            <tr class="bg-slate-100 font-bold">
+                                <td class="px-3 py-2.5 text-slate-800">รวมทั้งหมด</td>
+                                {% for cell in onprocess_province_pivot.grand_total.cells %}
+                                <td class="px-2.5 py-2.5 text-center">
+                                    {% if cell > 0 %}
+                                    <button type="button" class="onprocess-status-link text-amber-700 font-bold hover:bg-amber-200 px-2 py-0.5 rounded cursor-pointer"
+                                        data-status="{{ onprocess_province_pivot.columns[loop.index0] }}">
+                                        {{ cell }}<i class="fas fa-arrow-up-right-from-square ml-1 text-[9px] opacity-60"></i>
+                                    </button>
+                                    {% else %}-{% endif %}
+                                </td>
+                                {% endfor %}
+                                <td class="px-3 py-2.5 text-center bg-amber-50 text-amber-800">
+                                    <button type="button" class="onprocess-status-link hover:bg-amber-200 px-2 py-0.5 rounded cursor-pointer" data-status="__all__">
+                                        {{ onprocess_province_pivot.grand_total.total }}
+                                    </button>
+                                </td>
+                            </tr>
+                            {% for row in onprocess_province_pivot.rows %}
+                            <tr class="hover:bg-slate-50">
+                                <td class="px-3 py-2 font-medium text-slate-800">{{ row.name }}</td>
+                                {% for cell in row.cells %}
+                                <td class="px-2.5 py-2 text-center text-slate-700">{{ cell if cell > 0 else '' }}</td>
+                                {% endfor %}
+                                <td class="px-3 py-2 text-center font-bold bg-amber-50/70 text-amber-800">{{ row.total }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-sm text-slate-400 py-6 text-center">ไม่มีข้อมูลช่างค้างดำเนินการ (Onprocess)</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Tab 3: Depot Agent Summary -->
+        <div id="tab-depot" class="exec-tab-panel hidden">
+            {% set high_depots = depot_agents | selectattr('success_rate', '>=', 80) | list | length %}
+            {% set backlog_depots = depot_agents | selectattr('onprocess', '>', 0) | list | length %}
+            {% set low_depots = depot_agents | selectattr('success_rate', '<', 50) | list | length %}
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
+                <div class="flex flex-wrap gap-2 text-xs">
+                    <span class="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-medium">ทั้งหมด {{ depot_agents|length }} ตัวแทน</span>
+                    <span class="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg font-medium">สำเร็จ ≥ 80%: {{ high_depots }} แห่ง</span>
+                    <span class="bg-amber-50 text-amber-700 px-2.5 py-1 rounded-lg font-medium">มีงานค้าง Onprocess: {{ backlog_depots }} แห่ง</span>
+                    <span class="bg-rose-50 text-rose-700 px-2.5 py-1 rounded-lg font-medium">อัตราสำเร็จ &lt; 50%: {{ low_depots }} แห่ง</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <input type="text" id="execDepotSearch"
+                        class="border border-slate-300 rounded-lg px-3 py-1.5 text-xs w-56 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="ค้นหาตัวแทน / รหัส / จังหวัด / Area...">
+                    <select id="execDepotModeFilter"
+                        class="border border-slate-300 rounded-lg px-3 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="all">แสดงทุกตัวแทน</option>
+                        <option value="onprocess">เฉพาะตัวแทนที่มีงานค้าง</option>
+                        <option value="low">เฉพาะอัตราสำเร็จ &lt; 50%</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto max-h-[480px] overflow-y-auto border border-slate-200 rounded-lg">
+                <table class="min-w-full text-xs" id="execDepotTable">
+                    <thead class="bg-gray-800 text-white sticky top-0 z-10">
+                        <tr>
+                            <th class="px-3 py-2.5 text-left font-medium">#</th>
+                            <th class="px-3 py-2.5 text-left font-medium cursor-pointer hover:bg-gray-700 exec-sortable-header" data-sort="area">Area <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                            <th class="px-3 py-2.5 text-left font-medium cursor-pointer hover:bg-gray-700 exec-sortable-header" data-sort="depot_code">รหัส <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                            <th class="px-3 py-2.5 text-left font-medium cursor-pointer hover:bg-gray-700 exec-sortable-header" data-sort="depot_name">ตัวแทน <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                            <th class="px-3 py-2.5 text-left font-medium cursor-pointer hover:bg-gray-700 exec-sortable-header" data-sort="province">จังหวัด <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                            <th class="px-3 py-2.5 text-center font-medium cursor-pointer hover:bg-gray-700 exec-sortable-header" data-sort="total">ลงทะเบียน <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                            <th class="px-3 py-2.5 text-center font-medium cursor-pointer hover:bg-gray-700 bg-emerald-700 exec-sortable-header" data-sort="completed">สำเร็จ <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                            <th class="px-3 py-2.5 text-center font-medium cursor-pointer hover:bg-gray-700 bg-amber-600 exec-sortable-header" data-sort="onprocess">ค้าง (Onprocess) <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                            <th class="px-3 py-2.5 text-center font-medium cursor-pointer hover:bg-gray-700 bg-blue-700 exec-sortable-header" data-sort="success_rate">% สำเร็จ <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200" id="execDepotTableBody">
+                        {% for agent in depot_agents %}
+                        <tr class="hover:bg-slate-50"
+                            data-area="{{ agent.area }}"
+                            data-depot_code="{{ agent.depot_code }}"
+                            data-depot_name="{{ agent.depot_name }}"
+                            data-province="{{ agent.province }}"
+                            data-total="{{ agent.total }}"
+                            data-completed="{{ agent.completed }}"
+                            data-onprocess="{{ agent.onprocess }}"
+                            data-success_rate="{{ agent.success_rate }}">
+                            <td class="px-3 py-2 text-slate-500 exec-row-index">{{ loop.index }}</td>
+                            <td class="px-3 py-2 font-medium text-slate-800">{{ agent.area }}</td>
+                            <td class="px-3 py-2 text-slate-600">{{ agent.depot_code }}</td>
+                            <td class="px-3 py-2 text-slate-800 max-w-[200px] truncate" title="{{ agent.depot_name }}">{{ agent.depot_name }}</td>
+                            <td class="px-3 py-2 text-slate-600">{{ agent.province }}</td>
+                            <td class="px-3 py-2 text-center font-medium">{{ agent.total }}</td>
+                            <td class="px-3 py-2 text-center font-medium text-emerald-700">{{ agent.completed }}</td>
+                            <td class="px-3 py-2 text-center font-medium {{ 'text-amber-700' if agent.onprocess > 0 else 'text-slate-300' }}">{{ agent.onprocess }}</td>
+                            <td class="px-3 py-2 text-center">
+                                <span class="px-2 py-0.5 rounded font-semibold {{ 'bg-emerald-100 text-emerald-800' if agent.success_rate >= 80 else ('bg-amber-100 text-amber-800' if agent.success_rate >= 50 else 'bg-rose-100 text-rose-800') }}">
+                                    {{ agent.success_rate }}%
+                                </span>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="9" class="px-4 py-8 text-center text-slate-400">ไม่มีข้อมูลตัวแทน</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab 4: Onprocess Technician List -->
+        <div id="tab-onprocess-list" class="exec-tab-panel hidden">
+            {% if onprocess_details|length > 0 %}
+            <div class="mb-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2.5">
+                <div class="flex flex-wrap items-center gap-2">
+                    <input type="text" id="execOnprocessSearch"
+                        class="w-full sm:w-72 border border-slate-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400"
+                        placeholder="ค้นหา: ชื่อช่าง / Depot / จังหวัด / หมายเหตุ...">
+                    <select id="execOnprocessAreaFilter"
+                        class="border border-slate-300 rounded-lg px-3 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-amber-400">
+                        <option value="">ทุกพื้นที่</option>
+                        {% for area in area_list %}
+                        <option value="{{ area }}">{{ area }}</option>
+                        {% endfor %}
+                    </select>
+                    <select id="execOnprocessStatusFilter"
+                        class="border border-slate-300 rounded-lg px-3 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-amber-400">
+                        <option value="">ทุกสถานะย่อย</option>
+                        {% for col in onprocess_area_pivot.columns %}
+                        <option value="{{ col }}">{{ col }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="button" id="execOnprocessExportBtn"
+                    class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer whitespace-nowrap self-start lg:self-auto">
+                    <i class="fas fa-file-excel mr-1.5"></i>Export Excel
+                </button>
+            </div>
+            <div class="overflow-x-auto max-h-[500px] overflow-y-auto border border-slate-200 rounded-lg">
+                <table class="w-full text-xs" id="execOnprocessTable">
+                    <thead class="bg-gray-800 text-white sticky top-0 z-10">
+                        <tr>
+                            <th class="px-2.5 py-2.5 text-center font-medium whitespace-nowrap">ลำดับ</th>
+                            <th class="px-2.5 py-2.5 text-left font-medium whitespace-nowrap">ชื่อช่าง</th>
+                            <th class="px-2.5 py-2.5 text-left font-medium">Depot</th>
+                            <th class="px-2.5 py-2.5 text-left font-medium whitespace-nowrap">รหัส Depot</th>
+                            <th class="px-2.5 py-2.5 text-left font-medium whitespace-nowrap">จังหวัด</th>
+                            <th class="px-2.5 py-2.5 text-left font-medium whitespace-nowrap">พื้นที่</th>
+                            <th class="px-2.5 py-2.5 text-center font-medium whitespace-nowrap">ทฤษฎี</th>
+                            <th class="px-2.5 py-2.5 text-center font-medium whitespace-nowrap">OJT</th>
+                            <th class="px-2.5 py-2.5 text-center font-medium whitespace-nowrap">สถานะปัจจุบัน</th>
+                            <th class="px-2.5 py-2.5 text-left font-medium" style="min-width: 210px;">หมายเหตุ (ติดที่อะไร)</th>
+                            <th class="px-2.5 py-2.5 text-center font-medium whitespace-nowrap">รอบอบรม</th>
+                            <th class="px-2.5 py-2.5 text-center font-medium whitespace-nowrap">เดือนอบรม</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                        {% for t in onprocess_details %}
+                        <tr class="hover:bg-amber-50/50" data-area="{{ t.area }}" data-status="{{ t.status }}">
+                            <td class="px-2.5 py-2 text-center text-slate-500">{{ loop.index }}</td>
+                            <td class="px-2.5 py-2 font-medium text-slate-800">{{ t.full_name_th }}</td>
+                            <td class="px-2.5 py-2 text-slate-700">{{ t.depot_name }}</td>
+                            <td class="px-2.5 py-2 text-slate-600 whitespace-nowrap">{{ t.depot_code }}</td>
+                            <td class="px-2.5 py-2 text-slate-700">{{ t.province }}</td>
+                            <td class="px-2.5 py-2 text-slate-700 whitespace-nowrap">{{ t.area }}</td>
+                            {% for v in [t.theory_training_result, t.on_the_job_result] %}
+                            <td class="px-2.5 py-2 text-center whitespace-nowrap">
+                                {% if 'ไม่ผ่าน' in v %}
+                                <span class="bg-rose-100 text-rose-700 px-2 py-0.5 rounded font-medium">{{ v }}</span>
+                                {% elif 'ผ่าน' in v %}
+                                <span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-medium">{{ v }}</span>
+                                {% elif v and v != '-' %}
+                                <span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-medium">{{ v }}</span>
+                                {% else %}
+                                <span class="text-slate-300">-</span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                            <td class="px-2.5 py-2 text-center whitespace-nowrap">
+                                <span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-medium">{{ t.status }}</span>
+                            </td>
+                            <td class="px-2.5 py-2 text-slate-700">{% if t.remark %}{{ t.remark }}{% else %}<span class="text-slate-300">-</span>{% endif %}</td>
+                            <td class="px-2.5 py-2 text-center text-slate-600 whitespace-nowrap">{{ t.training_round_date }}</td>
+                            <td class="px-2.5 py-2 text-center text-slate-600 whitespace-nowrap">{{ t.training_month }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-sm text-slate-400 py-8 text-center">ไม่มีรายชื่อช่างในสถานะ Onprocess</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- JSON payload for Drill-down Modal -->
+<script type="application/json" id="execOnprocessDataJson">{{ onprocess_details | tojson }}</script>
+
+<!-- Modal: รายชื่อช่าง Onprocess -->
+<div id="execOnprocessModal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" id="execModalBackdrop"></div>
+    <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[88vh] flex flex-col">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-6 py-4 border-b border-slate-100">
+            <div>
+                <h3 class="text-base font-bold text-slate-800">
+                    <i class="fas fa-user-clock text-amber-500 mr-2"></i>รายชื่อช่างค้างดำเนินการ — <span id="execModalTitle" class="text-amber-700"></span>
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">พบทั้งหมด <span id="execModalCount" class="font-semibold text-slate-700">0</span> คน</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <input type="text" id="execModalSearchInput"
+                    class="border border-slate-300 rounded-lg px-3 py-1.5 text-xs w-52 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    placeholder="ค้นหาในหน้าต่างนี้...">
+                <button type="button" id="execModalExportBtn"
+                    class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer whitespace-nowrap">
+                    <i class="fas fa-file-excel mr-1.5"></i>Export Excel
+                </button>
+                <button type="button" id="execModalCloseBtn"
+                    class="text-slate-400 hover:text-slate-700 hover:bg-slate-100 w-8 h-8 rounded-lg cursor-pointer flex items-center justify-center">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        <div class="overflow-auto p-4">
+            <table class="w-full text-xs border border-slate-200">
+                <thead class="bg-gray-800 text-white sticky top-0 z-10">
+                    <tr>
+                        <th class="px-2.5 py-2 text-center font-medium whitespace-nowrap">ลำดับ</th>
+                        <th class="px-2.5 py-2 text-left font-medium whitespace-nowrap">ชื่อช่าง</th>
+                        <th class="px-2.5 py-2 text-left font-medium">Depot</th>
+                        <th class="px-2.5 py-2 text-left font-medium whitespace-nowrap">รหัส Depot</th>
+                        <th class="px-2.5 py-2 text-left font-medium whitespace-nowrap">จังหวัด</th>
+                        <th class="px-2.5 py-2 text-left font-medium whitespace-nowrap">พื้นที่</th>
+                        <th class="px-2.5 py-2 text-center font-medium whitespace-nowrap">ทฤษฎี</th>
+                        <th class="px-2.5 py-2 text-center font-medium whitespace-nowrap">OJT</th>
+                        <th class="px-2.5 py-2 text-center font-medium whitespace-nowrap">สถานะ</th>
+                        <th class="px-2.5 py-2 text-left font-medium" style="min-width: 210px;">หมายเหตุ (ติดที่อะไร)</th>
+                        <th class="px-2.5 py-2 text-center font-medium whitespace-nowrap">รอบอบรม</th>
+                        <th class="px-2.5 py-2 text-center font-medium whitespace-nowrap">เดือนอบรม</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200" id="execModalBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>

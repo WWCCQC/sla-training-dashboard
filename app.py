@@ -94,6 +94,21 @@ SLA_TARGET_GUIDELINES = [
     {'key': 'registration', 'name': 'ขึ้นทะเบียน', 'target_days': 3}
 ]
 
+SLA_TOTAL_TARGET_DAYS = sum(step['target_days'] for step in SLA_TARGET_GUIDELINES)
+
+
+def extract_area_sort_key(area_name):
+    """เรียงลำดับพื้นที่ตามตัวเลขในชื่อ เช่น R1_..., R2_... หรือ RSM1, RSM2..."""
+    import re
+    text = str(area_name or '').strip()
+    match = re.search(r'^R(\d+)[_\-]', text)
+    if match:
+        return (0, int(match.group(1)), text)
+    match = re.search(r'RSM(\d+)', text)
+    if match:
+        return (0, int(match.group(1)), text)
+    return (1, 999, text)
+
 # ===============================
 # CONTEXT PROCESSOR
 # ===============================
@@ -229,8 +244,13 @@ def get_summary_stats(df):
             'completed': 0,
             'onprocess': 0,
             'closed': 0,
+            'cancel': 0,
+            'dropoff': 0,
             'completed_rate': 0,
+            'onprocess_rate': 0,
             'closed_rate': 0,
+            'cancel_rate': 0,
+            'dropoff_rate': 0,
             'theory_pass': 0,
             'theory_fail': 0,
             'theory_rate': 0,
@@ -238,6 +258,10 @@ def get_summary_stats(df):
             'ojt_fail': 0,
             'ojt_rate': 0,
             'avg_sla_total': 0,
+            'sla_valid_count': 0,
+            'sla_within_target_count': 0,
+            'sla_within_target_rate': 0,
+            'sla_total_target': SLA_TOTAL_TARGET_DAYS,
             'sla_by_step': {},
             'status_counts': {}
         }
@@ -267,6 +291,8 @@ def get_summary_stats(df):
     ojt_fail = len(df[df['result_round_ojt'] == 'ไม่ผ่าน']) if 'result_round_ojt' in df.columns else 0
     
     # SLA เฉลี่ยรวม (เงื่อนไขใหม่: รวมค่า >= 0 ที่มี start_date และ end_date จริง)
+    sla_valid_count = 0
+    sla_within_target_count = 0
     try:
         if 'sla_total' in df.columns and 'start_date' in df.columns and 'end_date' in df.columns:
             valid_sla_df = df[
@@ -275,13 +301,20 @@ def get_summary_stats(df):
                 (df['start_date'].notna()) & 
                 (df['end_date'].notna())
             ]
-            avg_sla_total = valid_sla_df['sla_total'].mean() if len(valid_sla_df) > 0 else 0
+            sla_valid_count = len(valid_sla_df)
+            if sla_valid_count > 0:
+                avg_sla_total = valid_sla_df['sla_total'].mean()
+                sla_within_target_count = int((valid_sla_df['sla_total'] <= SLA_TOTAL_TARGET_DAYS).sum())
+            else:
+                avg_sla_total = 0
         else:
             avg_sla_total = 0
         if pd.isna(avg_sla_total):
             avg_sla_total = 0
     except:
         avg_sla_total = 0
+        sla_valid_count = 0
+        sla_within_target_count = 0
     
     # SLA เฉลี่ยแต่ละขั้นตอน
     # เงื่อนไขใหม่: รวมค่า >= 0 ที่มี start_date และ end_date จริง
@@ -307,16 +340,19 @@ def get_summary_stats(df):
         except:
             sla_by_step[step['key']] = 0
     
+    dropoff = closed + cancel
     return {
         'total': total,
         'completed': completed,
         'onprocess': onprocess,
         'closed': closed,
         'cancel': cancel,
+        'dropoff': dropoff,
         'completed_rate': round((completed / total * 100), 1) if total > 0 else 0,
         'onprocess_rate': round((onprocess / total * 100), 1) if total > 0 else 0,
         'closed_rate': round((closed / total * 100), 1) if total > 0 else 0,
         'cancel_rate': round((cancel / total * 100), 1) if total > 0 else 0,
+        'dropoff_rate': round((dropoff / total * 100), 1) if total > 0 else 0,
         'theory_pass': theory_pass,
         'theory_fail': theory_fail,
         'theory_rate': round((theory_pass / (theory_pass + theory_fail) * 100), 1) if (theory_pass + theory_fail) > 0 else 0,
@@ -324,6 +360,10 @@ def get_summary_stats(df):
         'ojt_fail': ojt_fail,
         'ojt_rate': round((ojt_pass / (ojt_pass + ojt_fail) * 100), 1) if (ojt_pass + ojt_fail) > 0 else 0,
         'avg_sla_total': round(float(avg_sla_total), 1) if avg_sla_total else 0,
+        'sla_valid_count': sla_valid_count,
+        'sla_within_target_count': sla_within_target_count,
+        'sla_within_target_rate': round((sla_within_target_count / sla_valid_count * 100), 1) if sla_valid_count > 0 else 0,
+        'sla_total_target': SLA_TOTAL_TARGET_DAYS,
         'sla_by_step': sla_by_step,
         'status_counts': status_counts
     }
@@ -808,12 +848,34 @@ def get_onprocess_detail_rows(df):
     cols = ['no', 'full_name_th', 'depot_name', 'depot_code', 'province', 'area',
             'theory_training_result', 'on_the_job_result', 'status', 'result',
             'training_round_date', 'training_month']
+
+    # คอลัมน์ remark ของแต่ละสถานะ (บอกว่าช่างติดที่อะไร) — ตรงกับ STATUS_SLA_MAPPING
+    status_remark_col = {
+        'เอกสารยังไม่ครบ': 'remark_doc',
+        'อยู่ระหว่างอบรม': 'remark_training',
+        'OJT': 'remark_ojt',
+        'Gen ID': 'remark_genid_card',
+        'Print/ส่งบัตร': 'remark_genid_card',
+        'รอตรวจกองงาน': 'remark_inspection',
+        'พื้นที่ขออนุมัติ': 'remark_dflow',
+        'ขอสิทธิ์เข้าใช้งาน': 'remark_registration',
+    }
+
     rows = []
     for _, r in onprocess_df.iterrows():
         row = {}
         for c in cols:
             v = r[c] if c in r.index else None
             row[c] = str(v).strip() if pd.notna(v) else ''
+        # remark ตามสถานะปัจจุบัน; ถ้าว่างใช้ remark ทั่วไปสำรอง
+        status_name = row.get('status', '')
+        remark_col = status_remark_col.get(status_name)
+        remark_val = ''
+        if remark_col and remark_col in r.index and pd.notna(r[remark_col]):
+            remark_val = str(r[remark_col]).strip()
+        if not remark_val and 'remark' in r.index and pd.notna(r['remark']):
+            remark_val = str(r['remark']).strip()
+        row['remark'] = remark_val
         rows.append(row)
 
     # เรียงตามเดือนอบรมล่าสุดก่อน (training_month format MonYY เช่น Jun26)
@@ -913,6 +975,180 @@ def get_executive_insight(monthly, sla_steps, onprocess_pivot):
     if card_onp['delta'] is not None and card_onp['delta'] > 0:
         recs.append(f"ช่างค้างดำเนินการเพิ่มขึ้น {card_onp['delta']} คนจากเดือนก่อน — "
                     f"เฝ้าระวังงานสะสม โดยเฉพาะขั้นตอนเอกสารและการตรวจ")
+    insight['recommendations'] = recs
+    return insight
+
+
+def get_executive_home_insight(monthly, all_monthly, sla_analysis_steps, onprocess_pivot, areas, summary, selected_months=None):
+    """สรุป Insight สำหรับหน้าหลักผู้บริหาร (เปลี่ยนตามเดือนที่เลือก หรือเดือนปัจจุบันเป็นค่าเริ่มต้น)"""
+    selected_months = selected_months or []
+    is_single_month = len(selected_months) == 1 or (not selected_months and len(monthly) == 1)
+    period_label = (
+        f"เดือน {selected_months[0]} 2026" if len(selected_months) == 1
+        else (f"เดือน {', '.join(selected_months)} 2026" if selected_months else f"ทั้งปี 2026 ({len(monthly)} เดือน)")
+    )
+
+    insight = {
+        'has_data': bool(monthly) or summary.get('total', 0) > 0,
+        'is_single_month': is_single_month,
+        'period_label': period_label,
+        'latest_month': '',
+        'prev_month': '',
+        'latest_cohort': None,
+        'prev_cohort': None,
+        'reg_delta': None,
+        'reg_pct': None,
+        'comp_delta': None,
+        'onp_delta': None,
+        'onp_pct': None,
+        'bottlenecks': [],
+        'top_stuck': None,
+        'top_backlog_area': None,
+        'slowest_area': None,
+        'recommendations': []
+    }
+
+    if monthly:
+        latest = monthly[-1]
+        prev = None
+        if is_single_month and all_monthly and len(all_monthly) >= 2:
+            for idx, item in enumerate(all_monthly):
+                if item.get('month') == latest.get('month') and idx > 0:
+                    prev = all_monthly[idx - 1]
+                    break
+        elif not is_single_month and len(monthly) >= 2:
+            prev = monthly[-2]
+
+        insight['latest_month'] = latest['month'] if is_single_month else period_label
+        insight['prev_month'] = prev['month'] if (is_single_month and prev) else ''
+
+        cur_total = summary.get('total', 0)
+        cur_comp = summary.get('completed', 0)
+        cur_onp = summary.get('onprocess', 0)
+        insight['latest_cohort'] = {
+            'month': latest['month'] if is_single_month else period_label,
+            'total': cur_total,
+            'completed': cur_comp,
+            'onprocess': cur_onp,
+            'closed': summary.get('closed', 0),
+            'cancel': summary.get('cancel', 0),
+            'completion_rate': summary.get('completed_rate', 0),
+            'month_count': len(monthly),
+            'avg_per_month': round(cur_total / len(monthly), 1) if len(monthly) > 0 else 0,
+        }
+
+        if is_single_month and prev:
+            prev_total = prev.get('total', 0)
+            prev_comp = prev.get('completed', 0)
+            prev_onp = prev.get('onprocess', 0)
+            insight['prev_cohort'] = {
+                'month': prev['month'],
+                'total': prev_total,
+                'completed': prev_comp,
+                'onprocess': prev_onp,
+                'completion_rate': round(prev_comp / prev_total * 100, 1) if prev_total else 0,
+            }
+            reg_delta = cur_total - prev_total
+            insight['reg_delta'] = reg_delta
+            insight['reg_pct'] = round(reg_delta / prev_total * 100, 1) if prev_total else None
+            insight['comp_delta'] = cur_comp - prev_comp
+
+            onp_delta = cur_onp - prev_onp
+            insight['onp_delta'] = onp_delta
+            insight['onp_pct'] = round(onp_delta / prev_onp * 100, 1) if prev_onp else None
+
+    # คอขวด SLA อิงเกณฑ์ 7 ขั้นตอนของช่วงเดือนที่เลือก
+    steps_with_data = [s for s in (sla_analysis_steps or []) if s.get('avg_sla', 0) > 0]
+    steps_sorted = sorted(
+        steps_with_data,
+        key=lambda s: (s.get('avg_sla', 0) - s.get('target_days', 0), s.get('avg_sla', 0)),
+        reverse=True
+    )
+    max_val = max([max(s.get('avg_sla', 0), s.get('target_days', 0)) for s in steps_sorted[:3]], default=0)
+    for s in steps_sorted[:3]:
+        avg_val = s.get('avg_sla', 0)
+        target_val = s.get('target_days', 0)
+        diff = round(avg_val - target_val, 1)
+        insight['bottlenecks'].append({
+            'name': s['name'],
+            'avg_sla': avg_val,
+            'target_days': target_val,
+            'diff': diff,
+            'is_over': avg_val > target_val,
+            'width': round(avg_val / max_val * 100) if max_val else 0,
+            'target_pos': round(target_val / max_val * 100) if max_val else 0,
+        })
+
+    # สถานะที่ช่าง Onprocess ค้างมากที่สุดในช่วงที่เลือก
+    cols = onprocess_pivot.get('columns', [])
+    cells = onprocess_pivot.get('grand_total', {}).get('cells', [])
+    if cols and cells:
+        top_idx = max(range(len(cols)), key=lambda k: cells[k])
+        if cells[top_idx] > 0:
+            insight['top_stuck'] = {'status': cols[top_idx], 'count': cells[top_idx]}
+
+    # พื้นที่ที่มีงานค้างสูงสุด และพื้นที่ที่ SLA เกินเป้ามากที่สุดในช่วงที่เลือก
+    if areas:
+        backlog_area = max(areas, key=lambda a: a.get('onprocess', 0))
+        if backlog_area.get('onprocess', 0) > 0:
+            insight['top_backlog_area'] = {
+                'area': backlog_area['area'],
+                'onprocess': backlog_area['onprocess'],
+                'total': backlog_area['total'],
+            }
+        over_sla_areas = [a for a in areas if a.get('avg_sla', 0) > SLA_TOTAL_TARGET_DAYS]
+        if over_sla_areas:
+            slowest = max(over_sla_areas, key=lambda a: a.get('avg_sla', 0))
+            insight['slowest_area'] = {
+                'area': slowest['area'],
+                'avg_sla': slowest['avg_sla'],
+                'over': round(slowest['avg_sla'] - SLA_TOTAL_TARGET_DAYS, 1),
+            }
+
+    # ข้อเสนอแนะเชิงบริหารตามช่วงเดือนที่เลือก
+    recs = []
+    recs.append(
+        f"ภาพรวม{period_label}: ลงทะเบียน {summary.get('total', 0)} คน • "
+        f"ขึ้นทะเบียนสำเร็จ {summary.get('completed', 0)} คน ({summary.get('completed_rate', 0)}%) • "
+        f"อยู่ระหว่างดำเนินการ {summary.get('onprocess', 0)} คน ({summary.get('onprocess_rate', 0)}%)"
+    )
+
+    avg_sla = summary.get('avg_sla_total', 0)
+    if avg_sla > 0:
+        if avg_sla > SLA_TOTAL_TARGET_DAYS:
+            over_days = round(avg_sla - SLA_TOTAL_TARGET_DAYS, 1)
+            recs.append(
+                f"SLA เฉลี่ยรวมของ{period_label}อยู่ที่ {avg_sla} วัน (เกินเป้า {SLA_TOTAL_TARGET_DAYS} วันอยู่ +{over_days} วัน) "
+                f"— เสร็จทันเกณฑ์ {summary.get('sla_within_target_rate', 0)}%"
+            )
+        else:
+            recs.append(
+                f"SLA เฉลี่ยรวมของ{period_label}อยู่ที่ {avg_sla} วัน อยู่ในเป้าหมาย ≤ {SLA_TOTAL_TARGET_DAYS} วัน "
+                f"(เสร็จทันเกณฑ์ {summary.get('sla_within_target_rate', 0)}%)"
+            )
+
+    over_bottlenecks = [b for b in insight['bottlenecks'] if b['is_over']]
+    if over_bottlenecks:
+        top_b = over_bottlenecks[0]
+        recs.append(
+            f"คอขวดเวลาหลักใน{period_label}คือขั้นตอน \"{top_b['name']}\" เฉลี่ย {top_b['avg_sla']} วัน "
+            f"(เป้า {top_b['target_days']} วัน, เกิน +{top_b['diff']} วัน)"
+        )
+    elif insight['bottlenecks']:
+        top_b = insight['bottlenecks'][0]
+        recs.append(
+            f"ทุกขั้นตอนใน{period_label}อยู่ในเป้าหมาย โดย \"{top_b['name']}\" ใช้เวลาเฉลี่ยสูงสุดที่ {top_b['avg_sla']} วัน (เป้า {top_b['target_days']} วัน)"
+        )
+
+    if insight['top_stuck']:
+        area_note = ''
+        if insight['top_backlog_area']:
+            area_note = f" โดยพื้นที่ค้างสูงสุดคือ {insight['top_backlog_area']['area']} ({insight['top_backlog_area']['onprocess']} คน)"
+        recs.append(
+            f"จุดค้างสะสมสูงสุดใน{period_label}อยู่ที่ \"{insight['top_stuck']['status']}\" จำนวน "
+            f"{insight['top_stuck']['count']} คน{area_note}"
+        )
+
     insight['recommendations'] = recs
     return insight
 
@@ -1114,18 +1350,19 @@ def get_monthly_area_stats(df):
     return sorted(area_monthly_data, key=get_area_sort_key)
 
 def get_depot_agent_stats(df):
-    """สรุปสถิติตัวแทน (Depot) พร้อม area, จำนวนลงทะเบียน, สำเร็จ, และ %"""
+    """สรุปสถิติตัวแทน (Depot) พร้อม area, จำนวนลงทะเบียน, สำเร็จ, Onprocess และ %"""
     if df.empty or 'depot_name' not in df.columns:
         return []
-    
-    import re
     
     depot_stats = []
     for depot in df['depot_name'].dropna().unique():
         depot_df = df[df['depot_name'] == depot]
         total = len(depot_df)
-        # นับขึ้นทะเบียนสำเร็จจาก result = 'Completed'
-        completed = len(depot_df[depot_df['result'] == 'Completed']) if 'result' in depot_df.columns else 0
+        result_counts = depot_df['result'].value_counts().to_dict() if 'result' in depot_df.columns else {}
+        completed = result_counts.get('Completed', 0)
+        onprocess = result_counts.get('Onprocess', 0)
+        closed = result_counts.get('Closed', 0)
+        cancel = result_counts.get('Cancel', 0)
         success_rate = round((completed / total * 100), 1) if total > 0 else 0
         
         depot_stats.append({
@@ -1135,6 +1372,9 @@ def get_depot_agent_stats(df):
             'province': depot_df['province'].iloc[0] if 'province' in depot_df.columns else '',
             'total': total,
             'completed': completed,
+            'onprocess': onprocess,
+            'closed': closed,
+            'cancel': cancel,
             'success_rate': success_rate
         })
     
@@ -1382,27 +1622,22 @@ def get_pending_technicians(df):
 # ROUTES
 # ===============================
 
-@app.route('/')
-def dashboard():
-    """หน้า Dashboard หลัก"""
-    df = load_data()
-    df = process_data(df)
-    data_updated_as = get_latest_created_at_label(df)
-    
-    # รับ parameter filter จาก URL (รองรับ multi-select)
-    years_param = request.args.get('years', '')  # format: "2025,2026"
-    months_param = request.args.get('months', '')  # format: "Jan,Feb,Mar"
-    
-    # แปลงเป็น list
+def prepare_dashboard_filter_context(df, allow_area_filter=False, default_to_latest_month=False):
+    """เตรียมรายการตัวกรองและ DataFrame ที่ผ่านการกรองสำหรับหน้า Dashboard"""
+    years_param = request.args.get('years', '')
+    months_param = request.args.get('months', '')
+    all_months_flag = request.args.get('all_months', '') == '1'
+    areas_param = request.args.get('areas', '') if allow_area_filter else ''
+
     selected_years = [y.strip() for y in years_param.split(',') if y.strip()] if years_param else []
     selected_months = [m.strip() for m in months_param.split(',') if m.strip()] if months_param else []
-    
-    # สร้างรายการปีและเดือนจาก training_month column (format: MonYY เช่น Nov25, Jan26)
+    selected_areas = [a.strip() for a in areas_param.split(',') if a.strip()] if areas_param else []
+
     year_list = []
     month_list = []
     month_order = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
                    'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12}
-    
+
     if 'training_month' in df.columns:
         unique_training_months = df['training_month'].dropna().unique()
         years_set = set()
@@ -1410,32 +1645,33 @@ def dashboard():
         for tm in unique_training_months:
             tm_str = str(tm).strip()
             if len(tm_str) >= 5:
-                month_part = tm_str[:3]   # เช่น 'Nov', 'Jan'
-                year_part = tm_str[3:]    # เช่น '25', '26'
+                month_part = tm_str[:3]
+                year_part = tm_str[3:]
                 if month_part in month_order:
                     months_set.add(month_part)
-                    # แปลง 25 → 2025, 26 → 2026
-                    full_year = '20' + year_part
-                    years_set.add(full_year)
-        
-        # เรียงลำดับ
+                    years_set.add('20' + year_part)
+
         year_list = sorted(list(years_set))
         month_list = sorted(list(months_set), key=lambda x: month_order.get(x, 99))
-    
-    # Filter DataFrame ตาม years และ months (multi-select)
-    filtered_df = df.copy()
+
+    latest_month_short = month_list[-1] if month_list else ''
+    if default_to_latest_month and not selected_months and not all_months_flag and latest_month_short:
+        selected_months = [latest_month_short]
+
+    area_filtered_df = df.copy()
+    if allow_area_filter and selected_areas and 'area' in area_filtered_df.columns:
+        area_filtered_df = area_filtered_df[area_filtered_df['area'].isin(selected_areas)]
+
+    filtered_df = area_filtered_df.copy()
     if 'training_month' in filtered_df.columns:
-        # สร้าง list ของ training_month ที่ต้องการ filter
         valid_training_months = []
-        
+
         if selected_years and selected_months:
-            # Filter ทั้งปีและเดือน - สร้าง combinations
             for year in selected_years:
-                year_short = year[2:] if len(year) == 4 else year  # 2025 → 25
+                year_short = year[2:] if len(year) == 4 else year
                 for month in selected_months:
-                    valid_training_months.append(month + year_short)  # เช่น Nov25
+                    valid_training_months.append(month + year_short)
         elif selected_years:
-            # Filter เฉพาะปี - เก็บทุกเดือนของปีที่เลือก
             years_short = [y[2:] if len(y) == 4 else y for y in selected_years]
             filtered_df = filtered_df[
                 filtered_df['training_month'].apply(
@@ -1443,30 +1679,138 @@ def dashboard():
                 )
             ]
         elif selected_months:
-            # Filter เฉพาะเดือน - เก็บทุกปีของเดือนที่เลือก
             filtered_df = filtered_df[
                 filtered_df['training_month'].apply(
                     lambda x: any(str(x).startswith(m) for m in selected_months) if pd.notna(x) else False
                 )
             ]
-        
-        # ถ้ามี valid_training_months (กรณีเลือกทั้งปีและเดือน)
+
         if valid_training_months:
             filtered_df = filtered_df[filtered_df['training_month'].isin(valid_training_months)]
-    
-    summary = get_summary_stats(filtered_df)
-    
-    # ตรวจสอบให้แน่ใจว่ามี key ที่จำเป็น
-    default_summary = {
-        'total': 0, 'completed': 0, 'onprocess': 0, 'closed': 0, 'cancel': 0,
-        'completed_rate': 0, 'onprocess_rate': 0, 'closed_rate': 0, 'cancel_rate': 0,
-        'theory_pass': 0, 'theory_fail': 0, 'theory_rate': 0,
-        'ojt_pass': 0, 'ojt_fail': 0, 'ojt_rate': 0,
-        'avg_sla_total': 0, 'sla_by_step': {}, 'status_counts': {}
+
+    area_list = df['area'].dropna().unique().tolist() if 'area' in df.columns else []
+    area_list = sorted([str(a).strip() for a in area_list if pd.notna(a)], key=extract_area_sort_key)
+
+    return {
+        'area_filtered_df': area_filtered_df,
+        'filtered_df': filtered_df,
+        'year_list': year_list,
+        'month_list': month_list,
+        'area_list': area_list,
+        'selected_years': selected_years,
+        'selected_months': selected_months,
+        'selected_areas': selected_areas,
+        'latest_month_short': latest_month_short,
+        'recent_3_months': month_list[-3:] if month_list else [],
     }
-    for key, val in default_summary.items():
-        if key not in summary:
-            summary[key] = val
+
+
+@app.route('/')
+def executive_home():
+    """หน้าหลักสำหรับนำเสนอผู้บริหาร (Default เป็นเดือนปัจจุบัน/ล่าสุด)"""
+    if request.args.get('view') == 'legacy':
+        return dashboard()
+
+    df = load_data()
+    df = process_data(df)
+    data_updated_as = get_latest_created_at_label(df)
+
+    ctx = prepare_dashboard_filter_context(df, allow_area_filter=True, default_to_latest_month=True)
+    filtered_df = ctx['filtered_df']
+    area_filtered_df = ctx['area_filtered_df']
+
+    summary = get_summary_stats(filtered_df)
+    sla_analysis_steps = get_sla_analysis_step_stats(filtered_df)
+    areas = get_area_stats(filtered_df)
+    onprocess_area_pivot = get_onprocess_pivot(filtered_df, 'area')
+    onprocess_province_pivot = get_onprocess_pivot(filtered_df, 'province')
+    onprocess_details = get_onprocess_detail_rows(filtered_df)
+    monthly = get_monthly_stats(filtered_df)
+    all_monthly_for_area = get_monthly_stats(area_filtered_df)
+    depot_agents = get_depot_agent_stats(filtered_df)
+
+    exec_insight = get_executive_home_insight(
+        monthly,
+        all_monthly_for_area,
+        sla_analysis_steps,
+        onprocess_area_pivot,
+        areas,
+        summary,
+        selected_months=ctx['selected_months'],
+    )
+
+    total = summary.get('total', 0)
+    funnel = {
+        'stages': [
+            {
+                'label': 'ลงทะเบียนอบรม',
+                'count': total,
+                'pct_total': 100.0 if total else 0.0,
+                'sub_label': 'ฐานผู้สมัครทั้งหมด',
+            },
+            {
+                'label': 'ผ่านอบรมทฤษฎี',
+                'count': summary.get('theory_pass', 0),
+                'pct_total': round(summary.get('theory_pass', 0) / total * 100, 1) if total else 0.0,
+                'sub_label': f"อัตราผ่านผู้เข้าสอบ {summary.get('theory_rate', 0)}%",
+            },
+            {
+                'label': 'ผ่าน OJT',
+                'count': summary.get('ojt_pass', 0),
+                'pct_total': round(summary.get('ojt_pass', 0) / total * 100, 1) if total else 0.0,
+                'sub_label': f"อัตราผ่านผู้เข้า OJT {summary.get('ojt_rate', 0)}%",
+            },
+            {
+                'label': 'ขึ้นทะเบียนสำเร็จ',
+                'count': summary.get('completed', 0),
+                'pct_total': summary.get('completed_rate', 0),
+                'sub_label': 'พร้อมปฏิบัติงาน',
+            },
+        ]
+    }
+
+    return render_template(
+        'executive_home.html',
+        summary=summary,
+        sla_analysis_steps=sla_analysis_steps,
+        sla_total_target=SLA_TOTAL_TARGET_DAYS,
+        areas=areas,
+        onprocess_area_pivot=onprocess_area_pivot,
+        onprocess_province_pivot=onprocess_province_pivot,
+        onprocess_details=onprocess_details,
+        exec_insight=exec_insight,
+        funnel=funnel,
+        monthly=monthly,
+        all_monthly=all_monthly_for_area,
+        depot_agents=depot_agents,
+        area_list=ctx['area_list'],
+        year_list=ctx['year_list'],
+        month_list=ctx['month_list'],
+        selected_years=ctx['selected_years'],
+        selected_months=ctx['selected_months'],
+        selected_areas=ctx['selected_areas'],
+        latest_month_short=ctx['latest_month_short'],
+        recent_3_months=ctx['recent_3_months'],
+        data_updated_as=data_updated_as,
+        active_page='home',
+    )
+
+
+@app.route('/dashboard')
+def dashboard():
+    """หน้า Dashboard เดิม (Backup สำหรับเปรียบเทียบ)"""
+    df = load_data()
+    df = process_data(df)
+    data_updated_as = get_latest_created_at_label(df)
+
+    ctx = prepare_dashboard_filter_context(df, allow_area_filter=False)
+    filtered_df = ctx['filtered_df']
+    selected_years = ctx['selected_years']
+    selected_months = ctx['selected_months']
+    year_list = ctx['year_list']
+    month_list = ctx['month_list']
+
+    summary = get_summary_stats(filtered_df)
     
     sla_steps = get_sla_by_step_stats(filtered_df)
     areas = get_area_stats(filtered_df)
@@ -1893,4 +2237,4 @@ def api_admin_get_record(row_id):
 # ===============================
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000, use_reloader=False)
+    app.run(debug=True, port=5000, use_reloader=True)

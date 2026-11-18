@@ -1,0 +1,1162 @@
+<!-- Header with Filter -->
+<div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div>
+        <h1 class="text-2xl font-bold text-blue-600">สถานะการอบรมเเละการขึ้นทะเบียนช่าง</h1>
+    </div>
+
+    <!-- Year and Month Filter (Multi-Select) -->
+    <div class="flex items-center gap-3 bg-white rounded-lg shadow-sm p-3 border">
+        <!-- Year Multi-Select -->
+        <div class="relative">
+            <label class="text-sm font-medium text-gray-600 mr-2">ปี:</label>
+            <button type="button" id="yearDropdownBtn"
+                class="inline-flex items-center justify-between min-w-[120px] border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500">
+                <span id="yearSelectedText">{{ selected_years|join(', ') if selected_years else 'ทั้งหมด' }}</span>
+                <i class="fas fa-chevron-down ml-2 text-gray-400"></i>
+            </button>
+            <div id="yearDropdown"
+                class="hidden absolute z-50 mt-1 w-48 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <label class="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer border-b">
+                    <input type="checkbox" id="yearSelectAll" class="mr-2 rounded text-blue-600">
+                    <span class="text-sm font-medium">เลือกทั้งหมด</span>
+                </label>
+                {% for year in year_list %}
+                <label class="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer">
+                    <input type="checkbox" class="yearCheckbox mr-2 rounded text-blue-600" value="{{ year }}" {% if year
+                        in selected_years %}checked{% endif %}>
+                    <span class="text-sm">{{ year }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Month Multi-Select -->
+        <div class="relative">
+            <label class="text-sm font-medium text-gray-600 mr-2">เดือน:</label>
+            <button type="button" id="monthDropdownBtn"
+                class="inline-flex items-center justify-between min-w-[120px] border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500">
+                <span id="monthSelectedText">{{ selected_months|join(', ') if selected_months else 'ทั้งหมด' }}</span>
+                <i class="fas fa-chevron-down ml-2 text-gray-400"></i>
+            </button>
+            <div id="monthDropdown"
+                class="hidden absolute z-50 mt-1 w-48 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <label class="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer border-b">
+                    <input type="checkbox" id="monthSelectAll" class="mr-2 rounded text-blue-600">
+                    <span class="text-sm font-medium">เลือกทั้งหมด</span>
+                </label>
+                {% for month in month_list %}
+                <label class="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer">
+                    <input type="checkbox" class="monthCheckbox mr-2 rounded text-blue-600" value="{{ month }}" {% if
+                        month in selected_months %}checked{% endif %}>
+                    <span class="text-sm">{{ month }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <button type="button" id="applyFilterBtn"
+            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-sm font-medium transition">
+            <i class="fas fa-search mr-1"></i>ค้นหา
+        </button>
+        <button type="button" id="resetFilterBtn"
+            class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-1.5 rounded-md text-sm font-medium transition">
+            <i class="fas fa-undo mr-1"></i>รีเซ็ต
+        </button>
+    </div>
+</div>
+
+<!-- KPI Cards Row 1 -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+    <!-- Total Technicians -->
+    <div class="bg-white rounded-xl shadow-sm p-5 card-hover border-l-4 border-blue-500">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500 mb-1">ลงทะเบียนอบรม</p>
+                <h3 class="text-3xl font-bold text-gray-800">{{ summary.total }}</h3>
+            </div>
+            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-users text-blue-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Closed -->
+    <div class="bg-white rounded-xl shadow-sm p-5 card-hover border-l-4 border-red-500">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500 mb-1">ไม่ผ่าน</p>
+                <h3 class="text-3xl font-bold text-red-600">{{ summary.closed }}</h3>
+                <p class="text-xs text-red-600 mt-1">{{ summary.closed_rate }}%</p>
+            </div>
+            <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-times-circle text-red-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cancel -->
+    <div class="bg-white rounded-xl shadow-sm p-5 card-hover border-l-4 border-gray-500">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500 mb-1">ลาออก</p>
+                <h3 class="text-3xl font-bold text-gray-600">{{ summary.cancel }}</h3>
+                <p class="text-xs text-gray-600 mt-1">{{ summary.cancel_rate }}%</p>
+            </div>
+            <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-ban text-gray-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- On Process -->
+    <div class="bg-white rounded-xl shadow-sm p-5 card-hover border-l-4 border-yellow-500">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500 mb-1">อยู่ระหว่างดำเนินการ</p>
+                <h3 class="text-3xl font-bold text-yellow-600">{{ summary.onprocess }}</h3>
+                <p class="text-xs text-yellow-600 mt-1">{{ summary.onprocess_rate }}%</p>
+            </div>
+            <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-spinner text-yellow-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Completed -->
+    <div class="bg-white rounded-xl shadow-sm p-5 card-hover border-l-4 border-green-500">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500 mb-1">ขึ้นทะเบียนเรียบร้อย</p>
+                <h3 class="text-3xl font-bold text-green-600">{{ summary.completed }}</h3>
+                <p class="text-xs text-green-600 mt-1">{{ summary.completed_rate }}%</p>
+            </div>
+            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-check-circle text-green-500 text-xl"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- KPI Cards Row 2 - Training Results -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <!-- Theory Training -->
+    <div class="bg-white rounded-xl shadow-sm p-5">
+        <div class="flex items-center justify-between mb-3">
+            <h4 class="text-gray-700 font-medium">ผลอบรมทฤษฎี</h4>
+            <span class="text-2xl font-bold text-blue-600">{{ summary.theory_rate }}%</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-3">
+            <div class="bg-blue-600 h-3 rounded-full" style="width: {{ summary.theory_rate }}%"></div>
+        </div>
+        <div class="flex justify-between text-sm mt-2">
+            <span class="text-blue-600"><i class="fas fa-users"></i> เข้าอบรม {{ summary.theory_pass +
+                summary.theory_fail }}</span>
+        </div>
+        <div class="flex justify-between text-sm mt-1">
+            <span class="text-green-600"><i class="fas fa-check"></i> ผ่าน {{ summary.theory_pass }}</span>
+            <span class="text-red-600"><i class="fas fa-times"></i> ไม่ผ่าน {{ summary.theory_fail }}</span>
+        </div>
+    </div>
+
+    <!-- OJT -->
+    <div class="bg-white rounded-xl shadow-sm p-5">
+        <div class="flex items-center justify-between mb-3">
+            <h4 class="text-gray-700 font-medium">ผล OJT</h4>
+            <span class="text-2xl font-bold text-purple-600">{{ summary.ojt_rate }}%</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-3">
+            <div class="bg-purple-600 h-3 rounded-full" style="width: {{ summary.ojt_rate }}%"></div>
+        </div>
+        <div class="flex justify-between text-sm mt-2">
+            <span class="text-purple-600"><i class="fas fa-users"></i> เข้า OJT {{ summary.ojt_pass + summary.ojt_fail
+                }}</span>
+        </div>
+        <div class="flex justify-between text-sm mt-1">
+            <span class="text-green-600"><i class="fas fa-check"></i> ผ่าน {{ summary.ojt_pass }}</span>
+            <span class="text-red-600"><i class="fas fa-times"></i> ไม่ผ่าน {{ summary.ojt_fail }}</span>
+        </div>
+    </div>
+
+    <!-- Average SLA -->
+    <div class="bg-white rounded-xl shadow-sm p-5">
+        <div class="flex items-center justify-between mb-3">
+            <h4 class="text-gray-700 font-medium">SLA เฉลี่ยรวม</h4>
+            <span
+                class="text-2xl font-bold {% if summary.avg_sla_total <= 45 %}text-green-600{% elif summary.avg_sla_total <= 60 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                {{ summary.avg_sla_total }} วัน
+            </span>
+        </div>
+        <div class="text-sm text-gray-500">
+            <i class="fas fa-info-circle"></i> ระยะเวลาเฉลี่ยจากเริ่มต้นจนขึ้นทะเบียนสำเร็จ
+        </div>
+    </div>
+</div>
+
+<!-- Executive Insight Section -->
+<div class="bg-white rounded-xl shadow-sm p-5 mb-6">
+    <h3 class="text-lg font-semibold text-gray-800 mb-1">
+        <i class="fas fa-lightbulb text-amber-500 mr-2"></i>Summary insight
+        {% if executive_insight.has_data %}
+        <span class="ml-2 bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm">เดือนล่าสุด: {{ executive_insight.latest_month }}</span>
+        {% endif %}
+    </h3>
+    {% if executive_insight.has_data %}
+    <p class="text-xs text-gray-400 mb-4">เปรียบเทียบกับเดือน {{ executive_insight.prev_month or '-' }} |
+        รุ่นเดือนล่าสุดยังดำเนินการไม่จบ ตัวเลขขึ้นทะเบียนจะทยอยเพิ่มขึ้น</p>
+
+    <!-- ตัวเลขหลักเดือนล่าสุด + เทียบเดือนก่อน -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {% for c in executive_insight.cards %}
+        <div class="rounded-xl border border-gray-100 bg-gradient-to-br from-gray-50 to-white p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 mb-1"><i class="fas {{ c.icon }} mr-1 text-gray-400"></i>{{ c.label }}</p>
+                    <div class="flex items-end gap-2">
+                        <h4 class="text-3xl font-bold text-gray-800">{{ c.value }}</h4>
+                        <span class="text-sm text-gray-400 mb-1">คน</span>
+                    </div>
+                </div>
+                {% if c.delta is not none %}
+                {% set is_good = (c.delta > 0 and c.good_when_up) or (c.delta < 0 and not c.good_when_up) %}
+                <div class="text-right">
+                    {% if c.delta == 0 %}
+                    <span class="inline-flex items-center bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full text-xs font-medium">
+                        <i class="fas fa-equals mr-1"></i>เท่าเดิม</span>
+                    {% else %}
+                    <span class="inline-flex items-center {{ 'bg-green-100 text-green-700' if is_good else 'bg-red-100 text-red-700' }} px-2.5 py-1 rounded-full text-xs font-medium">
+                        <i class="fas {{ 'fa-arrow-up' if c.delta > 0 else 'fa-arrow-down' }} mr-1"></i>
+                        {{ c.delta | abs }} คน{% if c.pct is not none %} ({{ c.pct | abs }}%){% endif %}
+                    </span>
+                    {% endif %}
+                    <p class="text-[11px] text-gray-400 mt-1">จากเดือน {{ executive_insight.prev_month }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- คอขวด SLA -->
+        <div>
+            <h4 class="text-sm font-semibold text-gray-700 mb-3">
+                <i class="fas fa-hourglass-half text-red-400 mr-1"></i>ขั้นตอนที่ใช้เวลานานที่สุด
+            </h4>
+            <div class="space-y-3">
+                {% for b in executive_insight.bottlenecks %}
+                <div>
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="text-gray-700">{{ loop.index }}. {{ b.name }}</span>
+                        <span class="font-bold {% if loop.index == 1 %}text-red-600{% elif loop.index == 2 %}text-orange-500{% else %}text-yellow-600{% endif %}">{{ b.avg_sla }} วัน</span>
+                    </div>
+                    <div class="w-full bg-gray-100 rounded-full h-2.5">
+                        <div class="h-2.5 rounded-full {% if loop.index == 1 %}bg-red-500{% elif loop.index == 2 %}bg-orange-400{% else %}bg-yellow-400{% endif %}"
+                            style="width: {{ b.width }}%"></div>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-sm text-gray-400">ยังไม่มีข้อมูล SLA เพียงพอ</p>
+                {% endfor %}
+            </div>
+            {% if executive_insight.top_stuck %}
+            <div class="mt-4 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800">
+                <i class="fas fa-user-clock mr-1"></i>ช่างค้างดำเนินการมากที่สุดที่สถานะ
+                <span class="font-bold">"{{ executive_insight.top_stuck.status }}"</span>
+                จำนวน <span class="font-bold">{{ executive_insight.top_stuck.count }} คน</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- ข้อเสนอแนะ -->
+        <div>
+            <h4 class="text-sm font-semibold text-gray-700 mb-3">
+                <i class="fas fa-clipboard-check text-green-500 mr-1"></i>ข้อเสนอแนะ
+            </h4>
+            <ul class="space-y-2.5">
+                {% for rec in executive_insight.recommendations %}
+                <li class="flex items-start text-sm text-gray-700 bg-gray-50 rounded-lg px-4 py-2.5 border border-gray-100">
+                    <i class="fas fa-angle-right text-blue-400 mr-2 mt-1"></i>
+                    <span>{{ rec }}</span>
+                </li>
+                {% else %}
+                <li class="text-sm text-gray-400">ไม่มีประเด็นที่ต้องเฝ้าระวังในเดือนนี้</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% else %}
+    <p class="text-gray-400 text-sm">ยังไม่มีข้อมูลเพียงพอสำหรับสรุป Insight</p>
+    {% endif %}
+</div>
+
+<!-- Charts Row -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Monthly Trend Line Chart - Total vs Completed -->
+    <div class="bg-white rounded-xl shadow-sm p-5">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+            <i class="fas fa-chart-line text-purple-500 mr-2"></i>Trend รายเดือน: ลงทะเบียน vs ขึ้นทะเบียนสำเร็จ (ปี 2026)
+        </h3>
+        <div style="position: relative; height: 250px; width: 100%;">
+            <canvas id="trendChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Monthly Area Trend Chart - Total by Area -->
+    <div class="bg-white rounded-xl shadow-sm p-5">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+            <i class="fas fa-trophy text-orange-500 mr-2"></i>Overall Success Rate Ranking
+        </h3>
+        <div style="position: relative; height: 250px; width: 100%;">
+            <canvas id="areaSuccessRateChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 2 -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Monthly Trend Chart -->
+    <div class="bg-white rounded-xl shadow-sm p-5">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+            <i class="fas fa-chart-line text-blue-500 mr-2"></i>จำนวนช่างรายเดือน
+        </h3>
+        <div style="position: relative; height: 250px; width: 100%;">
+            <canvas id="monthlyChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Status Pie Chart -->
+    <div class="bg-white rounded-xl shadow-sm p-5">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+            <i class="fas fa-chart-pie text-green-500 mr-2"></i>สถานะการลงทะเบียน
+        </h3>
+        <div style="position: relative; height: 250px; width: 100%;">
+            <canvas id="statusChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Area Step Summary Table -->
+<div class="bg-white rounded-xl shadow-sm p-5 mb-6">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+        <i class="fas fa-table text-indigo-500 mr-2"></i>จำนวนช่างแยกตามพื้นที่และสถานะ
+    </h3>
+    <div class="overflow-x-auto">
+        <table class="min-w-full text-sm" id="areaStepSummaryTable">
+            <thead class="bg-gray-800 text-white">
+                <tr>
+                    <th class="px-4 py-3 text-left font-medium">พื้นที่ (Area)</th>
+                    <th class="px-4 py-3 text-center font-medium">ลงทะเบียน<br>(คน)</th>
+                    <th class="px-4 py-3 text-center font-medium bg-green-700">Completed<br>(เสร็จสิ้น)</th>
+                    <th class="px-4 py-3 text-center font-medium bg-gray-600">Cancel<br>(ลาออก)</th>
+                    <th class="px-4 py-3 text-center font-medium bg-red-700">Closed<br>(ไม่ผ่าน)</th>
+                    <th class="px-4 py-3 text-center font-medium bg-yellow-600">Onprocess<br>(ดำเนินการ)</th>
+                    <!-- Dynamic Onprocess sub-status columns from unique statuses -->
+                    {% if area_step_summary|length > 0 %}
+                    {% for status_name in area_step_summary[0].unique_onprocess_statuses %}
+                    <th class="px-3 py-3 text-center font-medium bg-amber-500 onprocess-sub-col hidden text-xs"
+                        data-substatus="{{ loop.index0 }}">{{ status_name }}</th>
+                    {% endfor %}
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                <!-- Total Row -->
+                <tr class="bg-gray-100 font-bold border-b-2 border-gray-400">
+                    <td class="px-4 py-3 text-gray-800">Total</td>
+                    <td class="px-4 py-3 text-center">{{ area_step_summary|sum(attribute='total') }}</td>
+                    <td class="px-4 py-3 text-center text-green-600">{{ area_step_summary|sum(attribute='completed') }}
+                    </td>
+                    <td class="px-4 py-3 text-center text-gray-600">{{ area_step_summary|sum(attribute='cancel') }}</td>
+                    <td class="px-4 py-3 text-center text-red-600">{{ area_step_summary|sum(attribute='closed') }}</td>
+                    <td class="px-4 py-3 text-center text-yellow-600">{{ area_step_summary|sum(attribute='onprocess') }}
+                    </td>
+                    {% if area_step_summary|length > 0 %}
+                    {% for col_idx in range(area_step_summary[0].onprocess_columns|length) %}
+                    {% set col_total = [] %}
+                    {% for item in area_step_summary %}
+                    {% if item.onprocess_columns[col_idx].count %}
+                    {% set _ = col_total.append(item.onprocess_columns[col_idx].count) %}
+                    {% endif %}
+                    {% endfor %}
+                    <td class="px-3 py-3 text-center onprocess-sub-col hidden text-amber-700 font-medium">{{
+                        col_total|sum }}</td>
+                    {% endfor %}
+                    {% endif %}
+                </tr>
+                {% for item in area_step_summary %}
+                {% set area_idx = loop.index0 %}
+                <tr class="hover:bg-gray-50 area-main-row" data-area-idx="{{ area_idx }}">
+                    <td class="px-4 py-3 font-medium text-gray-800">{{ item.area }}</td>
+                    <td class="px-4 py-3 text-center font-medium">{{ item.total }}</td>
+                    <!-- Completed -->
+                    <td class="px-4 py-3 text-center">
+                        {% if item.completed > 0 %}
+                        <button
+                            class="toggle-status-details text-green-600 font-medium hover:bg-green-100 px-2 py-1 rounded cursor-pointer"
+                            data-target="completed-{{ area_idx }}">
+                            {{ item.completed }}<i class="fas fa-caret-right ml-2 toggle-icon"></i>
+                        </button>
+                        {% else %}
+                        <span class="text-gray-400">0</span>
+                        {% endif %}
+                    </td>
+                    <!-- Cancel -->
+                    <td class="px-4 py-3 text-center">
+                        {% if item.cancel > 0 %}
+                        <button
+                            class="toggle-status-details text-gray-600 font-medium hover:bg-gray-200 px-2 py-1 rounded cursor-pointer"
+                            data-target="cancel-{{ area_idx }}">
+                            {{ item.cancel }}<i class="fas fa-caret-right ml-2 toggle-icon"></i>
+                        </button>
+                        {% else %}
+                        <span class="text-gray-400">0</span>
+                        {% endif %}
+                    </td>
+                    <!-- Closed -->
+                    <td class="px-4 py-3 text-center">
+                        {% if item.closed > 0 %}
+                        <button
+                            class="toggle-status-details text-red-600 font-medium hover:bg-red-100 px-2 py-1 rounded cursor-pointer"
+                            data-target="closed-{{ area_idx }}">
+                            {{ item.closed }}<i class="fas fa-caret-right ml-2 toggle-icon"></i>
+                        </button>
+                        {% else %}
+                        <span class="text-gray-400">0</span>
+                        {% endif %}
+                    </td>
+                    <!-- Onprocess -->
+                    <td class="px-4 py-3 text-center">
+                        {% if item.onprocess > 0 %}
+                        <button
+                            class="toggle-onprocess-expand text-yellow-600 font-medium hover:bg-yellow-100 px-2 py-1 rounded cursor-pointer"
+                            data-area-idx="{{ area_idx }}" data-breakdown='{{ item.onprocess_breakdown | tojson }}'>
+                            {{ item.onprocess }}<i class="fas fa-caret-right ml-2 toggle-icon-onprocess"></i>
+                        </button>
+                        {% else %}
+                        <span class="text-gray-400">0</span>
+                        {% endif %}
+                    </td>
+                    <!-- Onprocess sub-status cells (using onprocess_columns for consistency) -->
+                    {% for col_idx in range(item.onprocess_columns|length) %}
+                    {% set col = item.onprocess_columns[col_idx] %}
+                    <td class="px-3 py-3 text-center onprocess-sub-col hidden" data-area="{{ area_idx }}">
+                        {% if col.count > 0 %}
+                        <button
+                            class="toggle-technician-list text-amber-700 font-medium hover:bg-amber-100 px-2 py-1 rounded cursor-pointer text-xs"
+                            data-target="onprocess-{{ area_idx }}-{{ col_idx }}">
+                            {{ col.count }}<i class="fas fa-caret-right ml-1 toggle-icon-sub"></i>
+                        </button>
+                        {% else %}
+                        <span class="text-gray-400">0</span>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+
+                <!-- Onprocess technician detail rows (hidden) - ใช้ enumerate-style index -->
+                {% for col_idx in range(item.onprocess_columns|length) %}
+                {% set col = item.onprocess_columns[col_idx] %}
+                {% if col.count > 0 %}
+                <tr class="technician-detail-row bg-amber-50 hidden" id="onprocess-{{ area_idx }}-{{ col_idx }}">
+                    <td colspan="20" class="px-6 py-3">
+                        <div class="text-sm">
+                            <div class="font-medium text-amber-800 mb-2 flex items-center justify-between">
+                                <span><i class="fas fa-users mr-2"></i>{{ col.status }} ({{ col.count }} คน)</span>
+                                <span class="bg-amber-600 text-white px-3 py-1 rounded-full text-xs">
+                                    <i class="fas fa-clock mr-1"></i>SLA เฉลี่ย: {{ col.avg_sla }} วัน
+                                </span>
+                            </div>
+                            <table class="min-w-full bg-white rounded border">
+                                <thead class="bg-amber-100">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-amber-800">#</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-amber-800">รหัส Depot
+                                        </th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-amber-800">ชื่อ Depot
+                                        </th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-amber-800">จังหวัด</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-amber-800">ชื่อช่าง</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-amber-800">หมายเหตุ</th>
+                                        <th class="px-3 py-2 text-center text-xs font-medium text-amber-800">SLA (วัน)
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    {% for tech in col.details %}
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-800">{{ tech.province }}</td>
+                                        <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{ tech.full_name_th }}
+                                        </td>
+                                        <td class="px-3 py-2 text-xs text-gray-600">{{ tech.get('remark', '') }}</td>
+                                        <td class="px-3 py-2 text-xs text-center">
+                                            {% set sla_val = tech.get('sla_total', 0) %}
+                                            {% if sla_val > 60 %}
+                                            <span class="bg-red-100 text-red-700 px-2 py-1 rounded font-medium">{{
+                                                sla_val }}</span>
+                                            {% elif sla_val > 45 %}
+                                            <span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded font-medium">{{
+                                                sla_val }}</span>
+                                            {% else %}
+                                            <span class="bg-green-100 text-green-700 px-2 py-1 rounded font-medium">{{
+                                                sla_val }}</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+
+                <!-- Detail rows for other status (Completed, Cancel, Closed) -->
+
+                <!-- Completed Breakdown -->
+                {% if item.completed_breakdown|length > 0 %}
+                <tr class="status-detail-row bg-green-50 hidden" id="completed-{{ area_idx }}">
+                    <td colspan="14" class="px-6 py-3">
+                        <div class="text-sm">
+                            <div class="font-medium text-green-800 mb-3">
+                                <i class="fas fa-check-circle mr-2"></i>Completed - สถานะย่อย ({{ item.completed }} คน)
+                            </div>
+                            <div class="space-y-2">
+                                {% for sub in item.completed_breakdown %}
+                                <div class="border border-green-200 rounded-lg overflow-hidden">
+                                    <button
+                                        class="toggle-technician-list w-full flex items-center justify-between px-4 py-2 bg-green-100 hover:bg-green-200 transition cursor-pointer"
+                                        data-target="completed-{{ area_idx }}-{{ loop.index0 }}">
+                                        <span class="font-medium text-green-800">{{ sub.status }}</span>
+                                        <span class="flex items-center gap-2">
+                                            <span class="bg-green-600 text-white px-2 py-1 rounded text-xs">{{ sub.count
+                                                }} คน</span>
+                                            <i class="fas fa-chevron-down toggle-icon-sub text-green-600"></i>
+                                        </span>
+                                    </button>
+                                    <div class="technician-list hidden bg-white"
+                                        id="completed-{{ area_idx }}-{{ loop.index0 }}">
+                                        <table class="min-w-full">
+                                            <thead class="bg-green-50">
+                                                <tr>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-green-700">#
+                                                    </th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-green-700">
+                                                        รหัส Depot</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-green-700">
+                                                        ชื่อ Depot</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-green-700">
+                                                        จังหวัด</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-green-700">
+                                                        ชื่อช่าง</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-100">
+                                                {% for tech in sub.details %}
+                                                <tr class="hover:bg-gray-50">
+                                                    <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}
+                                                    </td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}
+                                                    </td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.province }}</td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{
+                                                        tech.full_name_th }}</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+
+                <!-- Cancel Breakdown -->
+                {% if item.cancel_breakdown|length > 0 %}
+                <tr class="status-detail-row bg-gray-100 hidden" id="cancel-{{ area_idx }}">
+                    <td colspan="14" class="px-6 py-3">
+                        <div class="text-sm">
+                            <div class="font-medium text-gray-700 mb-3">
+                                <i class="fas fa-ban mr-2"></i>Cancel - สถานะย่อย ({{ item.cancel }} คน)
+                            </div>
+                            <div class="space-y-2">
+                                {% for sub in item.cancel_breakdown %}
+                                <div class="border border-gray-300 rounded-lg overflow-hidden">
+                                    <button
+                                        class="toggle-technician-list w-full flex items-center justify-between px-4 py-2 bg-gray-200 hover:bg-gray-300 transition cursor-pointer"
+                                        data-target="cancel-{{ area_idx }}-{{ loop.index0 }}">
+                                        <span class="font-medium text-gray-700">{{ sub.status }}</span>
+                                        <span class="flex items-center gap-2">
+                                            <span class="bg-gray-600 text-white px-2 py-1 rounded text-xs">{{ sub.count
+                                                }} คน</span>
+                                            <i class="fas fa-chevron-down toggle-icon-sub text-gray-600"></i>
+                                        </span>
+                                    </button>
+                                    <div class="technician-list hidden bg-white"
+                                        id="cancel-{{ area_idx }}-{{ loop.index0 }}">
+                                        <table class="min-w-full">
+                                            <thead class="bg-gray-50">
+                                                <tr>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">#
+                                                    </th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                                                        รหัส Depot</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                                                        ชื่อ Depot</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                                                        จังหวัด</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                                                        ชื่อช่าง</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-100">
+                                                {% for tech in sub.details %}
+                                                <tr class="hover:bg-gray-50">
+                                                    <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}
+                                                    </td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}
+                                                    </td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.province }}</td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{
+                                                        tech.full_name_th }}</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+
+                <!-- Closed Breakdown -->
+                {% if item.closed_breakdown|length > 0 %}
+                <tr class="status-detail-row bg-red-50 hidden" id="closed-{{ area_idx }}">
+                    <td colspan="14" class="px-6 py-3">
+                        <div class="text-sm">
+                            <div class="font-medium text-red-800 mb-3">
+                                <i class="fas fa-times-circle mr-2"></i>Closed - สถานะย่อย ({{ item.closed }} คน)
+                            </div>
+                            <div class="space-y-2">
+                                {% for sub in item.closed_breakdown %}
+                                <div class="border border-red-200 rounded-lg overflow-hidden">
+                                    <button
+                                        class="toggle-technician-list w-full flex items-center justify-between px-4 py-2 bg-red-100 hover:bg-red-200 transition cursor-pointer"
+                                        data-target="closed-{{ area_idx }}-{{ loop.index0 }}">
+                                        <span class="font-medium text-red-800">{{ sub.status }}</span>
+                                        <span class="flex items-center gap-2">
+                                            <span class="bg-red-600 text-white px-2 py-1 rounded text-xs">{{ sub.count
+                                                }} คน</span>
+                                            <i class="fas fa-chevron-down toggle-icon-sub text-red-600"></i>
+                                        </span>
+                                    </button>
+                                    <div class="technician-list hidden bg-white"
+                                        id="closed-{{ area_idx }}-{{ loop.index0 }}">
+                                        <table class="min-w-full">
+                                            <thead class="bg-red-50">
+                                                <tr>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-red-700">#
+                                                    </th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-red-700">
+                                                        รหัส Depot</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-red-700">
+                                                        ชื่อ Depot</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-red-700">
+                                                        จังหวัด</th>
+                                                    <th class="px-3 py-2 text-left text-xs font-medium text-red-700">
+                                                        ชื่อช่าง</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-100">
+                                                {% for tech in sub.details %}
+                                                <tr class="hover:bg-gray-50">
+                                                    <td class="px-3 py-2 text-xs text-gray-600">{{ loop.index }}</td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_code }}
+                                                    </td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.depot_name }}
+                                                    </td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800">{{ tech.province }}</td>
+                                                    <td class="px-3 py-2 text-xs text-gray-800 font-medium">{{
+                                                        tech.full_name_th }}</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Onprocess Pivot: แยกตามพื้นที่ (Region) -->
+<div class="bg-white rounded-xl shadow-sm p-5 mb-6">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+        <i class="fas fa-clock text-yellow-500 mr-2"></i>Onprocess: จำนวนช่างแยกตามพื้นที่
+    </h3>
+    {% if onprocess_area_pivot.rows|length > 0 %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full text-sm border border-gray-200">
+            <thead class="bg-amber-100 text-amber-900">
+                <tr>
+                    <th class="px-4 py-3 text-left font-medium border border-gray-200">Region</th>
+                    {% for col in onprocess_area_pivot.columns %}
+                    <th class="px-3 py-3 text-center font-medium border border-gray-200 text-xs">{{ col }}</th>
+                    {% endfor %}
+                    <th class="px-4 py-3 text-center font-medium border border-gray-200 bg-amber-200">Grand Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Grand Total Row (คลิกแต่ละคอลัมน์เพื่อดูรายชื่อช่างที่ค้างในสถานะนั้น) -->
+                <tr class="bg-gray-100 font-bold border-b-2 border-gray-400">
+                    <td class="px-4 py-3 text-gray-800 border border-gray-200">Grand Total</td>
+                    {% for cell in onprocess_area_pivot.grand_total.cells %}
+                    <td class="px-3 py-3 text-center border border-gray-200">
+                        {% if cell > 0 %}
+                        <button class="onprocess-status-link text-amber-700 font-bold hover:bg-amber-200 px-2 py-1 rounded cursor-pointer"
+                            data-status="{{ onprocess_area_pivot.columns[loop.index0] }}">
+                            {{ cell }}<i class="fas fa-arrow-up-right-from-square ml-1 text-[10px] opacity-50"></i>
+                        </button>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                    <td class="px-4 py-3 text-center border border-gray-200 bg-amber-50 text-amber-800">
+                        <button class="onprocess-status-link hover:bg-amber-200 px-2 py-1 rounded cursor-pointer"
+                            data-status="__all__">
+                            {{ onprocess_area_pivot.grand_total.total }}<i class="fas fa-arrow-up-right-from-square ml-1 text-[10px] opacity-50"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% for row in onprocess_area_pivot.rows %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 font-medium text-gray-800 border border-gray-200">{{ row.name }}</td>
+                    {% for cell in row.cells %}
+                    <td class="px-3 py-3 text-center border border-gray-200 text-gray-700">{{ cell if cell > 0 else '' }}</td>
+                    {% endfor %}
+                    <td class="px-4 py-3 text-center font-bold border border-gray-200 bg-amber-50 text-amber-800">{{ row.total }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-gray-400 text-sm">ไม่มีข้อมูลช่างในสถานะ Onprocess</p>
+    {% endif %}
+</div>
+
+<!-- Onprocess Pivot: แยกตามจังหวัด (Province) -->
+<div class="bg-white rounded-xl shadow-sm p-5 mb-6">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+        <i class="fas fa-clock text-yellow-500 mr-2"></i>Onprocess: จำนวนช่างแยกตามจังหวัด
+    </h3>
+    {% if onprocess_province_pivot.rows|length > 0 %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full text-sm border border-gray-200">
+            <thead class="bg-amber-100 text-amber-900">
+                <tr>
+                    <th class="px-4 py-3 text-left font-medium border border-gray-200">Province</th>
+                    {% for col in onprocess_province_pivot.columns %}
+                    <th class="px-3 py-3 text-center font-medium border border-gray-200 text-xs">{{ col }}</th>
+                    {% endfor %}
+                    <th class="px-4 py-3 text-center font-medium border border-gray-200 bg-amber-200">Grand Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Grand Total Row (คลิกแต่ละคอลัมน์เพื่อดูรายชื่อช่างที่ค้างในสถานะนั้น) -->
+                <tr class="bg-gray-100 font-bold border-b-2 border-gray-400">
+                    <td class="px-4 py-3 text-gray-800 border border-gray-200">Grand Total</td>
+                    {% for cell in onprocess_province_pivot.grand_total.cells %}
+                    <td class="px-3 py-3 text-center border border-gray-200">
+                        {% if cell > 0 %}
+                        <button class="onprocess-status-link text-amber-700 font-bold hover:bg-amber-200 px-2 py-1 rounded cursor-pointer"
+                            data-status="{{ onprocess_province_pivot.columns[loop.index0] }}">
+                            {{ cell }}<i class="fas fa-arrow-up-right-from-square ml-1 text-[10px] opacity-50"></i>
+                        </button>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                    <td class="px-4 py-3 text-center border border-gray-200 bg-amber-50 text-amber-800">
+                        <button class="onprocess-status-link hover:bg-amber-200 px-2 py-1 rounded cursor-pointer"
+                            data-status="__all__">
+                            {{ onprocess_province_pivot.grand_total.total }}<i class="fas fa-arrow-up-right-from-square ml-1 text-[10px] opacity-50"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% for row in onprocess_province_pivot.rows %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 font-medium text-gray-800 border border-gray-200">{{ row.name }}</td>
+                    {% for cell in row.cells %}
+                    <td class="px-3 py-3 text-center border border-gray-200 text-gray-700">{{ cell if cell > 0 else '' }}</td>
+                    {% endfor %}
+                    <td class="px-4 py-3 text-center font-bold border border-gray-200 bg-amber-50 text-amber-800">{{ row.total }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-gray-400 text-sm">ไม่มีข้อมูลช่างในสถานะ Onprocess</p>
+    {% endif %}
+</div>
+
+<!-- Onprocess Detail: รายละเอียดช่างที่ยังขึ้นทะเบียนไม่เรียบร้อย -->
+<div class="bg-white rounded-xl shadow-sm p-5 mb-6">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+        <i class="fas fa-user-clock text-yellow-500 mr-2"></i>รายละเอียดช่างที่ยังขึ้นทะเบียนไม่เรียบร้อย (Onprocess)
+        <span class="ml-2 bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm">{{ onprocess_details|length }} คน</span>
+    </h3>
+    {% if onprocess_details|length > 0 %}
+    <div class="mb-3 flex flex-col md:flex-row gap-3 md:items-center">
+        <input type="text" id="onprocessDetailSearch"
+            class="w-full md:w-96 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+            placeholder="ค้นหา: ชื่อช่าง / Depot / จังหวัด / พื้นที่ / สถานะ ...">
+        <button id="onprocessExportBtn"
+            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium cursor-pointer whitespace-nowrap">
+            <i class="fas fa-file-excel mr-2"></i>Export Excel
+        </button>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-xs border border-gray-200" id="onprocessDetailTable">
+            <thead class="bg-gray-800 text-white" style="position: sticky; top: 0; z-index: 10;">
+                <tr>
+                    <th class="px-2 py-2 text-center font-medium whitespace-nowrap">ลำดับ</th>
+                    <th class="px-2 py-2 text-left font-medium whitespace-nowrap">ชื่อช่าง</th>
+                    <th class="px-2 py-2 text-left font-medium">Depot</th>
+                    <th class="px-2 py-2 text-left font-medium whitespace-nowrap">รหัส Depot</th>
+                    <th class="px-2 py-2 text-left font-medium whitespace-nowrap">จังหวัด</th>
+                    <th class="px-2 py-2 text-left font-medium whitespace-nowrap">พื้นที่ (Area)</th>
+                    <th class="px-2 py-2 text-center font-medium whitespace-nowrap">ผลอบรมทฤษฎี</th>
+                    <th class="px-2 py-2 text-center font-medium whitespace-nowrap">ผล OJT</th>
+                    <th class="px-2 py-2 text-center font-medium whitespace-nowrap">สถานะ</th>
+                    <th class="px-2 py-2 text-left font-medium" style="min-width: 220px;">หมายเหตุ (ติดที่อะไร)</th>
+                    <th class="px-2 py-2 text-center font-medium whitespace-nowrap">Result</th>
+                    <th class="px-2 py-2 text-center font-medium whitespace-nowrap">รอบอบรม</th>
+                    <th class="px-2 py-2 text-center font-medium whitespace-nowrap">เดือนอบรม</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for t in onprocess_details %}
+                <tr class="hover:bg-yellow-50">
+                    <td class="px-2 py-2 text-center text-gray-600">{{ loop.index }}</td>
+                    <td class="px-2 py-2 font-medium text-gray-800">{{ t.full_name_th }}</td>
+                    <td class="px-2 py-2 text-gray-700">{{ t.depot_name }}</td>
+                    <td class="px-2 py-2 text-gray-700 whitespace-nowrap">{{ t.depot_code }}</td>
+                    <td class="px-2 py-2 text-gray-700">{{ t.province }}</td>
+                    <td class="px-2 py-2 text-gray-700 whitespace-nowrap">{{ t.area }}</td>
+                    {# ผลอบรมทฤษฎี / ผล OJT: ไม่ผ่าน=แดง, ผ่าน=เขียว, Onprocess=เหลือง, อื่นๆ=เทา #}
+                    {% for v in [t.theory_training_result, t.on_the_job_result] %}
+                    <td class="px-2 py-2 text-center whitespace-nowrap">
+                        {% if 'ไม่ผ่าน' in v %}
+                        <span class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-medium">{{ v }}</span>
+                        {% elif 'ผ่าน' in v %}
+                        <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-medium">{{ v }}</span>
+                        {% elif v and v != '-' %}
+                        <span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs font-medium">{{ v }}</span>
+                        {% else %}
+                        <span class="text-gray-400">-</span>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                    <td class="px-2 py-2 text-center whitespace-nowrap">
+                        <span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-xs font-medium">{{ t.status }}</span>
+                    </td>
+                    <td class="px-2 py-2 text-gray-700">{% if t.remark %}{{ t.remark }}{% else %}<span class="text-gray-300">-</span>{% endif %}</td>
+                    <td class="px-2 py-2 text-center text-yellow-600 font-medium whitespace-nowrap">{{ t.result }}</td>
+                    <td class="px-2 py-2 text-center text-gray-700 whitespace-nowrap">{{ t.training_round_date }}</td>
+                    <td class="px-2 py-2 text-center text-gray-700 whitespace-nowrap">{{ t.training_month }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-gray-400 text-sm">ไม่มีข้อมูลช่างในสถานะ Onprocess</p>
+    {% endif %}
+</div>
+
+<!-- ข้อมูลช่าง Onprocess ทั้งหมด (ใช้สำหรับ modal ตอนคลิก Grand Total) -->
+<script type="application/json" id="onprocessDataJson">{{ onprocess_details | tojson }}</script>
+
+<!-- Modal: รายชื่อช่างที่ค้างในสถานะที่เลือก -->
+<div id="onprocessStatusModal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" id="onprocessModalBackdrop"></div>
+    <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[88vh] flex flex-col">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-800">
+                    <i class="fas fa-user-clock text-amber-500 mr-2"></i>ช่างที่ค้างดำเนินการ — สถานะ
+                    <span id="onprocessModalStatus" class="text-amber-700"></span>
+                </h3>
+                <p class="text-sm text-gray-400 mt-0.5"><span id="onprocessModalCount">0</span> คน</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="onprocessModalExportBtn"
+                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium cursor-pointer whitespace-nowrap">
+                    <i class="fas fa-file-excel mr-2"></i>Export Excel
+                </button>
+                <button id="onprocessModalCloseBtn"
+                    class="text-gray-400 hover:text-gray-700 hover:bg-gray-100 w-9 h-9 rounded-lg cursor-pointer flex items-center justify-center">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+        </div>
+        <!-- Modal Body -->
+        <div class="overflow-auto p-4">
+            <table class="w-full text-xs border border-gray-200" id="onprocessModalTable">
+                <thead class="bg-gray-800 text-white" style="position: sticky; top: 0; z-index: 10;">
+                    <tr>
+                        <th class="px-2 py-2 text-center font-medium whitespace-nowrap">ลำดับ</th>
+                        <th class="px-2 py-2 text-left font-medium whitespace-nowrap">ชื่อช่าง</th>
+                        <th class="px-2 py-2 text-left font-medium">Depot</th>
+                        <th class="px-2 py-2 text-left font-medium whitespace-nowrap">รหัส Depot</th>
+                        <th class="px-2 py-2 text-left font-medium whitespace-nowrap">จังหวัด</th>
+                        <th class="px-2 py-2 text-left font-medium whitespace-nowrap">พื้นที่ (Area)</th>
+                        <th class="px-2 py-2 text-center font-medium whitespace-nowrap">ผลอบรมทฤษฎี</th>
+                        <th class="px-2 py-2 text-center font-medium whitespace-nowrap">ผล OJT</th>
+                        <th class="px-2 py-2 text-center font-medium whitespace-nowrap">สถานะ</th>
+                        <th class="px-2 py-2 text-left font-medium" style="min-width: 220px;">หมายเหตุ (ติดที่อะไร)</th>
+                        <th class="px-2 py-2 text-center font-medium whitespace-nowrap">รอบอบรม</th>
+                        <th class="px-2 py-2 text-center font-medium whitespace-nowrap">เดือนอบรม</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200" id="onprocessModalBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+    // ค้นหา + Export Excel ตารางรายละเอียดช่าง Onprocess
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchInput = document.getElementById('onprocessDetailSearch');
+        const detailTable = document.getElementById('onprocessDetailTable');
+        if (searchInput && detailTable) {
+            searchInput.addEventListener('input', function () {
+                const keyword = this.value.trim().toLowerCase();
+                detailTable.querySelectorAll('tbody tr').forEach(function (row) {
+                    row.style.display = row.textContent.toLowerCase().includes(keyword) ? '' : 'none';
+                });
+            });
+        }
+
+        const exportBtn = document.getElementById('onprocessExportBtn');
+        if (exportBtn && detailTable) {
+            exportBtn.addEventListener('click', function () {
+                // ดึงหัวตาราง + เฉพาะแถวที่แสดงอยู่ (เคารพผลการค้นหา)
+                const headers = Array.from(detailTable.querySelectorAll('thead th'))
+                    .map(th => th.textContent.trim());
+                const rows = Array.from(detailTable.querySelectorAll('tbody tr'))
+                    .filter(tr => tr.style.display !== 'none')
+                    .map(tr => Array.from(tr.querySelectorAll('td')).map(td => td.textContent.trim()));
+
+                const ws = XLSX.utils.aoa_to_sheet([headers].concat(rows));
+                // ตั้งความกว้างคอลัมน์ตามเนื้อหาที่ยาวที่สุด
+                ws['!cols'] = headers.map(function (h, i) {
+                    let w = h.length;
+                    rows.forEach(function (r) { w = Math.max(w, (r[i] || '').length); });
+                    return { wch: Math.min(w + 4, 60) };
+                });
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Onprocess');
+                XLSX.writeFile(wb, 'onprocess_technicians.xlsx');
+            });
+        }
+
+        // ===== Modal: คลิก Grand Total เพื่อดูรายชื่อช่างที่ค้างในแต่ละสถานะ =====
+        let onprocessData = [];
+        try {
+            onprocessData = JSON.parse(document.getElementById('onprocessDataJson').textContent || '[]');
+        } catch (e) { onprocessData = []; }
+
+        const modal = document.getElementById('onprocessStatusModal');
+        const modalBody = document.getElementById('onprocessModalBody');
+        const modalStatus = document.getElementById('onprocessModalStatus');
+        const modalCount = document.getElementById('onprocessModalCount');
+        let currentModalRows = [];   // เก็บข้อมูลที่กรองแล้วไว้ใช้ตอน export
+        let currentModalStatus = '';
+
+        // สร้าง badge สี ผ่าน/ไม่ผ่าน
+        function resultBadge(v) {
+            if (!v || v === '-') return '<span class="text-gray-400">-</span>';
+            if (v.indexOf('ไม่ผ่าน') !== -1)
+                return '<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-medium">' + v + '</span>';
+            if (v.indexOf('ผ่าน') !== -1)
+                return '<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-medium">' + v + '</span>';
+            return '<span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-xs font-medium">' + v + '</span>';
+        }
+
+        function escapeHtml(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function openModal(status) {
+            currentModalStatus = status;
+            const rows = (status === '__all__')
+                ? onprocessData
+                : onprocessData.filter(function (t) { return (t.status || '') === status; });
+            currentModalRows = rows;
+
+            modalStatus.textContent = (status === '__all__') ? 'ทั้งหมด' : status;
+            modalCount.textContent = rows.length;
+
+            modalBody.innerHTML = rows.map(function (t, i) {
+                return '<tr class="hover:bg-yellow-50">' +
+                    '<td class="px-2 py-2 text-center text-gray-600">' + (i + 1) + '</td>' +
+                    '<td class="px-2 py-2 font-medium text-gray-800">' + escapeHtml(t.full_name_th) + '</td>' +
+                    '<td class="px-2 py-2 text-gray-700">' + escapeHtml(t.depot_name) + '</td>' +
+                    '<td class="px-2 py-2 text-gray-700 whitespace-nowrap">' + escapeHtml(t.depot_code) + '</td>' +
+                    '<td class="px-2 py-2 text-gray-700">' + escapeHtml(t.province) + '</td>' +
+                    '<td class="px-2 py-2 text-gray-700 whitespace-nowrap">' + escapeHtml(t.area) + '</td>' +
+                    '<td class="px-2 py-2 text-center whitespace-nowrap">' + resultBadge(t.theory_training_result) + '</td>' +
+                    '<td class="px-2 py-2 text-center whitespace-nowrap">' + resultBadge(t.on_the_job_result) + '</td>' +
+                    '<td class="px-2 py-2 text-center whitespace-nowrap"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-xs font-medium">' + escapeHtml(t.status) + '</span></td>' +
+                    '<td class="px-2 py-2 text-gray-700">' + (t.remark ? escapeHtml(t.remark) : '<span class="text-gray-300">-</span>') + '</td>' +
+                    '<td class="px-2 py-2 text-center text-gray-700 whitespace-nowrap">' + escapeHtml(t.training_round_date) + '</td>' +
+                    '<td class="px-2 py-2 text-center text-gray-700 whitespace-nowrap">' + escapeHtml(t.training_month) + '</td>' +
+                    '</tr>';
+            }).join('') || '<tr><td colspan="12" class="px-4 py-6 text-center text-gray-400">ไม่มีข้อมูล</td></tr>';
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.body.style.overflow = '';
+        }
+
+        // ผูก event ให้ทุกปุ่มใน Grand Total ของทั้ง 2 ตาราง
+        document.querySelectorAll('.onprocess-status-link').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                openModal(this.getAttribute('data-status'));
+            });
+        });
+
+        document.getElementById('onprocessModalCloseBtn').addEventListener('click', closeModal);
+        document.getElementById('onprocessModalBackdrop').addEventListener('click', closeModal);
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
+        });
+
+        // Export Excel ใน modal (เฉพาะข้อมูลสถานะที่กำลังดู)
+        document.getElementById('onprocessModalExportBtn').addEventListener('click', function () {
+            const headers = ['ลำดับ', 'ชื่อช่าง', 'Depot', 'รหัส Depot', 'จังหวัด', 'พื้นที่ (Area)',
+                'ผลอบรมทฤษฎี', 'ผล OJT', 'สถานะ', 'หมายเหตุ (ติดที่อะไร)', 'รอบอบรม', 'เดือนอบรม'];
+            const rows = currentModalRows.map(function (t, i) {
+                return [i + 1, t.full_name_th, t.depot_name, t.depot_code, t.province, t.area,
+                    t.theory_training_result, t.on_the_job_result, t.status, t.remark, t.training_round_date, t.training_month];
+            });
+            const ws = XLSX.utils.aoa_to_sheet([headers].concat(rows));
+            ws['!cols'] = headers.map(function (h, i) {
+                let w = h.length;
+                rows.forEach(function (r) { w = Math.max(w, String(r[i] == null ? '' : r[i]).length); });
+                return { wch: Math.min(w + 4, 60) };
+            });
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Onprocess');
+            const statusName = (currentModalStatus === '__all__') ? 'all' : currentModalStatus;
+            XLSX.writeFile(wb, 'onprocess_' + statusName.replace(/[\\/?*:\[\]]/g, '_') + '.xlsx');
+        });
+    });
+</script>
+
+<!-- Depot Agent Stats -->
+<div class="flex flex-col lg:flex-row gap-6 mb-6">
+    <!-- Depot Agent Stats Table -->
+    <div class="bg-white rounded-xl shadow-sm p-5 w-full">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+            <i class="fas fa-building text-purple-500 mr-2"></i>สรุปจำนวนช่างตามตัวแทน
+        </h3>
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm" id="depotAgentTable">
+                <thead class="bg-gray-800 text-white sticky top-0">
+                    <tr>
+                        <th class="px-2 py-2 text-left font-medium text-xs">#</th>
+                        <th class="px-2 py-2 text-left font-medium text-xs cursor-pointer hover:bg-gray-700 sortable-header"
+                            data-sort="area">Area <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                        <th class="px-2 py-2 text-left font-medium text-xs cursor-pointer hover:bg-gray-700 sortable-header"
+                            data-sort="depot_code">รหัส <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                        <th class="px-2 py-2 text-left font-medium text-xs cursor-pointer hover:bg-gray-700 sortable-header"
+                            data-sort="depot_name" style="max-width: 150px;">ตัวแทน <i
+                                class="fas fa-sort text-gray-400 ml-1"></i></th>
+                        <th class="px-2 py-2 text-left font-medium text-xs cursor-pointer hover:bg-gray-700 sortable-header"
+                            data-sort="province">จังหวัด <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                        <th class="px-2 py-2 text-center font-medium text-xs cursor-pointer hover:bg-gray-700 sortable-header"
+                            data-sort="total">ลงทะเบียน <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                        <th class="px-2 py-2 text-center font-medium text-xs cursor-pointer hover:bg-gray-700 bg-green-700 sortable-header"
+                            data-sort="completed">สำเร็จ <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                        <th class="px-2 py-2 text-center font-medium text-xs cursor-pointer hover:bg-gray-700 bg-blue-700 sortable-header"
+                            data-sort="success_rate">% <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                    </tr>
+                    <!-- Total Row -->
+                    <tr class="bg-gray-100 font-bold border-b-2 border-gray-400">
+                        <td class="px-2 py-2 text-gray-800 text-xs" colspan="5">Total ({{ depot_agents|length }} ตัวแทน)
+                        </td>
+                        <td class="px-2 py-2 text-center text-gray-800 text-xs">{{ depot_agents|sum(attribute='total')
+                            }}</td>
+                        <td class="px-2 py-2 text-center text-green-600 text-xs">{{
+                            depot_agents|sum(attribute='completed') }}</td>
+                        <td class="px-2 py-2 text-center text-xs">
+                            {% set total_reg = depot_agents|sum(attribute='total') %}
+                            {% set total_comp = depot_agents|sum(attribute='completed') %}
+                            <span class="px-1 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                {{ ((total_comp / total_reg * 100) if total_reg > 0 else 0)|round(1) }}%
+                            </span>
+                        </td>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200" id="depotAgentTableBody">
+                    {% for agent in depot_agents %}
+                    <tr class="hover:bg-gray-50" data-area="{{ agent.area }}" data-depot_code="{{ agent.depot_code }}"
+                        data-depot_name="{{ agent.depot_name }}" data-province="{{ agent.province }}"
+                        data-total="{{ agent.total }}" data-completed="{{ agent.completed }}"
+                        data-success_rate="{{ agent.success_rate }}">
+                        <td class="px-2 py-1 text-gray-600 text-xs row-index">{{ loop.index }}</td>
+                        <td class="px-2 py-1 text-gray-800 font-medium text-xs">{{ agent.area }}</td>
+                        <td class="px-2 py-1 text-gray-600 text-xs">{{ agent.depot_code }}</td>
+                        <td class="px-2 py-1 text-gray-800 text-xs truncate" style="max-width: 150px;"
+                            title="{{ agent.depot_name }}">{{ agent.depot_name }}</td>
+                        <td class="px-2 py-1 text-gray-600 text-xs">{{ agent.province }}</td>
+                        <td class="px-2 py-1 text-center font-medium text-xs">{{ agent.total }}</td>
+                        <td class="px-2 py-1 text-center text-green-600 font-medium text-xs">{{ agent.completed }}</td>
+                        <td class="px-2 py-1 text-center">
+                            <span class="px-1 py-0.5 rounded text-xs font-medium 
+                                {% if agent.success_rate >= 80 %}bg-green-100 text-green-800
+                                {% elif agent.success_rate >= 50 %}bg-yellow-100 text-yellow-800
+                                {% else %}bg-red-100 text-red-800{% endif %}">
+                                {{ agent.success_rate }}%
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+

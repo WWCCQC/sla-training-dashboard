@@ -1,0 +1,22 @@
+{% extends "layout.html" %}
+
+{% block title %}หน้าหลัก : สรุปผู้บริหาร - SLA Training{% endblock %}
+
+{% block page_title %}สถานะการอบรมและการขึ้นทะเบียนช่าง{% endblock %}
+{% block page_subtitle %}อัปเดตข้อมูลล่าสุด: {{ data_updated_as | default('N/A', true) }}{% endblock %}
+
+{% block topbar_actions %}
+<button type="button" id="presentationToggleBtn"
+    class="no-print inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 cursor-pointer">
+    <i class="fas fa-expand"></i>
+    <span id="presentationToggleText">โหมดนำเสนอ</span>
+</button>
+{% endblock %}
+
+{% block content %}
+{% include "_executive_home_body.html" %}
+{% endblock %}
+
+{% block scripts %}
+{% include "_executive_home_scripts.html" %}
+{% endblock %}
