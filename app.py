@@ -131,6 +131,15 @@ def step_finished_mask(df, status_col):
         return pd.Series(True, index=df.index)
     return df[status_col].astype(str).str.strip().str.lower() != 'onprocess'
 
+def mask_pending_results(result, theory, ojt):
+    """ช่างที่ยังดำเนินการอยู่ (Onprocess): แสดงเฉพาะผล 'ผ่าน' ที่กรอกในฐานข้อมูลแล้ว
+    ค่าอื่น (ว่าง / Onprocess / 'ไม่ผ่าน' ที่ถูกเติมไว้ล่วงหน้า) แสดงเป็น '-'"""
+    if str(result or '').strip() != 'Onprocess':
+        return theory, ojt
+    keep = lambda v: v if str(v or '').strip() == 'ผ่าน' else '-'
+    return keep(theory), keep(ojt)
+
+
 # ===============================
 # CONTEXT PROCESSOR
 # ===============================
@@ -917,6 +926,8 @@ def get_onprocess_detail_rows(df, result='Onprocess'):
         if not remark_val and 'remark' in r.index and pd.notna(r['remark']):
             remark_val = str(r['remark']).strip()
         row['remark'] = remark_val
+        row['theory_training_result'], row['on_the_job_result'] = mask_pending_results(
+            row['result'], row['theory_training_result'], row['on_the_job_result'])
         rows.append(row)
 
     # เรียงตามเดือนอบรมล่าสุดก่อน (training_month format MonYY เช่น Jun26)
@@ -1689,6 +1700,8 @@ def get_technician_list(df, status_filter=None, area_filter=None, province_filte
     
     technicians = []
     for _, row in data_df.iterrows():
+        theory_result, ojt_result = mask_pending_results(
+            row.get('result'), safe_str(row.get('result_round')), safe_str(row.get('result_round_ojt')))
         technicians.append({
             'no': safe_str(row.get('no')),
             'name': safe_str(row.get('full_name_th')),
@@ -1699,8 +1712,8 @@ def get_technician_list(df, status_filter=None, area_filter=None, province_filte
             'area': safe_str(row.get('area')),
             'education': safe_str(row.get('education')),
             'workgroup': safe_str(row.get('workgroup_status')),
-            'theory_result': safe_str(row.get('result_round')),
-            'ojt_result': safe_str(row.get('result_round_ojt')),
+            'theory_result': theory_result,
+            'ojt_result': ojt_result,
             'status': safe_str(row.get('status')),
             'result': safe_str(row.get('result')),
             'sla_total': safe_int(row.get('sla_total')),
