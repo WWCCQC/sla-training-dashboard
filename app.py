@@ -1296,6 +1296,63 @@ def get_executive_home_insight(monthly, all_monthly, sla_analysis_steps, onproce
     return insight
 
 
+def get_current_month_insight(df):
+    """Summary insight ของเดือนปัจจุบัน (เวลาไทย): ลงทะเบียน/ขึ้นทะเบียนสำเร็จ เทียบเดือนที่แล้ว
+    + พื้นที่ที่ลงทะเบียนมากที่สุด และจังหวัดที่มากที่สุดในพื้นที่นั้น
+    ถ้าเดือนปัจจุบันยังไม่มีข้อมูล ใช้เดือนล่าสุดที่มีข้อมูลแทน"""
+    if df.empty or 'training_month' not in df.columns:
+        return None
+    months = df['training_month'].astype(str).str.strip()
+    month_dt = pd.to_datetime(months, format='%b%y', errors='coerce')
+    now = pd.Timestamp.now(tz='Asia/Bangkok')
+    cur = pd.Timestamp(year=now.year, month=now.month, day=1)
+    if not (month_dt == cur).any():
+        if month_dt.notna().sum() == 0:
+            return None
+        cur = month_dt.max()
+    prev = cur - pd.DateOffset(months=1)
+    cur_df, prev_df = df[month_dt == cur], df[month_dt == prev]
+
+    def counts(part):
+        res = part['result'] if 'result' in part.columns else pd.Series(dtype=str)
+        return {'total': len(part), 'completed': int((res == 'Completed').sum())}
+
+    def compare(key):
+        c, p = counts(cur_df)[key], counts(prev_df)[key]
+        delta = c - p
+        return {'cur': c, 'prev': p, 'delta': delta,
+                'pct': round(delta / p * 100, 1) if p else None}
+
+    top_area = top_province = None
+    if 'area' in cur_df.columns and not cur_df.empty:
+        area_counts = cur_df['area'].dropna().astype(str).str.strip()
+        area_counts = area_counts[area_counts != ''].value_counts()
+        if len(area_counts):
+            name, n = area_counts.index[0], int(area_counts.iloc[0])
+            top_area = {'name': name, 'count': n, 'share': round(n / len(cur_df) * 100, 1)}
+            if 'province' in cur_df.columns:
+                prov = cur_df.loc[cur_df['area'].astype(str).str.strip() == name, 'province']
+                prov = prov.dropna().astype(str).str.strip()
+                prov = prov[prov != ''].value_counts()
+                if len(prov):
+                    top_n = int(prov.iloc[0])  # จังหวัดที่เท่ากันอันดับ 1 แสดงทั้งหมด
+                    top_province = {'names': [str(x) for x in prov[prov == top_n].index], 'count': top_n}
+
+    th_months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
+    return {
+        'month_label': cur.strftime('%b %Y'),
+        'prev_label': prev.strftime('%b %Y'),
+        'month_th': f"{th_months[cur.month - 1]} {cur.year + 543}",
+        'prev_th': f"{th_months[prev.month - 1]} {prev.year + 543}",
+        'is_current': cur.year == now.year and cur.month == now.month,
+        'as_of': now.strftime('%d %b %Y'),
+        'registered': compare('total'),
+        'completed': compare('completed'),
+        'top_area': top_area,
+        'top_province': top_province,
+    }
+
+
 def get_overdue_backlog(df):
     """ช่าง Onprocess ทุกรุ่นที่เกิน/ใกล้เกิน SLA รวม (sla_total ของ Onprocess = อายุงานค้างถึงวันข้อมูลล่าสุด)"""
     result = {'count': 0, 'near_count': 0, 'max_days': 0, 'by_month': [], 'top_status': '', 'top_area': ''}
@@ -1896,6 +1953,8 @@ def executive_home():
         overdue=get_overdue_backlog(area_filtered_df),
     )
 
+    month_insight = get_current_month_insight(area_filtered_df)
+
     total = summary.get('total', 0)
     funnel = {
         'stages': [
@@ -1937,6 +1996,7 @@ def executive_home():
         onprocess_details=onprocess_details,
         completed_details=completed_details,
         exec_insight=exec_insight,
+        month_insight=month_insight,
         funnel=funnel,
         monthly=monthly,
         all_monthly=all_monthly_for_area,

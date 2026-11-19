@@ -645,26 +645,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // Pivot Area / Province sub-toggle inside Tab 2
-    const pivotAreaBtn = document.getElementById('pivotAreaBtn');
-    const pivotProvinceBtn = document.getElementById('pivotProvinceBtn');
-    const pivotAreaCont = document.getElementById('pivotAreaContainer');
-    const pivotProvCont = document.getElementById('pivotProvinceContainer');
-    if (pivotAreaBtn && pivotProvinceBtn) {
-        pivotAreaBtn.addEventListener('click', function () {
-            pivotAreaCont.classList.remove('hidden');
-            pivotProvCont.classList.add('hidden');
-            pivotAreaBtn.classList.add('bg-white', 'text-slate-800', 'shadow-sm', 'font-semibold');
-            pivotProvinceBtn.classList.remove('bg-white', 'text-slate-800', 'shadow-sm', 'font-semibold');
-        });
-        pivotProvinceBtn.addEventListener('click', function () {
-            pivotProvCont.classList.remove('hidden');
-            pivotAreaCont.classList.add('hidden');
-            pivotProvinceBtn.classList.add('bg-white', 'text-slate-800', 'shadow-sm', 'font-semibold');
-            pivotAreaBtn.classList.remove('bg-white', 'text-slate-800', 'shadow-sm', 'font-semibold');
-        });
-    }
-
     // ===== 5. Depot Tab Filter & Sorting =====
     const depotSearch = document.getElementById('execDepotSearch');
     const depotModeFilter = document.getElementById('execDepotModeFilter');

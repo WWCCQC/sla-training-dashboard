@@ -543,26 +543,79 @@
                 <span class="exec-icon3d !w-8 !h-8 !rounded-lg !text-sm"><i class="fas fa-lightbulb"></i></span>
                 Summary insight
             </h3>
-            <span class="text-xs text-slate-400">{{ active_period_short }}</span>
+            {% if month_insight %}
+            <span class="text-[11px] font-semibold bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full">
+                {{ 'เดือนปัจจุบัน' if month_insight.is_current else 'เดือนล่าสุด' }}: {{ month_insight.month_label }}
+            </span>
+            {% endif %}
         </div>
-        {% if exec_insight.has_data %}
-        <ol class="space-y-1">
-            {% for rec in exec_insight.recommendations %}
-            {% set r_tone = rec.tone if rec is mapping else 'info' %}
-            <li class="exec-reveal flex items-start gap-3 rounded-xl px-3 py-2.5 hover:bg-slate-50 transition" style="--d:{{ loop.index0 * 70 }}ms">
-                <span class="mt-1.5 exec-dot tone-{{ r_tone }} {{ 'exec-live' if r_tone == 'risk' }}"></span>
-                <span class="text-sm text-slate-700 leading-relaxed">{{ rec.text if rec is mapping else rec }}</span>
-            </li>
-            {% else %}
-            <li class="text-sm text-slate-400">ไม่มีประเด็นเฝ้าระวังเพิ่มเติมในช่วงที่เลือก</li>
-            {% endfor %}
-        </ol>
-        <div class="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-4 text-[11px] text-slate-500">
-            <span class="flex items-center gap-1.5"><span class="exec-dot tone-risk"></span>ต้องเร่งแก้</span>
-            <span class="flex items-center gap-1.5"><span class="exec-dot tone-warn"></span>ติดตาม</span>
-            <span class="flex items-center gap-1.5"><span class="exec-dot tone-good"></span>ตามเป้า</span>
-            <span class="flex items-center gap-1.5"><span class="exec-dot tone-info"></span>ข้อมูลประกอบ</span>
+        {% macro mi_delta(c, unit='คน') %}
+            {% if c.prev == 0 and c.cur == 0 %}<span class="mi-chip is-flat">เท่าเดิม</span>
+            {% elif c.delta > 0 %}<span class="mi-chip is-up"><i class="fas fa-arrow-up text-[9px]"></i> {{ c.delta }} {{ unit }}{% if c.pct is not none %} (+{{ c.pct }}%){% endif %}</span>
+            {% elif c.delta < 0 %}<span class="mi-chip is-down"><i class="fas fa-arrow-down text-[9px]"></i> {{ -c.delta }} {{ unit }}{% if c.pct is not none %} ({{ c.pct }}%){% endif %}</span>
+            {% else %}<span class="mi-chip is-flat">เท่าเดิม</span>{% endif %}
+        {% endmacro %}
+        <style>
+            .mi-item { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border-radius: 14px; transition: background .15s; }
+            .mi-item:hover { background: #F8FAFC; }
+            .mi-ic { flex-shrink: 0; width: 36px; height: 36px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+            .mi-num { font-size: 22px; font-weight: 800; letter-spacing: -.02em; color: #0F172A; line-height: 1.1; }
+            .mi-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+            .mi-chip.is-up { background: #ECFDF5; color: #047857; }
+            .mi-chip.is-down { background: #FFF1F2; color: #BE123C; }
+            .mi-chip.is-flat { background: #F1F5F9; color: #475569; }
+        </style>
+        {% if month_insight %}
+        {% set mi = month_insight %}
+        <div class="space-y-1">
+            <div class="mi-item exec-reveal" style="--d:0ms">
+                <div class="mi-ic bg-indigo-50 text-indigo-600"><i class="fas fa-user-plus"></i></div>
+                <div class="min-w-0 flex-1">
+                    <p class="text-xs font-semibold text-slate-500">ลงทะเบียนอบรม</p>
+                    <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 mt-0.5">
+                        <span class="mi-num">{{ mi.registered.cur }}</span><span class="text-xs text-slate-500">คน</span>
+                        {{ mi_delta(mi.registered) }}
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">เดือนที่แล้ว ({{ mi.prev_label }}) {{ mi.registered.prev }} คน</p>
+                </div>
+            </div>
+            <div class="mi-item exec-reveal" style="--d:70ms">
+                <div class="mi-ic bg-emerald-50 text-emerald-600"><i class="fas fa-circle-check"></i></div>
+                <div class="min-w-0 flex-1">
+                    <p class="text-xs font-semibold text-slate-500">ขึ้นทะเบียนสำเร็จ</p>
+                    <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 mt-0.5">
+                        <span class="mi-num">{{ mi.completed.cur }}</span><span class="text-xs text-slate-500">คน</span>
+                        {{ mi_delta(mi.completed) }}
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">
+                        เดือนที่แล้ว ({{ mi.prev_label }}) {{ mi.completed.prev }} คน
+                        {% if mi.is_current %}<span class="text-slate-400">• เดือนยังไม่ปิด ข้อมูลถึง {{ mi.as_of }} ช่างรุ่นนี้ส่วนใหญ่ยังอยู่ระหว่างดำเนินการ</span>{% endif %}
+                    </p>
+                </div>
+            </div>
+            <div class="mi-item exec-reveal" style="--d:140ms">
+                <div class="mi-ic bg-amber-50 text-amber-600"><i class="fas fa-location-dot"></i></div>
+                <div class="min-w-0 flex-1">
+                    <p class="text-xs font-semibold text-slate-500">พื้นที่ที่ลงทะเบียนมากที่สุด</p>
+                    {% if mi.top_area %}
+                    <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 mt-0.5">
+                        <span class="text-lg font-extrabold text-slate-900">{{ mi.top_area.name }}</span>
+                        <span class="text-sm font-semibold text-slate-700">{{ mi.top_area.count }} คน</span>
+                        <span class="mi-chip is-flat">{{ mi.top_area.share }}% ของทั้งหมด</span>
+                    </div>
+                    {% if mi.top_province %}
+                    <p class="text-xs text-slate-500 mt-1">
+                        จังหวัดที่มากที่สุด: <span class="font-semibold text-slate-800">{{ mi.top_province.names | join(', ') }}</span>
+                        ({{ mi.top_province.count }} คน{{ ' ต่อจังหวัด' if mi.top_province.names|length > 1 }})
+                    </p>
+                    {% endif %}
+                    {% else %}
+                    <p class="text-sm text-slate-400 mt-0.5">ไม่มีข้อมูลพื้นที่</p>
+                    {% endif %}
+                </div>
+            </div>
         </div>
+        {% if selected_areas %}<p class="mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-400">เฉพาะพื้นที่ที่เลือก: {{ selected_areas | join(', ') }}</p>{% endif %}
         {% else %}
         <p class="text-sm text-slate-400 text-center py-6">ไม่มีข้อมูลในช่วงเวลาหรือพื้นที่ที่เลือก</p>
         {% endif %}
@@ -827,8 +880,13 @@
             </button>
             <button type="button" class="exec-tab-btn px-4 py-2.5 text-xs sm:text-sm font-medium rounded-t-lg border-b-2 border-transparent text-slate-600 hover:text-slate-900 hover:bg-white/60 cursor-pointer"
                 data-tab="tab-bottleneck">
-                <i class="fas fa-clock mr-1.5"></i>คอขวดงานค้าง (Onprocess)
+                <i class="fas fa-clock mr-1.5"></i>Onprocess by RBM
                 <span class="ml-1 bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full text-[11px]">{{ summary.onprocess }}</span>
+            </button>
+            <button type="button" class="exec-tab-btn px-4 py-2.5 text-xs sm:text-sm font-medium rounded-t-lg border-b-2 border-transparent text-slate-600 hover:text-slate-900 hover:bg-white/60 cursor-pointer"
+                data-tab="tab-province">
+                <i class="fas fa-map-location-dot mr-1.5"></i>Onprocess by Province
+                <span class="ml-1 bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full text-[11px]">{{ onprocess_province_pivot.rows|length }}</span>
             </button>
             <button type="button" class="exec-tab-btn px-4 py-2.5 text-xs sm:text-sm font-medium rounded-t-lg border-b-2 border-transparent text-slate-600 hover:text-slate-900 hover:bg-white/60 cursor-pointer"
                 data-tab="tab-depot">
@@ -916,24 +974,14 @@
     </div>
         </div>
 
-        <!-- Tab 2: Onprocess Bottleneck Matrix (Region / Province Toggle) -->
+        <!-- Tab 2: Onprocess by RBM (Area) -->
         <div id="tab-bottleneck" class="exec-tab-panel hidden">
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                <div class="inline-flex rounded-lg bg-slate-100 p-1">
-                    <button type="button" id="pivotAreaBtn"
-                        class="pivot-toggle-btn px-3 py-1.5 rounded-md text-xs font-semibold bg-white text-slate-800 shadow-sm cursor-pointer">
-                        แยกตามพื้นที่ ({{ onprocess_area_pivot.rows|length }})
-                    </button>
-                    <button type="button" id="pivotProvinceBtn"
-                        class="pivot-toggle-btn px-3 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 cursor-pointer">
-                        แยกตามจังหวัด ({{ onprocess_province_pivot.rows|length }})
-                    </button>
-                </div>
+            <div class="flex items-center justify-end mb-3">
                 <p class="text-xs text-slate-500">คลิกตัวเลขในแถวรวมทั้งหมด เพื่อเปิดดูรายชื่อช่างที่ค้างในขั้นตอนนั้น</p>
             </div>
 
             <!-- Pivot by Area -->
-            <div id="pivotAreaContainer">
+            <div>
                 {% if onprocess_area_pivot.rows|length > 0 %}
                 <div class="overflow-x-auto max-h-[460px] overflow-y-auto border border-slate-200 rounded-lg">
                     <table class="min-w-full text-xs">
@@ -982,8 +1030,14 @@
                 {% endif %}
             </div>
 
-            <!-- Pivot by Province -->
-            <div id="pivotProvinceContainer" class="hidden">
+        </div>
+
+        <!-- Tab 2b: Onprocess by Province -->
+        <div id="tab-province" class="exec-tab-panel hidden">
+            <div class="flex items-center justify-end mb-3">
+                <p class="text-xs text-slate-500">คลิกตัวเลขในแถวรวมทั้งหมด เพื่อเปิดดูรายชื่อช่างที่ค้างในขั้นตอนนั้น</p>
+            </div>
+            <div>
                 {% if onprocess_province_pivot.rows|length > 0 %}
                 <div class="overflow-x-auto max-h-[460px] overflow-y-auto border border-slate-200 rounded-lg">
                     <table class="min-w-full text-xs">

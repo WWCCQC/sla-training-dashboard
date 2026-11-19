@@ -405,8 +405,9 @@
                 <span class="ml-3 sidebar-text">หน้าหลัก</span>
             </a>
 
-            <a href="/?view=legacy" data-tooltip="Dashboard (เดิม)"
-                class="sidebar-item flex items-center px-4 py-3 rounded-lg text-white/90 hover:text-white {% if is_legacy_view %}active{% endif %}">
+            {# ซ่อนเมนู Dashboard (เดิม) ไว้ — หน้ายังเปิดได้ที่ /?view=legacy #}
+            <a href="/?view=legacy" data-tooltip="Dashboard (เดิม)" hidden
+                class="hidden sidebar-item flex items-center px-4 py-3 rounded-lg text-white/90 hover:text-white {% if is_legacy_view %}active{% endif %}">
                 <i class="fas fa-columns w-6 text-center"></i>
                 <span class="ml-3 sidebar-text">Dashboard (เดิม)</span>
             </a>
