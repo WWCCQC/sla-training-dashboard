@@ -4,7 +4,6 @@
 {% block title %}{% if show_legacy %}Dashboard : สถานะการอบรมเเละการขึ้นทะเบียนช่าง - SLA Training{% else %}หน้าหลัก : สรุปผู้บริหาร - SLA Training{% endif %}{% endblock %}
 
 {% block page_title %}สถานะการอบรมและการขึ้นทะเบียนช่าง{% endblock %}
-{% block page_subtitle %}{% if show_legacy %}Data updates as {{ data_updated_as | default('N/A', true) }}{% else %}อัปเดตข้อมูลล่าสุด: {{ data_updated_as | default('N/A', true) }}{% endif %}{% endblock %}
 
 {% block topbar_actions %}
 {% if not show_legacy %}

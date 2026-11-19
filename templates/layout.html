@@ -467,15 +467,17 @@
                     </button>
                     <div>
                         <h2 class="text-xl font-bold text-blue-600">{% block page_title %}สถานะการอบรมและการขึ้นทะเบียนช่าง{% endblock %}</h2>
-                        <p class="text-sm text-gray-500">{% block page_subtitle %}อัปเดตข้อมูลล่าสุด: {{ data_updated_as }}{%
-                            endblock %}</p>
+                        {% if self.page_subtitle() | trim %}<p class="text-sm text-gray-500">{% block page_subtitle %}{% endblock %}</p>{% endif %}
                     </div>
                 </div>
                 <div class="flex items-center space-x-3">
-                    <span class="text-sm text-gray-500 hidden sm:inline">
-                        <i class="fas fa-calendar mr-1"></i>
-                        {{ current_date }}
-                    </span>
+                    <div class="hidden sm:flex flex-col items-end leading-tight">
+                        <span class="text-sm text-gray-500">
+                            <i class="fas fa-calendar mr-1"></i>
+                            {{ current_date }}
+                        </span>
+                        {% if data_updated_as %}<span class="text-xs text-gray-400 mt-0.5">อัปเดตข้อมูลล่าสุด: {{ data_updated_as }}</span>{% endif %}
+                    </div>
                     {% block topbar_actions %}{% endblock %}
                 </div>
             </div>
