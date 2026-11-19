@@ -198,6 +198,70 @@
     } %}
 {% endif %}
 
+<style>
+    /* ===== Executive Home: Minimal + 3D/Motion ===== */
+    .exec-card { background: #fff; border: 1px solid #E2E8F0; border-radius: 1.25rem; box-shadow: 0 1px 2px rgba(15,23,42,.04); }
+    .exec-label { font-size: .75rem; font-weight: 600; color: #64748B; }
+    .exec-num { font-size: 2rem; line-height: 1; font-weight: 800; color: #0F172A; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+    .exec-muted { color: #94A3B8; }
+    .exec-dot { width: .5rem; height: .5rem; border-radius: 9999px; display: inline-block; flex-shrink: 0; }
+    .tone-risk { --tone: #E11D48; --tone-soft: #FFE4E6; }
+    .tone-warn { --tone: #D97706; --tone-soft: #FEF3C7; }
+    .tone-good { --tone: #059669; --tone-soft: #D1FAE5; }
+    .tone-info { --tone: #4F46E5; --tone-soft: #E0E7FF; }
+    .exec-dot.tone-risk, .exec-dot.tone-warn, .exec-dot.tone-good, .exec-dot.tone-info { background: var(--tone); }
+    .tone-text { color: var(--tone); }
+
+    /* 3D icon tile */
+    .exec-icon3d {
+        width: 2.75rem; height: 2.75rem; border-radius: .9rem; display: flex; align-items: center; justify-content: center;
+        color: #4F46E5; font-size: 1rem;
+        background: linear-gradient(145deg, #FFFFFF 0%, #EEF2FF 55%, #E0E7FF 100%);
+        box-shadow: inset 0 1px 0 #fff, inset 0 -3px 6px rgba(79,70,229,.12), 0 6px 14px -6px rgba(79,70,229,.45), 0 2px 4px rgba(15,23,42,.06);
+        transform: perspective(300px) rotateX(10deg) rotateY(-10deg);
+        transition: transform .4s cubic-bezier(.2,.8,.2,1);
+    }
+    .exec-icon3d i { filter: drop-shadow(0 2px 2px rgba(79,70,229,.35)); }
+
+
+    /* 3D status orb */
+
+    .exec-live { position: relative; }
+    .exec-live::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: inherit; animation: execPulse 2s ease-out infinite; }
+
+    /* Rings & gauge */
+
+    /* Process pipeline */
+    .exec-flow { position: absolute; left: 0; right: 0; top: 1.05rem; height: 2px; background: #E2E8F0; overflow: hidden; }
+    .exec-flow::after { content: ''; position: absolute; top: 0; left: -30%; width: 30%; height: 100%; background: linear-gradient(90deg, transparent, #6366F1, transparent); animation: execFlow 3.2s linear infinite; }
+    .exec-node { width: 2.15rem; height: 2.15rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 700; background: #fff; border: 2px solid #E2E8F0; color: #64748B; position: relative; z-index: 1; box-shadow: 0 4px 10px -6px rgba(15,23,42,.3); }
+    .exec-node.is-ok { border-color: #C7D2FE; color: #4F46E5; }
+    .exec-node.is-warn { border-color: #FCD34D; color: #B45309; background: #FFFBEB; }
+    .exec-node.is-risk { border-color: #FDA4AF; color: #BE123C; background: #FFF1F2; animation: execNodePulse 2s ease-in-out infinite; }
+
+    /* Reveal on scroll */
+    .exec-reveal { opacity: 0; transform: translateY(14px); transition: opacity .6s ease, transform .6s cubic-bezier(.2,.8,.2,1); }
+    .exec-reveal.is-in { opacity: 1; transform: none; }
+
+    .exec-pill { padding: .375rem .75rem; border-radius: .65rem; font-size: .75rem; font-weight: 600; color: #475569; transition: background .2s, color .2s; cursor: pointer; }
+    .exec-pill:hover { background: #F1F5F9; color: #0F172A; }
+    .exec-pill.is-active { background: #0F172A; color: #fff; box-shadow: 0 4px 10px -4px rgba(15,23,42,.5); }
+    .exec-select { display: inline-flex; align-items: center; justify-content: space-between; gap: .5rem; min-width: 150px; border: 1px solid #E2E8F0; border-radius: .75rem; padding: .4rem .75rem; font-size: .75rem; color: #334155; background: #fff; cursor: pointer; }
+    .exec-select:hover { border-color: #CBD5E1; }
+
+    @keyframes execPulse { 0% { transform: scale(1); opacity: .55 } 100% { transform: scale(1.7); opacity: 0 } }
+    @keyframes execFlow { to { left: 100% } }
+    @keyframes execNodePulse { 0%,100% { box-shadow: 0 0 0 0 rgba(225,29,72,.35) } 50% { box-shadow: 0 0 0 6px rgba(225,29,72,0) } }
+
+    @media (prefers-reduced-motion: reduce) {
+        .exec-live::after, .exec-flow::after, .exec-node.is-risk { animation: none !important; }
+        .exec-reveal { opacity: 1; transform: none; transition: none; }
+        .exec-icon3d { transform: none !important; transition: none; }
+    }
+    @media print { .exec-reveal { opacity: 1 !important; transform: none !important; } }
+</style>
+
+
 <!-- Zone 1: Modern Executive Control & Period Filter Bar -->
 <div class="no-print bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white rounded-2xl shadow-lg p-4 sm:p-5 mb-6 border border-slate-800">
     <div class="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
@@ -430,7 +494,7 @@
             {% set sla_grad = 'from-slate-500 to-slate-600' %}
             {% set sla_text = 'text-slate-600' %}
             {% set sla_badge_bg = 'bg-slate-100 text-slate-600' %}
-            {% set sla_status_label = 'รอปิดจบขั้นตอน' %}
+            {% set sla_status_label = 'ยังไม่มีผู้ขึ้นทะเบียนครบ' %}
         {% elif sla_val <= sla_total_target %}
             {% set sla_grad = 'from-emerald-500 to-teal-600' %}
             {% set sla_text = 'text-emerald-600' %}
@@ -451,7 +515,7 @@
             <div class="flex items-start justify-between">
                 <div>
                     <div class="flex items-center gap-1.5">
-                        <p class="text-xs font-semibold text-slate-500">SLA เฉลี่ยรวม</p>
+                        <p class="text-xs font-semibold text-slate-500" title="คิดจากช่างที่ขึ้นทะเบียนสำเร็จแล้วเท่านั้น">SLA เฉลี่ยรวม</p>
                         <span class="text-[10px] font-bold bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">เป้า ≤ {{ sla_total_target }} วัน</span>
                     </div>
                     <div class="flex items-baseline gap-1.5 mt-1.5">
@@ -465,289 +529,271 @@
             </div>
             <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
                 <span class="px-2 py-0.5 rounded-full font-semibold text-[11px] {{ sla_badge_bg }}">{{ sla_status_label }}</span>
-                <span class="text-slate-500">ทันเป้า <strong class="text-slate-800">{{ sum_sla_within_rate }}%</strong></span>
+                <span class="text-slate-500">ทันเป้า <strong class="text-slate-800">{{ (sum_sla_within_rate ~ '%') if sum_sla_valid > 0 else '-' }}</strong></span>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Zone 3: Modern Executive Summary & Key Bottlenecks (Dynamic by Selected Month) -->
-<div class="bg-white rounded-2xl shadow-sm border border-slate-200/90 overflow-hidden mb-6">
-    <!-- Modern Header Strip -->
-    <div class="bg-gradient-to-r from-slate-50 via-blue-50/50 to-indigo-50/40 px-5 py-4 border-b border-slate-200/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-sm flex items-center justify-center flex-shrink-0">
-                <i class="fas fa-lightbulb text-base"></i>
-            </div>
-            <div>
-                <h3 class="text-base font-bold text-slate-900">Summary insight</h3>
-            </div>
+<!-- Zone 4: Insight + Process pipeline -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-6">
+    <div class="exec-card exec-reveal p-5 lg:col-span-7">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <span class="exec-icon3d !w-8 !h-8 !rounded-lg !text-sm"><i class="fas fa-lightbulb"></i></span>
+                Summary insight
+            </h3>
+            <span class="text-xs text-slate-400">{{ active_period_short }}</span>
         </div>
-        <div class="flex flex-wrap items-center gap-2">
-            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold {{ 'bg-emerald-100 text-emerald-800 border border-emerald-200' if is_current_month_selected else 'bg-blue-100 text-blue-800 border border-blue-200' }}">
-                <i class="fas fa-calendar-day"></i>
-                {{ active_period_badge }}
-            </span>
-        </div>
-    </div>
-
-    <div class="p-5">
         {% if exec_insight.has_data %}
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <!-- Left (7 cols): Selected Period Snapshot + 7-Step Mini Pipeline + Top 3 Bottlenecks -->
-            <div class="lg:col-span-7 space-y-5">
-                <!-- 3 Dynamic Period Summary Cards (Always matches selected month(s)) -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <!-- Tile 1: Registration Volume -->
-                    <div class="rounded-xl bg-gradient-to-br from-blue-50/70 to-white border border-blue-100 p-3.5">
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="text-xs font-semibold text-slate-600">ยอดลงทะเบียน</span>
-                            <span class="text-[11px] font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">{{ active_period_short }}</span>
-                        </div>
-                        <div class="flex items-baseline justify-between mt-1">
-                            <span class="text-2xl font-extrabold text-slate-900">{{ summary.total }} <span class="text-xs font-normal text-slate-400">คน</span></span>
-                            <span id="execSummaryRegDelta" class="text-xs font-semibold">
-                                {% if exec_insight.reg_delta is not none and exec_insight.prev_month %}
-                                <span class="px-2 py-0.5 rounded-full {{ 'bg-emerald-100 text-emerald-700' if exec_insight.reg_delta >= 0 else 'bg-rose-100 text-rose-700' }}">
-                                    {{ '+' if exec_insight.reg_delta > 0 else '' }}{{ exec_insight.reg_delta }} คน
-                                </span>
-                                {% endif %}
-                            </span>
-                        </div>
-                        <p id="execSummaryRegSub" class="text-[11px] text-slate-500 mt-1.5">
-                            {% if exec_insight.prev_month %}
-                            เทียบเดือน {{ exec_insight.prev_month }} ({{ exec_insight.prev_cohort.total }} คน)
-                            {% elif monthly|length > 1 %}
-                            เฉลี่ย {{ (summary.total / (monthly|length)) | round(1) }} คน/เดือน
-                            {% else %}
-                            ผ่านทฤษฎี {{ summary.theory_rate }}% • ผ่าน OJT {{ summary.ojt_rate }}%
-                            {% endif %}
-                        </p>
-                    </div>
-
-                    <!-- Tile 2: Completion & Output -->
-                    <div class="rounded-xl bg-gradient-to-br from-emerald-50/70 to-white border border-emerald-100 p-3.5">
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="text-xs font-semibold text-slate-600">ขึ้นทะเบียนสำเร็จ</span>
-                            <span class="text-xs font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">{{ summary.completed_rate }}%</span>
-                        </div>
-                        <div class="flex items-baseline justify-between mt-1">
-                            <span class="text-2xl font-extrabold text-emerald-600">{{ summary.completed }} <span class="text-xs font-normal text-slate-400">คน</span></span>
-                            <span class="text-xs text-rose-600 font-medium">ไม่ผ่าน/ออก {{ sum_dropoff }}</span>
-                        </div>
-                        <p id="execSummaryCompSub" class="text-[11px] text-slate-500 mt-1.5">
-                            {% if exec_insight.prev_cohort %}
-                            เดือนก่อน ({{ exec_insight.prev_cohort.month }}) สำเร็จ {{ exec_insight.prev_cohort.completion_rate }}%
-                            {% else %}
-                            ไม่ผ่าน {{ summary.closed }} คน • ลาออก {{ summary.cancel }} คน
-                            {% endif %}
-                        </p>
-                    </div>
-
-                    <!-- Tile 3: Active Backlog & SLA -->
-                    <div class="rounded-xl bg-gradient-to-br from-amber-50/70 to-white border border-amber-100 p-3.5">
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="text-xs font-semibold text-slate-600">ค้างดำเนินการ</span>
-                            <span class="text-xs font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">{{ summary.onprocess_rate }}%</span>
-                        </div>
-                        <div class="flex items-baseline justify-between mt-1">
-                            <span class="text-2xl font-extrabold text-amber-600">{{ summary.onprocess }} <span class="text-xs font-normal text-slate-400">คน</span></span>
-                            <span id="execSummaryOnpDelta" class="text-xs font-semibold">
-                                {% if exec_insight.onp_delta is not none and exec_insight.prev_month %}
-                                <span class="px-2 py-0.5 rounded-full {{ 'bg-amber-100 text-amber-800' if exec_insight.onp_delta > 0 else 'bg-emerald-100 text-emerald-700' }}">
-                                    {{ '+' if exec_insight.onp_delta > 0 else '' }}{{ exec_insight.onp_delta }} คน
-                                </span>
-                                {% endif %}
-                            </span>
-                        </div>
-                        <p class="text-[11px] text-slate-500 mt-1.5">
-                            SLA เฉลี่ย: <strong class="text-slate-700">{{ summary.avg_sla_total if sum_sla_valid > 0 else '-' }}</strong> วัน (เป้า ≤ {{ sla_total_target }})
-                        </p>
-                    </div>
-                </div>
-
-                <!-- 7-Step Mini Status Pipeline for Selected Period -->
-                <div class="bg-slate-50/90 border border-slate-200/80 rounded-xl p-3.5">
-                    <div class="flex items-center justify-between mb-2.5">
-                        <span class="text-xs font-bold text-slate-700">
-                            <i class="fas fa-project-diagram text-blue-500 mr-1.5"></i>สถานะ SLA ทั้ง 7 ขั้นตอน ({{ active_period_short }})
-                        </span>
-                        <a href="/sla-analysis" class="no-print text-xs text-blue-600 hover:text-blue-800 font-medium">
-                            วิเคราะห์เชิงลึก <i class="fas fa-arrow-right ml-0.5 text-[10px]"></i>
-                        </a>
-                    </div>
-                    <div class="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-2">
-                        {% for step in sla_analysis_steps %}
-                        {% set is_over_step = step.avg_sla > step.target_days %}
-                        {% set is_warn_step = is_over_step and step.avg_sla <= (step.target_days * 1.5) %}
-                        <div class="rounded-lg p-2 text-center border {{ 'bg-rose-50/80 border-rose-200' if (is_over_step and not is_warn_step) else ('bg-amber-50/80 border-amber-200' if is_warn_step else ('bg-emerald-50/70 border-emerald-200' if step.avg_sla > 0 else 'bg-white border-slate-200')) }}">
-                            <div class="text-[10px] font-semibold text-slate-500 truncate" title="{{ step.name }}">{{ loop.index }}. {{ step.name }}</div>
-                            <div class="text-sm font-extrabold mt-0.5 {{ 'text-rose-600' if (is_over_step and not is_warn_step) else ('text-amber-600' if is_warn_step else ('text-emerald-600' if step.avg_sla > 0 else 'text-slate-400')) }}">
-                                {{ step.avg_sla if step.avg_sla > 0 else '-' }} <span class="text-[10px] font-normal">วัน</span>
-                            </div>
-                            <div class="text-[10px] text-slate-400">เป้า {{ step.target_days }} วัน</div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-
-                <!-- Top 3 Bottlenecks Progress Bars -->
-                <div>
-                    <h4 class="text-xs font-bold uppercase tracking-wide text-slate-600 mb-2.5">
-                        <i class="fas fa-fire text-rose-500 mr-1.5"></i>3 อันดับขั้นตอนที่ใช้เวลานานที่สุดเทียบเป้าหมาย ({{ active_period_short }})
-                    </h4>
-                    <div class="space-y-2.5">
-                        {% for b in exec_insight.bottlenecks %}
-                        <div class="bg-white border border-slate-200/80 rounded-xl px-3.5 py-2.5">
-                            <div class="flex flex-wrap items-center justify-between text-xs mb-1.5 gap-1">
-                                <span class="font-semibold text-slate-800">{{ loop.index }}. {{ b.name }}</span>
-                                <div class="flex items-center gap-2">
-                                    <span class="text-slate-400">เป้าหมาย {{ b.target_days }} วัน</span>
-                                    <span class="px-2 py-0.5 rounded-full font-bold {{ 'bg-rose-100 text-rose-700' if b.is_over else 'bg-emerald-100 text-emerald-700' }}">
-                                        เฉลี่ย {{ b.avg_sla }} วัน {% if b.is_over %}(เกิน +{{ b.diff }}){% else %}(ตามเป้า){% endif %}
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="relative w-full bg-slate-100 rounded-full h-2.5 overflow-visible">
-                                <div class="h-2.5 rounded-full {{ 'bg-gradient-to-r from-rose-500 to-red-500' if b.is_over and b.diff > 3 else ('bg-gradient-to-r from-amber-400 to-orange-500' if b.is_over else 'bg-gradient-to-r from-emerald-500 to-teal-500') }}"
-                                    style="width: {{ b.width }}%"></div>
-                                <div class="absolute -top-0.5 bottom-0 w-0.5 bg-slate-800" style="left: {{ b.target_pos }}%"
-                                    title="เป้าหมาย {{ b.target_days }} วัน"></div>
-                            </div>
-                        </div>
-                        {% else %}
-                        <p class="text-xs text-slate-400 bg-slate-50 rounded-xl p-4 text-center">ยังไม่มีข้อมูลระยะเวลา SLA ที่ปิดจบใน{{ active_period_short }}</p>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right (5 cols): Executive Key Takeaways & Stuck Bottleneck Callout -->
-            <div class="lg:col-span-5 flex flex-col justify-between bg-gradient-to-b from-slate-50 to-slate-100/60 rounded-2xl p-4 border border-slate-200/90">
-                <div>
-                    <div class="flex items-center justify-between mb-3">
-                        <h4 class="text-xs font-bold uppercase tracking-wide text-slate-700">
-                            <i class="fas fa-clipboard-check text-emerald-600 mr-1.5"></i>บทสรุปและข้อเสนอแนะ ({{ active_period_short }})
-                        </h4>
-                    </div>
-                    <ul class="space-y-2.5">
-                        {% for rec in exec_insight.recommendations %}
-                        <li class="flex items-start gap-2.5 text-xs leading-relaxed text-slate-700 bg-white rounded-xl p-3 border border-slate-200/80 shadow-2xs">
-                            <span class="w-5 h-5 rounded-lg bg-blue-600 text-white font-bold flex items-center justify-center flex-shrink-0 text-[11px] mt-0.5">
-                                {{ loop.index }}
-                            </span>
-                            <span>{{ rec }}</span>
-                        </li>
-                        {% else %}
-                        <li class="text-xs text-slate-400">ไม่มีประเด็นเฝ้าระวังเพิ่มเติมในช่วงที่เลือก</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-
-                {% if exec_insight.top_stuck %}
-                <div class="mt-4 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/5 border border-amber-300/80 rounded-xl p-3.5 flex items-center justify-between gap-3">
-                    <div class="text-xs text-amber-950">
-                        <div class="font-bold flex items-center gap-1.5 text-amber-900">
-                            <i class="fas fa-exclamation-circle text-amber-600"></i>
-                            <span>จุดค้างสะสมสูงสุด ({{ active_period_short }})</span>
-                        </div>
-                        <p class="mt-0.5 text-amber-800">
-                            ขั้นตอน <strong>"{{ exec_insight.top_stuck.status }}"</strong> จำนวน <strong>{{ exec_insight.top_stuck.count }} คน</strong>
-                        </p>
-                    </div>
-                    <button type="button"
-                        class="no-print onprocess-status-link flex-shrink-0 bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm cursor-pointer"
-                        data-status="{{ exec_insight.top_stuck.status }}">
-                        ดูรายชื่อช่าง
-                    </button>
-                </div>
-                {% endif %}
-            </div>
+        <ol class="space-y-1">
+            {% for rec in exec_insight.recommendations %}
+            {% set r_tone = rec.tone if rec is mapping else 'info' %}
+            <li class="exec-reveal flex items-start gap-3 rounded-xl px-3 py-2.5 hover:bg-slate-50 transition" style="--d:{{ loop.index0 * 70 }}ms">
+                <span class="mt-1.5 exec-dot tone-{{ r_tone }} {{ 'exec-live' if r_tone == 'risk' }}"></span>
+                <span class="text-sm text-slate-700 leading-relaxed">{{ rec.text if rec is mapping else rec }}</span>
+            </li>
+            {% else %}
+            <li class="text-sm text-slate-400">ไม่มีประเด็นเฝ้าระวังเพิ่มเติมในช่วงที่เลือก</li>
+            {% endfor %}
+        </ol>
+        <div class="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-4 text-[11px] text-slate-500">
+            <span class="flex items-center gap-1.5"><span class="exec-dot tone-risk"></span>ต้องเร่งแก้</span>
+            <span class="flex items-center gap-1.5"><span class="exec-dot tone-warn"></span>ติดตาม</span>
+            <span class="flex items-center gap-1.5"><span class="exec-dot tone-good"></span>ตามเป้า</span>
+            <span class="flex items-center gap-1.5"><span class="exec-dot tone-info"></span>ข้อมูลประกอบ</span>
         </div>
         {% else %}
         <p class="text-sm text-slate-400 text-center py-6">ไม่มีข้อมูลในช่วงเวลาหรือพื้นที่ที่เลือก</p>
         {% endif %}
     </div>
+
+    <div class="exec-card exec-reveal p-5 lg:col-span-5 flex flex-col" style="--d:120ms">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <span class="exec-icon3d !w-8 !h-8 !rounded-lg !text-sm"><i class="fas fa-route"></i></span>
+                เส้นทาง 7 ขั้นตอน
+            </h3>
+            <a href="/sla-analysis" class="no-print text-xs text-indigo-600 hover:text-indigo-800 font-medium">วิเคราะห์เชิงลึก <i class="fas fa-arrow-right text-[10px]"></i></a>
+        </div>
+        <div class="relative">
+            <div class="exec-flow" aria-hidden="true"></div>
+            <div class="relative grid grid-cols-7 gap-1">
+                {% for step in sla_analysis_steps %}
+                {% set st = 'none' if step.avg_sla <= 0 else ('ok' if step.avg_sla <= step.target_days else ('warn' if step.avg_sla <= step.target_days * 1.5 else 'risk')) %}
+                <div class="flex flex-col items-center text-center" title="{{ step.name }}: เฉลี่ย {{ step.avg_sla if step.avg_sla > 0 else '-' }} วัน / เป้า {{ step.target_days }} วัน">
+                    <div class="exec-node is-{{ st }}">
+                        {% if st == 'ok' %}<i class="fas fa-check text-[11px]"></i>{% else %}{{ loop.index }}{% endif %}
+                    </div>
+                    <p class="mt-2 text-[10px] leading-tight font-medium text-slate-600 h-6">{{ step.name }}</p>
+                    <p class="text-xs font-bold {{ 'text-rose-600' if st == 'risk' else ('text-amber-600' if st == 'warn' else 'text-slate-800') }}">{{ step.avg_sla if step.avg_sla > 0 else '-' }}</p>
+                    <p class="text-[10px] text-slate-400">/{{ step.target_days }} วัน</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="mt-auto pt-4">
+            {% if exec_insight.bottlenecks and exec_insight.bottlenecks[0].is_over %}
+            {% set b0 = exec_insight.bottlenecks[0] %}
+            <div class="rounded-xl bg-rose-50/70 px-3.5 py-3 text-xs text-rose-900">
+                <p class="font-semibold">คอขวด: {{ b0.name }}</p>
+                <p class="mt-0.5 text-rose-800/80">เฉลี่ย {{ b0.avg_sla }} วัน เทียบเป้า {{ b0.target_days }} วัน (+{{ b0.diff }} วัน)</p>
+            </div>
+            {% else %}
+            <div class="rounded-xl bg-slate-50 px-3.5 py-3 text-xs text-slate-600">ทุกขั้นตอนที่ปิดจบแล้วอยู่ในเป้าหมาย</div>
+            {% endif %}
+            {% if exec_insight.top_stuck %}
+            <button type="button" class="no-print onprocess-status-link mt-2 w-full flex items-center justify-between rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-700 hover:border-indigo-300 hover:text-indigo-700 transition cursor-pointer" data-status="{{ exec_insight.top_stuck.status }}">
+                <span>งานค้างกระจุกที่ <strong>{{ exec_insight.top_stuck.status }}</strong> ({{ exec_insight.top_stuck.count }} คน)</span>
+                <span class="font-semibold">ดูรายชื่อ <i class="fas fa-arrow-right text-[10px]"></i></span>
+            </button>
+            {% endif %}
+        </div>
+    </div>
 </div>
 
-<!-- Zone 4: Core Executive Visuals (2x2 Grid - Zero Redundancy) -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-    <!-- Chart 1: Conversion Funnel -->
-    <div class="bg-white rounded-2xl shadow-sm p-5 border border-slate-200 flex flex-col justify-between">
+<!-- Zone 5a: Onprocess technicians by status (3D isometric) -->
+{% macro iso_short(name) %}{{ name | replace('ห้างหุ้นส่วนจำกัด', '') | replace('บริษัท', '') | replace('หจก.', '') | replace('(ประเทศไทย)', '') | replace('จำกัด', '') | trim }}{% endmacro %}
+{% set iso_steps = [
+    {'label': 'เอกสารยังไม่ครบ', 'icon': 'fa-folder-open', 'badge': 'fa-triangle-exclamation', 'type': 'alert'},
+    {'label': 'อยู่ระหว่างอบรม', 'icon': 'fa-chalkboard-user', 'badge': '', 'type': ''},
+    {'label': 'OJT', 'icon': 'fa-users-gear', 'badge': '', 'type': ''},
+    {'label': 'Print/ส่งบัตร', 'icon': 'fa-print', 'badge': 'fa-id-card', 'type': 'blue'},
+    {'label': 'รอตรวจกองงาน', 'icon': 'fa-file-lines', 'badge': 'fa-magnifying-glass', 'type': 'blue'},
+    {'label': 'พื้นที่ขออนุมัติ', 'icon': 'fa-building', 'badge': 'fa-clock', 'type': 'alert'},
+    {'label': 'ขอสิทธิ์เข้าใช้งาน', 'icon': 'fa-desktop', 'badge': 'fa-key', 'type': 'alert'}
+] %}
+{% set iso_counts = {} %}
+{% for col in onprocess_area_pivot.columns %}{% set _ = iso_counts.update({col: onprocess_area_pivot.grand_total.cells[loop.index0]}) %}{% endfor %}
+{% set iso_labels = iso_steps | map(attribute='label') | list %}
+{% for col in onprocess_area_pivot.columns %}{% if col not in iso_labels %}{% set _ = iso_steps.append({'label': col, 'icon': 'fa-circle-question', 'badge': '', 'type': ''}) %}{% endif %}{% endfor %}
+{% set iso_max = (iso_counts.values() | max) if iso_counts else 0 %}
+{% set iso_done_depots = {} %}
+{% for t in (completed_details | default([], true)) %}
+    {% set dname = t.depot_name or 'ไม่ระบุ Depot' %}
+    {% set _ = iso_done_depots.update({dname: iso_done_depots.get(dname, 0) + 1}) %}
+{% endfor %}
+{% set iso_done_items = iso_done_depots.items() | sort(attribute='1', reverse=true) | list %}
+{% set iso_depots = {} %}
+{% for t in (onprocess_details | default([], true)) %}
+    {% set st_map = iso_depots.setdefault(t.status, {}) %}
+    {% set dname = t.depot_name or 'ไม่ระบุ Depot' %}
+    {% set _ = st_map.update({dname: st_map.get(dname, 0) + 1}) %}
+{% endfor %}
+<style>
+    .iso-stage { background: linear-gradient(#F7FAFF, #E2EDFB); border-radius: 1rem; position: relative; overflow-x: auto; }
+    .iso-track { position: absolute; left: 1.25rem; right: 1.25rem; top: 10.5rem; height: 5.5rem; border-radius: 3rem; background: rgba(191,219,254,.55); }
+    .iso-flow { position: relative; display: flex; justify-content: center; align-items: flex-start; width: 100%; min-width: max-content; padding: 1.25rem 1.5rem 1.5rem; }
+    .iso-step { width: 122px; display: flex; flex-direction: column; align-items: center; opacity: 0; animation: isoFadeUp .6s ease forwards; }
+    .iso-box { display: flex; flex-direction: column; align-items: center; background: none; border: 0; font: inherit; padding: 0; }
+    .iso-step.is-empty { filter: grayscale(.6); }
+    .iso-step.is-empty .iso-platform, .iso-step.is-empty .iso-icon { opacity: .45; }
+    button.iso-box { cursor: pointer; }
+    .iso-num { width: 34px; height: 34px; border-radius: 50%; background: #1D4ED8; color: #fff; font-weight: 800; font-size: 16px; display: grid; place-items: center; box-shadow: 0 4px 10px rgba(29,78,216,.35); }
+    .iso-icon { position: relative; z-index: 2; height: 84px; margin-top: 10px; margin-bottom: -30px; display: flex; align-items: flex-end; justify-content: center; transition: transform .3s ease; }
+    .iso-icon .main { font-size: 46px; color: #2563EB; filter: drop-shadow(0 6px 4px rgba(30,58,138,.25)); }
+    .iso-icon .badge { position: absolute; right: -18px; top: 14px; font-size: 22px; filter: drop-shadow(0 3px 3px rgba(0,0,0,.2)); }
+    .iso-icon .badge.alert { color: #F59E0B; }
+    .iso-icon .badge.blue { color: #1E40AF; }
+    .iso-platform { width: 120px; height: 80px; position: relative; filter: drop-shadow(0 10px 8px rgba(30,58,138,.22)); transition: transform .3s ease; }
+    .iso-platform div { position: absolute; inset: 0; }
+    .iso-platform .top { clip-path: polygon(0 30px, 60px 0, 120px 30px, 60px 60px); background: linear-gradient(135deg, #FFFFFF, #D6E7FB); }
+    .iso-platform .left { clip-path: polygon(0 30px, 60px 60px, 60px 80px, 0 50px); background: #1D4ED8; }
+    .iso-platform .right { clip-path: polygon(60px 60px, 120px 30px, 120px 50px, 60px 80px); background: #3B82F6; }
+    .iso-step.is-peak .iso-platform .left { background: #D97706; }
+    .iso-step.is-peak .iso-platform .right { background: #F59E0B; }
+    .iso-step.is-peak .iso-num { background: #D97706; box-shadow: 0 4px 10px rgba(217,119,6,.4); }
+    .iso-box:hover .iso-platform, .iso-box:hover .iso-icon, .iso-box:focus-visible .iso-platform { transform: translateY(-6px); }
+    .iso-count { margin-top: 12px; font-size: 26px; line-height: 1; font-weight: 800; color: #0B2E6B; font-variant-numeric: tabular-nums; }
+    .iso-count small { font-size: 12px; font-weight: 600; color: #64748B; margin-left: 2px; }
+    .iso-label { margin-top: 8px; background: #fff; border: 2px solid #BFDBFE; border-radius: 1.25rem; padding: 4px 12px; font-weight: 700; font-size: 13px; color: #0B2E6B; white-space: nowrap; box-shadow: 0 4px 10px rgba(30,58,138,.08); }
+    .iso-depots { margin-top: 8px; width: 100%; display: flex; flex-direction: column; gap: 3px; text-align: left; }
+    .iso-depots li button { width: 100%; text-align: left; cursor: pointer; font: inherit; transition: border-color .15s, background .15s; display: flex; align-items: center; justify-content: space-between; gap: 4px; background: rgba(255,255,255,.85); border: 1px solid #DBEAFE; border-radius: .5rem; padding: 3px 6px; font-size: 11px; color: #334155; }
+    .iso-depots li .name { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.25; word-break: break-word; }
+    .iso-depots li button:hover, .iso-depots li button:focus-visible { border-color: #60A5FA; background: #fff; outline: none; }
+    .iso-depots li .n { flex-shrink: 0; font-weight: 700; color: #1D4ED8; }
+    .iso-step.is-peak .iso-depots li .n { color: #B45309; }
+    .iso-arrow { flex: 1 1 30px; min-width: 30px; max-width: 72px; margin-top: 140px; text-align: center; font-size: 20px; color: #2563EB; animation: isoNudge 1.2s ease-in-out infinite; flex-shrink: 0; }
+    .iso-io { margin-top: 110px; }
+    .iso-io .iso-num { background: #334155; box-shadow: 0 4px 10px rgba(51,65,85,.35); }
+    .iso-io.is-in .iso-platform .left { background: #475569; }
+    .iso-io.is-in .iso-platform .right { background: #64748B; }
+    .iso-io.is-in .iso-icon .main { color: #475569; }
+    .iso-io.is-out .iso-num { background: #047857; box-shadow: 0 4px 10px rgba(4,120,87,.35); }
+    .iso-io.is-out .iso-platform .left { background: #047857; }
+    .iso-io.is-out .iso-platform .right { background: #10B981; }
+    .iso-io.is-out .iso-icon .main { color: #059669; }
+    .iso-io.is-out .iso-label { border-color: #A7F3D0; color: #065F46; }
+    .iso-io.is-out .iso-depots li button { border-color: #D1FAE5; }
+    .iso-io.is-out .iso-depots li .n { color: #047857; }
+    .iso-io.is-out .iso-depots li button:hover { border-color: #34D399; }
+    .iso-depots.is-scroll { max-height: 360px; overflow-y: auto; padding-right: 2px; }
+    .iso-dash { flex: 1 1 64px; min-width: 64px; max-width: 100px; position: relative; z-index: 1; }
+    .iso-dash svg { overflow: visible; display: block; width: 100%; }
+    .iso-dash path { vector-effect: non-scaling-stroke; }
+    .iso-dash .line { fill: none; stroke: #2563EB; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 8 6; animation: isoDash .8s linear infinite; }
+    .iso-dash .head { fill: none; stroke: #2563EB; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    @keyframes isoDash { to { stroke-dashoffset: -14; } }
+    @keyframes isoNudge { 0%,100% { transform: translateX(-3px) } 50% { transform: translateX(4px) } }
+    @keyframes isoFadeUp { from { opacity: 0; transform: translateY(20px) } to { opacity: 1; transform: none } }
+    @media (prefers-reduced-motion: reduce) {
+        .iso-step { animation: none; opacity: 1; }
+        .iso-arrow, .iso-dash .line { animation: none; }
+        .iso-platform, .iso-icon { transition: none; }
+    }
+    @media print { .iso-step { opacity: 1 !important; animation: none !important; } }
+</style>
+<div class="exec-card exec-reveal p-5 mb-6">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div>
-            <div class="flex items-center justify-between mb-3">
-                <div>
-                    <h3 class="text-base font-bold text-slate-800">
-                        <i class="fas fa-filter text-blue-500 mr-2"></i>Funnel ประสิทธิภาพการคัดกรอง ({{ active_period_short }})
-                    </h3>
+            <h3 class="text-sm font-bold text-slate-900">จำนวนช่างที่อยู่ระหว่างดำเนินการ แยกตามสถานะ ({{ active_period_short }})</h3>
+            <p class="text-xs text-slate-400">คลิกที่กล่องหรือรายชื่อ Depot จะแสดงรายชื่อช่าง <i class="fa-solid fa-arrow-pointer text-slate-500"></i> • สีส้ม = สถานะที่มีช่างค้างมากที่สุด</p>
+        </div>
+        <span class="text-xs font-semibold text-slate-500">รวม {{ onprocess_area_pivot.grand_total.total }} คน</span>
+    </div>
+    <div class="iso-stage">
+        <div class="iso-flow">
+            <div class="iso-track" aria-hidden="true"></div>
+            <div class="iso-step iso-io is-in">
+                <div class="iso-box">
+                    <div class="iso-num"><i class="fa-solid fa-right-to-bracket text-sm"></i></div>
+                    <div class="iso-icon" aria-hidden="true"><i class="fa-solid fa-user-plus main"></i></div>
+                    <div class="iso-platform" aria-hidden="true"><div class="left"></div><div class="right"></div><div class="top"></div></div>
+                    <div class="iso-count">{{ summary.total }}<small>คน</small></div>
+                    <div class="iso-label">ลงทะเบียน</div>
                 </div>
-                <span class="text-xs font-semibold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full">
-                    สำเร็จ {{ summary.completed_rate }}%
-                </span>
             </div>
-            <div style="position: relative; height: 225px; width: 100%;">
-                {% if summary.total > 0 %}
-                <canvas id="execFunnelChart"></canvas>
+            <div class="iso-dash" aria-hidden="true"><svg viewBox="0 0 56 280" height="280" preserveAspectRatio="none"><path d="M2 248 C 30 248, 26 138, 50 138" class="line"/><path d="M44 132 L52 138 L44 144" class="head"/></svg></div>
+            {% for s in iso_steps %}
+            {% set cnt = iso_counts.get(s.label, 0) %}
+            {% set cls = 'iso-step' ~ (' is-empty' if cnt == 0 else '') ~ (' is-peak' if (cnt > 0 and cnt == iso_max) else '') %}
+            <div class="{{ cls }}" style="animation-delay: {{ loop.index0 * 0.15 }}s">
+                {% if cnt > 0 %}
+                <button type="button" class="iso-box onprocess-status-link" data-status="{{ s.label }}" title="ดูรายชื่อช่าง: {{ s.label }}">
                 {% else %}
-                <div class="h-full flex items-center justify-center text-sm text-slate-400">ไม่มีข้อมูลสำหรับแสดงกราฟ</div>
+                <div class="iso-box">
+                {% endif %}
+                    <div class="iso-num">{{ loop.index }}</div>
+                    <div class="iso-icon" aria-hidden="true">
+                        <i class="fa-solid {{ s.icon }} main"></i>
+                        {% if s.badge %}<i class="fa-solid {{ s.badge }} badge {{ s.type }}"></i>{% endif %}
+                    </div>
+                    <div class="iso-platform" aria-hidden="true"><div class="left"></div><div class="right"></div><div class="top"></div></div>
+                    <div class="iso-count">{{ cnt }}<small>คน</small></div>
+                    <div class="iso-label">{{ s.label }}</div>
+                {% if cnt > 0 %}</button>{% else %}</div>{% endif %}
+                {% set dep_items = (iso_depots.get(s.label, {}).items() | sort(attribute='1', reverse=true) | list) %}
+                {% if dep_items %}
+                <ul class="iso-depots">
+                    {% for d in dep_items %}
+                    <li>
+                        <button type="button" class="onprocess-depot-link" data-status="{{ s.label }}" data-depot="{{ '' if d[0] == 'ไม่ระบุ Depot' else d[0] }}" title="ดูรายชื่อช่าง: {{ d[0] }} ({{ d[1] }} คน)">
+                            <span class="name">{{ iso_short(d[0]) }}</span><span class="n">{{ d[1] }}</span>
+                        </button>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+            {% if not loop.last %}<div class="iso-arrow" aria-hidden="true"><i class="fa-solid fa-chevron-right"></i></div>{% endif %}
+            {% endfor %}
+            <div class="iso-dash" aria-hidden="true"><svg viewBox="0 0 56 280" height="280" preserveAspectRatio="none"><path d="M4 138 C 28 138, 24 248, 50 248" class="line"/><path d="M44 242 L52 248 L44 254" class="head"/></svg></div>
+            <div class="iso-step iso-io is-out" style="animation-delay: {{ (iso_steps|length) * 0.15 }}s">
+                {% if summary.completed > 0 %}
+                <button type="button" class="iso-box completed-all-link" title="ดูรายชื่อช่างที่ขึ้นทะเบียนสำเร็จ">
+                {% else %}
+                <div class="iso-box">
+                {% endif %}
+                    <div class="iso-num"><i class="fa-solid fa-flag-checkered text-sm"></i></div>
+                    <div class="iso-icon" aria-hidden="true"><i class="fa-solid fa-user-check main"></i></div>
+                    <div class="iso-platform" aria-hidden="true"><div class="left"></div><div class="right"></div><div class="top"></div></div>
+                    <div class="iso-count">{{ summary.completed }}<small>คน</small></div>
+                    <div class="iso-label">ขึ้นทะเบียนสำเร็จ</div>
+                {% if summary.completed > 0 %}</button>{% else %}</div>{% endif %}
+                {% if iso_done_items %}
+                <ul class="iso-depots is-scroll">
+                    {% for d in iso_done_items %}
+                    <li>
+                        <button type="button" class="completed-depot-link" data-depot="{{ '' if d[0] == 'ไม่ระบุ Depot' else d[0] }}" title="ดูรายชื่อช่าง: {{ d[0] }} ({{ d[1] }} คน)">
+                            <span class="name">{{ iso_short(d[0]) }}</span><span class="n">{{ d[1] }}</span>
+                        </button>
+                    </li>
+                    {% endfor %}
+                </ul>
                 {% endif %}
             </div>
         </div>
-        <div class="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
-            <div class="bg-slate-50 rounded-lg p-2">
-                <p class="text-slate-400">ไม่ผ่านทฤษฎี</p>
-                <p class="font-bold text-rose-600">{{ summary.theory_fail }} คน</p>
-            </div>
-            <div class="bg-slate-50 rounded-lg p-2">
-                <p class="text-slate-400">ไม่ผ่าน OJT</p>
-                <p class="font-bold text-rose-600">{{ summary.ojt_fail }} คน</p>
-            </div>
-            <div class="bg-slate-50 rounded-lg p-2">
-                <p class="text-slate-400">ลาออก</p>
-                <p class="font-bold text-slate-600">{{ summary.cancel }} คน</p>
-            </div>
-            <div class="bg-slate-50 rounded-lg p-2">
-                <p class="text-slate-400">อยู่ระหว่างดำเนินการ</p>
-                <p class="font-bold text-amber-600">{{ summary.onprocess }} คน</p>
-            </div>
-        </div>
     </div>
+</div>
 
-    <!-- Chart 2: 7-Step SLA vs Target -->
-    <div class="bg-white rounded-2xl shadow-sm p-5 border border-slate-200 flex flex-col justify-between">
-        <div>
-            <div class="flex items-center justify-between mb-3">
-                <div>
-                    <h3 class="text-base font-bold text-slate-800">
-                        <i class="fas fa-tachometer-alt text-rose-500 mr-2"></i>SLA เฉลี่ย 7 ขั้นตอน เทียบเป้าหมาย ({{ active_period_short }})
-                    </h3>
-                </div>
-                <span class="text-xs font-semibold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full">
-                    หน่วย: วัน
-                </span>
-            </div>
-            <div style="position: relative; height: 245px; width: 100%;">
-                {% if sla_analysis_steps|length > 0 %}
-                <canvas id="execSlaStepsChart"></canvas>
-                {% else %}
-                <div class="h-full flex items-center justify-center text-sm text-slate-400">ไม่มีข้อมูลสำหรับแสดงกราฟ</div>
-                {% endif %}
-            </div>
-        </div>
-        <div class="mt-2 pt-2 border-t border-slate-100 flex flex-wrap items-center justify-center gap-4 text-[11px] text-slate-500">
-            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block"></span> ตามเป้า</span>
-            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-amber-500 inline-block"></span> เกินเป้าเล็กน้อย</span>
-            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-rose-500 inline-block"></span> เกินเป้ามาก (คอขวด)</span>
-            <span class="flex items-center gap-1"><span class="w-0.5 h-3 bg-slate-800 inline-block"></span> เป้าหมายขั้นตอน</span>
-        </div>
-    </div>
-
+<!-- Zone 5: Core Executive Visuals -->
+<div class="mb-6">
     <!-- Chart 3: Monthly Trend & Completion Rate Combo -->
-    <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm p-5 border border-slate-200">
+    <div class="exec-card exec-reveal p-5">
         <div class="flex items-center justify-between mb-3">
             <div>
-                <h3 class="text-base font-bold text-slate-800">
-                    <i class="fas fa-chart-line text-indigo-500 mr-2"></i>แนวโน้มรายเดือนและอัตราความสำเร็จ (ปี 2026)
+                <h3 class="text-sm font-bold text-slate-900">
+                    แนวโน้มรายเดือนและอัตราความสำเร็จ (ปี 2026)
                 </h3>
                 <p class="text-xs text-slate-400">เปรียบเทียบแนวโน้มรายเดือนทั้งปี • เส้นประแสดงอัตราขึ้นทะเบียนสำเร็จ (%)</p>
             </div>
@@ -762,30 +808,30 @@
     </div>
 </div>
 
-<!-- Zone 5: Tabbed Detail & Drill-down Hub (Default: Tab 1 Area Summary) -->
-<div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+<!-- Zone 6: Tabbed Detail & Drill-down Hub (Default: Tab 1 Area Summary) -->
+<div class="exec-card exec-reveal overflow-hidden mb-6">
     <!-- Tab Navigation -->
-    <div class="no-print border-b border-slate-200 bg-slate-50/70 px-4 pt-3 flex flex-wrap items-center justify-between gap-2">
+    <div class="no-print border-b border-slate-200 px-4 pt-3 flex flex-wrap items-center justify-between gap-2">
         <div class="flex flex-wrap gap-1.5" role="tablist">
             <button type="button" class="exec-tab-btn px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-t-lg border-b-2 border-blue-600 text-blue-700 bg-white cursor-pointer"
                 data-tab="tab-area">
                 <i class="fas fa-layer-group mr-1.5"></i>สรุปตามพื้นที่
-                <span class="ml-1 bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full text-[11px]">{{ areas|length }}</span>
+                <span class="ml-1 bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full text-[11px]">{{ areas|length }}</span>
             </button>
             <button type="button" class="exec-tab-btn px-4 py-2.5 text-xs sm:text-sm font-medium rounded-t-lg border-b-2 border-transparent text-slate-600 hover:text-slate-900 hover:bg-white/60 cursor-pointer"
                 data-tab="tab-bottleneck">
-                <i class="fas fa-clock mr-1.5 text-amber-500"></i>คอขวดงานค้าง (Onprocess)
-                <span class="ml-1 bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full text-[11px]">{{ summary.onprocess }}</span>
+                <i class="fas fa-clock mr-1.5"></i>คอขวดงานค้าง (Onprocess)
+                <span class="ml-1 bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full text-[11px]">{{ summary.onprocess }}</span>
             </button>
             <button type="button" class="exec-tab-btn px-4 py-2.5 text-xs sm:text-sm font-medium rounded-t-lg border-b-2 border-transparent text-slate-600 hover:text-slate-900 hover:bg-white/60 cursor-pointer"
                 data-tab="tab-depot">
-                <i class="fas fa-building mr-1.5 text-indigo-500"></i>สรุปตามตัวแทน (Depot)
-                <span class="ml-1 bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded-full text-[11px]">{{ depot_agents|length }}</span>
+                <i class="fas fa-building mr-1.5"></i>สรุปตามตัวแทน (Depot)
+                <span class="ml-1 bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full text-[11px]">{{ depot_agents|length }}</span>
             </button>
             <button type="button" class="exec-tab-btn px-4 py-2.5 text-xs sm:text-sm font-medium rounded-t-lg border-b-2 border-transparent text-slate-600 hover:text-slate-900 hover:bg-white/60 cursor-pointer"
                 data-tab="tab-onprocess-list">
-                <i class="fas fa-user-clock mr-1.5 text-rose-500"></i>รายชื่อช่าง Onprocess
-                <span class="ml-1 bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded-full text-[11px]">{{ onprocess_details|length }}</span>
+                <i class="fas fa-user-clock mr-1.5"></i>รายชื่อช่าง Onprocess
+                <span class="ml-1 bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full text-[11px]">{{ onprocess_details|length }}</span>
             </button>
         </div>
         <a href="/technicians" class="text-xs text-blue-600 hover:text-blue-800 font-medium pb-2 hidden sm:inline-flex items-center gap-1">
@@ -802,37 +848,37 @@
             </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full text-sm">
-                    <thead class="bg-gray-800 text-white">
+                    <thead class="text-slate-500 text-xs border-b border-slate-200">
                         <tr>
                             <th class="px-4 py-3 text-left font-medium">พื้นที่ (Area)</th>
                             <th class="px-4 py-3 text-center font-medium">ลงทะเบียน</th>
-                            <th class="px-4 py-3 text-center font-medium bg-emerald-700">ขึ้นทะเบียนสำเร็จ</th>
-                            <th class="px-4 py-3 text-center font-medium bg-amber-600">อยู่ระหว่างดำเนินการ</th>
-                            <th class="px-4 py-3 text-center font-medium bg-rose-700">ไม่ผ่าน</th>
-                            <th class="px-4 py-3 text-center font-medium bg-slate-600">ลาออก</th>
+                            <th class="px-4 py-3 text-center font-medium">ขึ้นทะเบียนสำเร็จ</th>
+                            <th class="px-4 py-3 text-center font-medium">อยู่ระหว่างดำเนินการ</th>
+                            <th class="px-4 py-3 text-center font-medium">ไม่ผ่าน</th>
+                            <th class="px-4 py-3 text-center font-medium">ลาออก</th>
                             <th class="px-4 py-3 text-center font-medium">SLA เฉลี่ย (วัน)</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-200">
-                        <tr class="bg-slate-100 font-bold border-b-2 border-slate-300">
+                    <tbody class="divide-y divide-slate-100">
+                        <tr class="bg-slate-50 font-bold">
                             <td class="px-4 py-3 text-slate-800">รวมทั้งหมด</td>
                             <td class="px-4 py-3 text-center text-slate-800">{{ summary.total }}</td>
-                            <td class="px-4 py-3 text-center text-emerald-700">
+                            <td class="px-4 py-3 text-center text-slate-900">
                                 {{ summary.completed }} <span class="text-xs font-semibold">({{ summary.completed_rate }}%)</span>
                             </td>
-                            <td class="px-4 py-3 text-center text-amber-700">
+                            <td class="px-4 py-3 text-center text-slate-900">
                                 {% if summary.onprocess > 0 %}
-                                <button type="button" class="onprocess-status-link hover:bg-amber-200 px-2.5 py-1 rounded-lg cursor-pointer" data-status="__all__">
+                                <button type="button" class="onprocess-status-link hover:bg-indigo-50 hover:text-indigo-700 px-2.5 py-1 rounded-lg cursor-pointer" data-status="__all__">
                                     {{ summary.onprocess }} ({{ summary.onprocess_rate }}%)
                                     <i class="fas fa-arrow-up-right-from-square ml-1 text-[10px] opacity-60"></i>
                                 </button>
                                 {% else %}0{% endif %}
                             </td>
-                            <td class="px-4 py-3 text-center text-rose-700">{{ summary.closed }}</td>
+                            <td class="px-4 py-3 text-center text-slate-900">{{ summary.closed }}</td>
                             <td class="px-4 py-3 text-center text-slate-600">{{ summary.cancel }}</td>
                             <td class="px-4 py-3 text-center">
                                 {% if sum_sla_valid > 0 %}
-                                <span class="px-2.5 py-1 rounded-full text-xs font-bold {{ 'bg-emerald-100 text-emerald-800' if summary.avg_sla_total <= sla_total_target else ('bg-amber-100 text-amber-800' if summary.avg_sla_total <= sla_total_target + 5 else 'bg-rose-100 text-rose-800') }}">
+                                <span class="px-2.5 py-1 rounded-full text-xs font-bold {{ 'text-slate-700' if summary.avg_sla_total <= sla_total_target else ('bg-amber-100 text-amber-800' if summary.avg_sla_total <= sla_total_target + 5 else 'bg-rose-100 text-rose-800') }}">
                                     {{ summary.avg_sla_total }} วัน
                                 </span>
                                 {% else %}
@@ -845,13 +891,13 @@
                             <td class="px-4 py-3 font-semibold text-slate-800">{{ a.area }}</td>
                             <td class="px-4 py-3 text-center font-medium text-slate-700">{{ a.total }}</td>
                             <td class="px-4 py-3 text-center">
-                                <span class="text-emerald-700 font-semibold">{{ a.completed }}</span>
+                                <span class="text-slate-900 font-semibold">{{ a.completed }}</span>
                                 <span class="text-xs text-slate-400 ml-1">({{ a.success_rate }}%)</span>
                             </td>
                             <td class="px-4 py-3 text-center">
                                 {% if a.onprocess > 0 %}
                                 <button type="button"
-                                    class="onprocess-area-link bg-amber-50 hover:bg-amber-100 text-amber-800 font-semibold px-2.5 py-1 rounded-lg text-xs cursor-pointer"
+                                    class="onprocess-area-link bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 font-semibold px-2.5 py-1 rounded-lg text-xs cursor-pointer"
                                     data-area="{{ a.area }}">
                                     {{ a.onprocess }} คน
                                     <i class="fas fa-arrow-up-right-from-square ml-1 text-[10px] opacity-60"></i>
@@ -860,11 +906,11 @@
                                 <span class="text-slate-300">0</span>
                                 {% endif %}
                             </td>
-                            <td class="px-4 py-3 text-center {{ 'text-rose-600 font-medium' if a.closed > 0 else 'text-slate-300' }}">{{ a.closed }}</td>
+                            <td class="px-4 py-3 text-center {{ 'text-slate-700 font-medium' if a.closed > 0 else 'text-slate-300' }}">{{ a.closed }}</td>
                             <td class="px-4 py-3 text-center {{ 'text-slate-700 font-medium' if a.cancel > 0 else 'text-slate-300' }}">{{ a.cancel }}</td>
                             <td class="px-4 py-3 text-center">
                                 {% if a.avg_sla > 0 %}
-                                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold {{ 'bg-emerald-100 text-emerald-700' if a.avg_sla <= sla_total_target else ('bg-amber-100 text-amber-700' if a.avg_sla <= sla_total_target + 5 else 'bg-rose-100 text-rose-700') }}">
+                                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold {{ 'text-slate-700' if a.avg_sla <= sla_total_target else ('bg-amber-100 text-amber-700' if a.avg_sla <= sla_total_target + 5 else 'bg-rose-100 text-rose-700') }}">
                                     {{ a.avg_sla }} วัน
                                 </span>
                                 {% else %}
@@ -903,30 +949,30 @@
                 {% if onprocess_area_pivot.rows|length > 0 %}
                 <div class="overflow-x-auto max-h-[460px] overflow-y-auto border border-slate-200 rounded-lg">
                     <table class="min-w-full text-xs">
-                        <thead class="bg-amber-100 text-amber-900 sticky top-0 z-10">
+                        <thead class="bg-slate-50 text-slate-600 sticky top-0 z-10">
                             <tr>
-                                <th class="px-3 py-2.5 text-left font-semibold border-b border-amber-200">พื้นที่ (Area)</th>
+                                <th class="px-3 py-2.5 text-left font-semibold border-b border-slate-200">พื้นที่ (Area)</th>
                                 {% for col in onprocess_area_pivot.columns %}
-                                <th class="px-2.5 py-2.5 text-center font-semibold border-b border-amber-200">{{ col }}</th>
+                                <th class="px-2.5 py-2.5 text-center font-semibold border-b border-slate-200">{{ col }}</th>
                                 {% endfor %}
-                                <th class="px-3 py-2.5 text-center font-semibold border-b border-amber-200 bg-amber-200">รวมทั้งหมด</th>
+                                <th class="px-3 py-2.5 text-center font-semibold border-b border-slate-200 bg-slate-100">รวมทั้งหมด</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-200">
+                        <tbody class="divide-y divide-slate-100">
                             <tr class="bg-slate-100 font-bold">
                                 <td class="px-3 py-2.5 text-slate-800">รวมทั้งหมด</td>
                                 {% for cell in onprocess_area_pivot.grand_total.cells %}
                                 <td class="px-2.5 py-2.5 text-center">
                                     {% if cell > 0 %}
-                                    <button type="button" class="onprocess-status-link text-amber-700 font-bold hover:bg-amber-200 px-2 py-0.5 rounded cursor-pointer"
+                                    <button type="button" class="onprocess-status-link text-indigo-700 font-bold hover:bg-indigo-50 px-2 py-0.5 rounded cursor-pointer"
                                         data-status="{{ onprocess_area_pivot.columns[loop.index0] }}">
                                         {{ cell }}<i class="fas fa-arrow-up-right-from-square ml-1 text-[9px] opacity-60"></i>
                                     </button>
                                     {% else %}-{% endif %}
                                 </td>
                                 {% endfor %}
-                                <td class="px-3 py-2.5 text-center bg-amber-50 text-amber-800">
-                                    <button type="button" class="onprocess-status-link hover:bg-amber-200 px-2 py-0.5 rounded cursor-pointer" data-status="__all__">
+                                <td class="px-3 py-2.5 text-center bg-slate-100 text-slate-900">
+                                    <button type="button" class="onprocess-status-link hover:bg-indigo-50 px-2 py-0.5 rounded cursor-pointer" data-status="__all__">
                                         {{ onprocess_area_pivot.grand_total.total }}
                                     </button>
                                 </td>
@@ -937,7 +983,7 @@
                                 {% for cell in row.cells %}
                                 <td class="px-2.5 py-2 text-center text-slate-700">{{ cell if cell > 0 else '' }}</td>
                                 {% endfor %}
-                                <td class="px-3 py-2 text-center font-bold bg-amber-50/70 text-amber-800">{{ row.total }}</td>
+                                <td class="px-3 py-2 text-center font-bold bg-slate-50 text-slate-900">{{ row.total }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -953,30 +999,30 @@
                 {% if onprocess_province_pivot.rows|length > 0 %}
                 <div class="overflow-x-auto max-h-[460px] overflow-y-auto border border-slate-200 rounded-lg">
                     <table class="min-w-full text-xs">
-                        <thead class="bg-amber-100 text-amber-900 sticky top-0 z-10">
+                        <thead class="bg-slate-50 text-slate-600 sticky top-0 z-10">
                             <tr>
-                                <th class="px-3 py-2.5 text-left font-semibold border-b border-amber-200">จังหวัด</th>
+                                <th class="px-3 py-2.5 text-left font-semibold border-b border-slate-200">จังหวัด</th>
                                 {% for col in onprocess_province_pivot.columns %}
-                                <th class="px-2.5 py-2.5 text-center font-semibold border-b border-amber-200">{{ col }}</th>
+                                <th class="px-2.5 py-2.5 text-center font-semibold border-b border-slate-200">{{ col }}</th>
                                 {% endfor %}
-                                <th class="px-3 py-2.5 text-center font-semibold border-b border-amber-200 bg-amber-200">รวมทั้งหมด</th>
+                                <th class="px-3 py-2.5 text-center font-semibold border-b border-slate-200 bg-slate-100">รวมทั้งหมด</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-200">
+                        <tbody class="divide-y divide-slate-100">
                             <tr class="bg-slate-100 font-bold">
                                 <td class="px-3 py-2.5 text-slate-800">รวมทั้งหมด</td>
                                 {% for cell in onprocess_province_pivot.grand_total.cells %}
                                 <td class="px-2.5 py-2.5 text-center">
                                     {% if cell > 0 %}
-                                    <button type="button" class="onprocess-status-link text-amber-700 font-bold hover:bg-amber-200 px-2 py-0.5 rounded cursor-pointer"
+                                    <button type="button" class="onprocess-status-link text-indigo-700 font-bold hover:bg-indigo-50 px-2 py-0.5 rounded cursor-pointer"
                                         data-status="{{ onprocess_province_pivot.columns[loop.index0] }}">
                                         {{ cell }}<i class="fas fa-arrow-up-right-from-square ml-1 text-[9px] opacity-60"></i>
                                     </button>
                                     {% else %}-{% endif %}
                                 </td>
                                 {% endfor %}
-                                <td class="px-3 py-2.5 text-center bg-amber-50 text-amber-800">
-                                    <button type="button" class="onprocess-status-link hover:bg-amber-200 px-2 py-0.5 rounded cursor-pointer" data-status="__all__">
+                                <td class="px-3 py-2.5 text-center bg-slate-100 text-slate-900">
+                                    <button type="button" class="onprocess-status-link hover:bg-indigo-50 px-2 py-0.5 rounded cursor-pointer" data-status="__all__">
                                         {{ onprocess_province_pivot.grand_total.total }}
                                     </button>
                                 </td>
@@ -987,7 +1033,7 @@
                                 {% for cell in row.cells %}
                                 <td class="px-2.5 py-2 text-center text-slate-700">{{ cell if cell > 0 else '' }}</td>
                                 {% endfor %}
-                                <td class="px-3 py-2 text-center font-bold bg-amber-50/70 text-amber-800">{{ row.total }}</td>
+                                <td class="px-3 py-2 text-center font-bold bg-slate-50 text-slate-900">{{ row.total }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -1007,8 +1053,8 @@
             <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
                 <div class="flex flex-wrap gap-2 text-xs">
                     <span class="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-medium">ทั้งหมด {{ depot_agents|length }} ตัวแทน</span>
-                    <span class="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg font-medium">สำเร็จ ≥ 80%: {{ high_depots }} แห่ง</span>
-                    <span class="bg-amber-50 text-amber-700 px-2.5 py-1 rounded-lg font-medium">มีงานค้าง Onprocess: {{ backlog_depots }} แห่ง</span>
+                    <span class="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-medium">สำเร็จ ≥ 80%: {{ high_depots }} แห่ง</span>
+                    <span class="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg font-medium">มีงานค้าง Onprocess: {{ backlog_depots }} แห่ง</span>
                     <span class="bg-rose-50 text-rose-700 px-2.5 py-1 rounded-lg font-medium">อัตราสำเร็จ &lt; 50%: {{ low_depots }} แห่ง</span>
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
@@ -1026,17 +1072,17 @@
 
             <div class="overflow-x-auto max-h-[480px] overflow-y-auto border border-slate-200 rounded-lg">
                 <table class="min-w-full text-xs" id="execDepotTable">
-                    <thead class="bg-gray-800 text-white sticky top-0 z-10">
+                    <thead class="bg-slate-50 text-slate-500 sticky top-0 z-10">
                         <tr>
                             <th class="px-3 py-2.5 text-left font-medium">#</th>
-                            <th class="px-3 py-2.5 text-left font-medium cursor-pointer hover:bg-gray-700 exec-sortable-header" data-sort="area">Area <i class="fas fa-sort text-gray-400 ml-1"></i></th>
-                            <th class="px-3 py-2.5 text-left font-medium cursor-pointer hover:bg-gray-700 exec-sortable-header" data-sort="depot_code">รหัส <i class="fas fa-sort text-gray-400 ml-1"></i></th>
-                            <th class="px-3 py-2.5 text-left font-medium cursor-pointer hover:bg-gray-700 exec-sortable-header" data-sort="depot_name">ตัวแทน <i class="fas fa-sort text-gray-400 ml-1"></i></th>
-                            <th class="px-3 py-2.5 text-left font-medium cursor-pointer hover:bg-gray-700 exec-sortable-header" data-sort="province">จังหวัด <i class="fas fa-sort text-gray-400 ml-1"></i></th>
-                            <th class="px-3 py-2.5 text-center font-medium cursor-pointer hover:bg-gray-700 exec-sortable-header" data-sort="total">ลงทะเบียน <i class="fas fa-sort text-gray-400 ml-1"></i></th>
-                            <th class="px-3 py-2.5 text-center font-medium cursor-pointer hover:bg-gray-700 bg-emerald-700 exec-sortable-header" data-sort="completed">สำเร็จ <i class="fas fa-sort text-gray-400 ml-1"></i></th>
-                            <th class="px-3 py-2.5 text-center font-medium cursor-pointer hover:bg-gray-700 bg-amber-600 exec-sortable-header" data-sort="onprocess">ค้าง (Onprocess) <i class="fas fa-sort text-gray-400 ml-1"></i></th>
-                            <th class="px-3 py-2.5 text-center font-medium cursor-pointer hover:bg-gray-700 bg-blue-700 exec-sortable-header" data-sort="success_rate">% สำเร็จ <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                            <th class="px-3 py-2.5 text-left font-medium cursor-pointer hover:bg-slate-100 exec-sortable-header" data-sort="area">Area <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                            <th class="px-3 py-2.5 text-left font-medium cursor-pointer hover:bg-slate-100 exec-sortable-header" data-sort="depot_code">รหัส <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                            <th class="px-3 py-2.5 text-left font-medium cursor-pointer hover:bg-slate-100 exec-sortable-header" data-sort="depot_name">ตัวแทน <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                            <th class="px-3 py-2.5 text-left font-medium cursor-pointer hover:bg-slate-100 exec-sortable-header" data-sort="province">จังหวัด <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                            <th class="px-3 py-2.5 text-center font-medium cursor-pointer hover:bg-slate-100 exec-sortable-header" data-sort="total">ลงทะเบียน <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                            <th class="px-3 py-2.5 text-center font-medium cursor-pointer hover:bg-slate-100 exec-sortable-header" data-sort="completed">สำเร็จ <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                            <th class="px-3 py-2.5 text-center font-medium cursor-pointer hover:bg-slate-100 exec-sortable-header" data-sort="onprocess">ค้าง (Onprocess) <i class="fas fa-sort text-gray-400 ml-1"></i></th>
+                            <th class="px-3 py-2.5 text-center font-medium cursor-pointer hover:bg-slate-100 exec-sortable-header" data-sort="success_rate">% สำเร็จ <i class="fas fa-sort text-gray-400 ml-1"></i></th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-200" id="execDepotTableBody">
@@ -1056,10 +1102,10 @@
                             <td class="px-3 py-2 text-slate-800 max-w-[200px] truncate" title="{{ agent.depot_name }}">{{ agent.depot_name }}</td>
                             <td class="px-3 py-2 text-slate-600">{{ agent.province }}</td>
                             <td class="px-3 py-2 text-center font-medium">{{ agent.total }}</td>
-                            <td class="px-3 py-2 text-center font-medium text-emerald-700">{{ agent.completed }}</td>
-                            <td class="px-3 py-2 text-center font-medium {{ 'text-amber-700' if agent.onprocess > 0 else 'text-slate-300' }}">{{ agent.onprocess }}</td>
+                            <td class="px-3 py-2 text-center font-medium text-slate-900">{{ agent.completed }}</td>
+                            <td class="px-3 py-2 text-center font-medium {{ 'text-slate-900' if agent.onprocess > 0 else 'text-slate-300' }}">{{ agent.onprocess }}</td>
                             <td class="px-3 py-2 text-center">
-                                <span class="px-2 py-0.5 rounded font-semibold {{ 'bg-emerald-100 text-emerald-800' if agent.success_rate >= 80 else ('bg-amber-100 text-amber-800' if agent.success_rate >= 50 else 'bg-rose-100 text-rose-800') }}">
+                                <span class="px-2 py-0.5 rounded font-semibold {{ 'text-slate-700' if agent.success_rate >= 80 else ('bg-amber-100 text-amber-800' if agent.success_rate >= 50 else 'bg-rose-100 text-rose-800') }}">
                                     {{ agent.success_rate }}%
                                 </span>
                             </td>
@@ -1080,17 +1126,17 @@
             <div class="mb-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2.5">
                 <div class="flex flex-wrap items-center gap-2">
                     <input type="text" id="execOnprocessSearch"
-                        class="w-full sm:w-72 border border-slate-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400"
+                        class="w-full sm:w-72 border border-slate-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300"
                         placeholder="ค้นหา: ชื่อช่าง / Depot / จังหวัด / หมายเหตุ...">
                     <select id="execOnprocessAreaFilter"
-                        class="border border-slate-300 rounded-lg px-3 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-amber-400">
+                        class="border border-slate-300 rounded-lg px-3 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
                         <option value="">ทุกพื้นที่</option>
                         {% for area in area_list %}
                         <option value="{{ area }}">{{ area }}</option>
                         {% endfor %}
                     </select>
                     <select id="execOnprocessStatusFilter"
-                        class="border border-slate-300 rounded-lg px-3 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-amber-400">
+                        class="border border-slate-300 rounded-lg px-3 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300">
                         <option value="">ทุกสถานะย่อย</option>
                         {% for col in onprocess_area_pivot.columns %}
                         <option value="{{ col }}">{{ col }}</option>
@@ -1098,13 +1144,13 @@
                     </select>
                 </div>
                 <button type="button" id="execOnprocessExportBtn"
-                    class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer whitespace-nowrap self-start lg:self-auto">
+                    class="bg-slate-900 hover:bg-slate-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer whitespace-nowrap self-start lg:self-auto">
                     <i class="fas fa-file-excel mr-1.5"></i>Export Excel
                 </button>
             </div>
             <div class="overflow-x-auto max-h-[500px] overflow-y-auto border border-slate-200 rounded-lg">
                 <table class="w-full text-xs" id="execOnprocessTable">
-                    <thead class="bg-gray-800 text-white sticky top-0 z-10">
+                    <thead class="bg-slate-50 text-slate-500 sticky top-0 z-10">
                         <tr>
                             <th class="px-2.5 py-2.5 text-center font-medium whitespace-nowrap">ลำดับ</th>
                             <th class="px-2.5 py-2.5 text-left font-medium whitespace-nowrap">ชื่อช่าง</th>
@@ -1120,9 +1166,9 @@
                             <th class="px-2.5 py-2.5 text-center font-medium whitespace-nowrap">เดือนอบรม</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-200">
+                    <tbody class="divide-y divide-slate-100">
                         {% for t in onprocess_details %}
-                        <tr class="hover:bg-amber-50/50" data-area="{{ t.area }}" data-status="{{ t.status }}">
+                        <tr class="hover:bg-slate-50" data-area="{{ t.area }}" data-status="{{ t.status }}">
                             <td class="px-2.5 py-2 text-center text-slate-500">{{ loop.index }}</td>
                             <td class="px-2.5 py-2 font-medium text-slate-800">{{ t.full_name_th }}</td>
                             <td class="px-2.5 py-2 text-slate-700">{{ t.depot_name }}</td>
@@ -1134,7 +1180,7 @@
                                 {% if 'ไม่ผ่าน' in v %}
                                 <span class="bg-rose-100 text-rose-700 px-2 py-0.5 rounded font-medium">{{ v }}</span>
                                 {% elif 'ผ่าน' in v %}
-                                <span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-medium">{{ v }}</span>
+                                <span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-medium">{{ v }}</span>
                                 {% elif v and v != '-' %}
                                 <span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-medium">{{ v }}</span>
                                 {% else %}
@@ -1143,7 +1189,7 @@
                             </td>
                             {% endfor %}
                             <td class="px-2.5 py-2 text-center whitespace-nowrap">
-                                <span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-medium">{{ t.status }}</span>
+                                <span class="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-medium">{{ t.status }}</span>
                             </td>
                             <td class="px-2.5 py-2 text-slate-700">{% if t.remark %}{{ t.remark }}{% else %}<span class="text-slate-300">-</span>{% endif %}</td>
                             <td class="px-2.5 py-2 text-center text-slate-600 whitespace-nowrap">{{ t.training_round_date }}</td>
@@ -1162,6 +1208,7 @@
 
 <!-- JSON payload for Drill-down Modal -->
 <script type="application/json" id="execOnprocessDataJson">{{ onprocess_details | tojson }}</script>
+<script type="application/json" id="execCompletedDataJson">{{ (completed_details | default([], true)) | tojson }}</script>
 
 <!-- Modal: รายชื่อช่าง Onprocess -->
 <div id="execOnprocessModal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4">
@@ -1169,17 +1216,17 @@
     <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[88vh] flex flex-col">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-6 py-4 border-b border-slate-100">
             <div>
-                <h3 class="text-base font-bold text-slate-800">
-                    <i class="fas fa-user-clock text-amber-500 mr-2"></i>รายชื่อช่างค้างดำเนินการ — <span id="execModalTitle" class="text-amber-700"></span>
+                <h3 class="text-sm font-bold text-slate-900">
+                    <i class="fas fa-user-clock text-indigo-500 mr-2"></i><span id="execModalHeading">รายชื่อช่างค้างดำเนินการ</span> — <span id="execModalTitle" class="text-indigo-700"></span>
                 </h3>
                 <p class="text-xs text-slate-500 mt-0.5">พบทั้งหมด <span id="execModalCount" class="font-semibold text-slate-700">0</span> คน</p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
                 <input type="text" id="execModalSearchInput"
-                    class="border border-slate-300 rounded-lg px-3 py-1.5 text-xs w-52 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    class="border border-slate-300 rounded-lg px-3 py-1.5 text-xs w-52 focus:outline-none focus:ring-2 focus:ring-indigo-300"
                     placeholder="ค้นหาในหน้าต่างนี้...">
                 <button type="button" id="execModalExportBtn"
-                    class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer whitespace-nowrap">
+                    class="bg-slate-900 hover:bg-slate-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer whitespace-nowrap">
                     <i class="fas fa-file-excel mr-1.5"></i>Export Excel
                 </button>
                 <button type="button" id="execModalCloseBtn"
@@ -1190,7 +1237,7 @@
         </div>
         <div class="overflow-auto p-4">
             <table class="w-full text-xs border border-slate-200">
-                <thead class="bg-gray-800 text-white sticky top-0 z-10">
+                <thead class="bg-slate-50 text-slate-500 sticky top-0 z-10">
                     <tr>
                         <th class="px-2.5 py-2 text-center font-medium whitespace-nowrap">ลำดับ</th>
                         <th class="px-2.5 py-2 text-left font-medium whitespace-nowrap">ชื่อช่าง</th>

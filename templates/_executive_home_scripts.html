@@ -47,6 +47,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const SLA_STEPS = {{ sla_analysis_steps | tojson }};
     const RAW_MONTHLY_DATA = {{ (all_monthly if all_monthly is defined else monthly) | tojson }};
     const TOTAL_REGISTERED = {{ tot_reg | tojson }};
+    const IS_PARTIAL_MONTH = {{ (exec_insight.is_partial_month if exec_insight is defined and exec_insight.is_partial_month is defined else false) | tojson }};
 
     // Preserve full-year monthly trend in sessionStorage so single-month filters still have full-year context
     let MONTHLY_DATA = RAW_MONTHLY_DATA;
@@ -74,7 +75,11 @@ document.addEventListener('DOMContentLoaded', function () {
             const prevCompRate = prevM.total > 0 ? ((prevM.completed / prevM.total) * 100).toFixed(1) : '0.0';
 
             const kpiBadge = document.getElementById('kpiRegMoMBadge');
-            if (kpiBadge) {
+            if (kpiBadge && IS_PARTIAL_MONTH) {
+                // เดือนที่ยังไม่ปิดรอบ ไม่ควรตัดสินว่าลด/เพิ่มเทียบเดือนเต็ม
+                kpiBadge.className = 'text-slate-500 font-medium';
+                kpiBadge.textContent = 'เดือนยังไม่ปิด • ' + prevM.month + ' ' + prevM.total + ' คน';
+            } else if (kpiBadge) {
                 const cls = regDelta >= 0 ? 'text-emerald-600 font-semibold' : 'text-rose-600 font-semibold';
                 const sign = regDelta > 0 ? '+' : '';
                 kpiBadge.className = cls;
@@ -87,7 +92,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 regDeltaEl.innerHTML = '<span class="px-2 py-0.5 rounded-full ' + cls + '">' + sign + regDelta + ' คน' + (regPct !== null ? ' (' + regPct + '%)' : '') + '</span>';
             }
             const regSubEl = document.getElementById('execSummaryRegSub');
-            if (regSubEl) {
+            if (regSubEl && !IS_PARTIAL_MONTH) {
                 regSubEl.textContent = 'เทียบเดือน ' + prevM.month + ' (' + prevM.total + ' คน)';
             }
             const compSubEl = document.getElementById('execSummaryCompSub');
@@ -102,6 +107,69 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
     }
+
+    // ===== 0. Motion: reveal, count-up, rings, 3D tilt (ปิดเมื่อผู้ใช้ตั้ง reduced motion) =====
+    (function initExecMotion() {
+        const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const fmt = (v, d) => Number(v).toLocaleString('th-TH', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+        function runCountUp(el) {
+            const target = parseFloat(el.dataset.countup);
+            const decimals = parseInt(el.dataset.decimals || '0', 10);
+            if (isNaN(target)) return;
+            if (reduce) { el.textContent = fmt(target, decimals); return; }
+            const start = performance.now(), dur = 1100;
+            (function tick(now) {
+                const p = Math.min((now - start) / dur, 1);
+                el.textContent = fmt(target * (1 - Math.pow(1 - p, 3)), decimals);
+                if (p < 1) requestAnimationFrame(tick);
+            })(start);
+        }
+        function runRing(el) {
+            const pct = Math.max(0, Math.min(parseFloat(el.dataset.ring) || 0, 100));
+            if (pct <= 0) { el.style.opacity = '0'; return; }  // ไม่ให้ round cap เหลือเป็นจุด
+            el.style.strokeDashoffset = String(100 - pct);
+        }
+        function activate(root) {
+            root.classList.add('is-in');
+            root.querySelectorAll('[data-countup]').forEach(runCountUp);
+            root.querySelectorAll('[data-ring]').forEach(runRing);
+        }
+
+        const blocks = document.querySelectorAll('.exec-reveal');
+        if (reduce || !('IntersectionObserver' in window)) {
+            blocks.forEach(activate);
+        } else {
+            const io = new IntersectionObserver(entries => {
+                entries.forEach(e => {
+                    if (!e.isIntersecting) return;
+                    io.unobserve(e.target);
+                    const delay = parseInt(e.target.style.getPropertyValue('--d'), 10) || 0;  // stagger
+                    setTimeout(() => activate(e.target), delay);
+                });
+            }, { threshold: 0.15 });
+            blocks.forEach(b => io.observe(b));
+        }
+        // ตัวเลข/วงแหวนที่ไม่ได้อยู่ใน .exec-reveal
+        document.querySelectorAll('[data-countup], [data-ring]').forEach(el => {
+            if (!el.closest('.exec-reveal')) { el.dataset.countup !== undefined ? runCountUp(el) : runRing(el); }
+        });
+
+    })();
+
+    // ===== 0.1 ย่อแผนภาพสถานะ 3D ให้พอดีความกว้างกรอบ (ไม่ย่อเกิน 60% — จอเล็กกว่านั้นให้เลื่อนซ้ายขวา) =====
+    (function fitIsoFlow() {
+        const stage = document.querySelector('.iso-stage');
+        const flow = stage && stage.querySelector('.iso-flow');
+        if (!flow) return;
+        function fit() {
+            flow.style.zoom = '1';
+            const ratio = stage.clientWidth / flow.scrollWidth;
+            flow.style.zoom = String(Math.max(0.6, Math.min(1, ratio)));
+        }
+        fit();
+        window.addEventListener('resize', fit);
+    })();
 
     // ===== 1. Presentation Mode Toggle =====
     const presBtn = document.getElementById('presentationToggleBtn');
@@ -259,7 +327,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 datasets: [{
                     label: 'จำนวนช่าง',
                     data: FUNNEL_STAGES.map(s => s.pct_total),
-                    backgroundColor: ['#3B82F6', '#6366F1', '#8B5CF6', '#10B981'],
+                    backgroundColor: ['#E0E7FF', '#C7D2FE', '#A5B4FC', '#4F46E5'],
                     borderRadius: 8,
                     barThickness: 28
                 }]
@@ -347,9 +415,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     label: 'SLA เฉลี่ยจริง (วัน)',
                     data: SLA_STEPS.map(s => s.avg_sla),
                     backgroundColor: SLA_STEPS.map(s => {
-                        if (s.avg_sla <= s.target_days) return '#10B981';
-                        if (s.avg_sla <= s.target_days * 1.5) return '#F59E0B';
-                        return '#EF4444';
+                        if (s.avg_sla <= s.target_days) return '#CBD5E1';
+                        if (s.avg_sla <= s.target_days * 1.5) return '#FBBF24';
+                        return '#F43F5E';
                     }),
                     borderRadius: 6,
                     barThickness: 20
@@ -446,7 +514,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     {
                         label: 'ขึ้นทะเบียนสำเร็จ',
                         data: MONTHLY_DATA.map(m => m.completed),
-                        backgroundColor: '#10B981',
+                        backgroundColor: '#4F46E5',
                         stack: 'headcount',
                         order: 2,
                         datalabels: {
@@ -458,11 +526,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     {
                         label: 'อยู่ระหว่างดำเนินการ',
                         data: MONTHLY_DATA.map(m => m.onprocess),
-                        backgroundColor: '#F59E0B',
+                        backgroundColor: '#A5B4FC',
                         stack: 'headcount',
                         order: 2,
                         datalabels: {
-                            color: '#fff',
+                            color: '#1E1B4B',
                             font: { weight: 'bold', size: 10 },
                             formatter: v => v > 0 ? v : ''
                         }
@@ -470,11 +538,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     {
                         label: 'ไม่ผ่าน',
                         data: MONTHLY_DATA.map(m => m.closed),
-                        backgroundColor: '#EF4444',
+                        backgroundColor: '#FDA4AF',
                         stack: 'headcount',
                         order: 2,
                         datalabels: {
-                            color: '#fff',
+                            color: '#881337',
                             font: { weight: 'bold', size: 10 },
                             formatter: v => v > 0 ? v : ''
                         }
@@ -482,11 +550,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     {
                         label: 'ลาออก',
                         data: MONTHLY_DATA.map(m => m.cancel),
-                        backgroundColor: '#6B7280',
+                        backgroundColor: '#E2E8F0',
                         stack: 'headcount',
                         order: 2,
                         datalabels: {
-                            color: '#fff',
+                            color: '#475569',
                             font: { weight: 'bold', size: 10 },
                             formatter: v => v > 0 ? v : ''
                         }
@@ -496,13 +564,13 @@ document.addEventListener('DOMContentLoaded', function () {
                         label: 'อัตราสำเร็จ (%)',
                         data: monthlySuccessRates,
                         yAxisID: 'y1',
-                        borderColor: '#4F46E5',
-                        backgroundColor: '#4F46E5',
+                        borderColor: '#0F172A',
+                        backgroundColor: '#0F172A',
                         borderWidth: 2.5,
                         borderDash: [5, 4],
                         tension: 0.25,
                         pointRadius: 4,
-                        pointBackgroundColor: '#4F46E5',
+                        pointBackgroundColor: '#0F172A',
                         pointBorderColor: '#fff',
                         pointBorderWidth: 1.5,
                         order: 1,
@@ -510,7 +578,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             display: true,
                             align: 'top',
                             offset: 4,
-                            color: '#4338CA',
+                            color: '#0F172A',
                             backgroundColor: 'rgba(255,255,255,0.85)',
                             borderRadius: 4,
                             padding: { top: 1, bottom: 1, left: 3, right: 3 },
@@ -550,7 +618,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         max: 115,
                         grid: { display: false },
                         ticks: {
-                            color: '#6366F1',
+                            color: '#64748B',
                             font: { size: 10 },
                             callback: v => v <= 100 ? v + '%' : ''
                         }
@@ -717,6 +785,13 @@ document.addEventListener('DOMContentLoaded', function () {
     try {
         onprocessData = JSON.parse(document.getElementById('execOnprocessDataJson').textContent || '[]');
     } catch (e) { onprocessData = []; }
+    let completedData = [];
+    try {
+        const el = document.getElementById('execCompletedDataJson');
+        completedData = el ? JSON.parse(el.textContent || '[]') : [];
+    } catch (e) { completedData = []; }
+    const modalHeading = document.getElementById('execModalHeading');
+    let modalFilePrefix = 'onprocess_';
 
     const modal = document.getElementById('execOnprocessModal');
     const modalBody = document.getElementById('execModalBody');
@@ -771,12 +846,24 @@ document.addEventListener('DOMContentLoaded', function () {
     function openExecModal(opts) {
         const status = opts.status || '';
         const area = opts.area || '';
-        baseModalRows = onprocessData.filter(t => {
+        const depot = opts.depot;  // undefined = ไม่กรอง, '' = ช่างที่ไม่ระบุ Depot
+        const isCompleted = opts.dataset === 'completed';
+        if (modalHeading) modalHeading.textContent = isCompleted ? 'รายชื่อช่างขึ้นทะเบียนสำเร็จ' : 'รายชื่อช่างค้างดำเนินการ';
+        modalFilePrefix = isCompleted ? 'completed_' : 'onprocess_';
+        baseModalRows = (isCompleted ? completedData : onprocessData).filter(t => {
             const matchStatus = !status || status === '__all__' || (t.status || '') === status;
             const matchArea = !area || (t.area || '') === area;
-            return matchStatus && matchArea;
+            const matchDepot = depot === undefined || (t.depot_name || '') === depot;
+            return matchStatus && matchArea && matchDepot;
         });
-        if (area && (!status || status === '__all__')) {
+        if (depot !== undefined) {
+            const depotLabel = depot || 'ไม่ระบุ Depot';
+            modalTitle.textContent = status ? 'สถานะ ' + status + ' • ' + depotLabel : depotLabel;
+            modalFileSuffix = (status ? status + '_' : '') + depotLabel;
+        } else if (isCompleted) {
+            modalTitle.textContent = 'ทั้งหมด';
+            modalFileSuffix = 'all';
+        } else if (area && (!status || status === '__all__')) {
             modalTitle.textContent = 'พื้นที่ ' + area;
             modalFileSuffix = area;
         } else if (status && status !== '__all__') {
@@ -804,6 +891,19 @@ document.addEventListener('DOMContentLoaded', function () {
             openExecModal({ status: this.getAttribute('data-status') });
         });
     });
+    document.querySelectorAll('.onprocess-depot-link').forEach(btn => {
+        btn.addEventListener('click', function () {
+            openExecModal({ status: this.getAttribute('data-status'), depot: this.getAttribute('data-depot') });
+        });
+    });
+    document.querySelectorAll('.completed-depot-link').forEach(btn => {
+        btn.addEventListener('click', function () {
+            openExecModal({ dataset: 'completed', depot: this.getAttribute('data-depot') });
+        });
+    });
+    document.querySelectorAll('.completed-all-link').forEach(btn => {
+        btn.addEventListener('click', () => openExecModal({ dataset: 'completed' }));
+    });
     document.querySelectorAll('.onprocess-area-link').forEach(btn => {
         btn.addEventListener('click', function () {
             openExecModal({ area: this.getAttribute('data-area') });
@@ -823,7 +923,7 @@ document.addEventListener('DOMContentLoaded', function () {
             i + 1, t.full_name_th, t.depot_name, t.depot_code, t.province, t.area,
             t.theory_training_result, t.on_the_job_result, t.status, t.remark, t.training_round_date, t.training_month
         ]);
-        exportAoAToExcel(headers, rows, 'onprocess_' + modalFileSuffix.replace(/[\\/?*:\[\]]/g, '_') + '.xlsx');
+        exportAoAToExcel(headers, rows, modalFilePrefix + modalFileSuffix.replace(/[\\/?*:\[\]]/g, '_') + '.xlsx');
     });
 });
 </script>

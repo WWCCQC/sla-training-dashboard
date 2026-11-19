@@ -109,6 +109,28 @@ def extract_area_sort_key(area_name):
         return (0, int(match.group(1)), text)
     return (1, 999, text)
 
+
+def completed_sla_rows(df):
+    """แถวที่ใช้คิด SLA รวม: เฉพาะช่างที่ขึ้นทะเบียนสำเร็จแล้ว (ปิดจบครบทุกขั้นตอน)
+    ช่าง Onprocess มี end_date = วันที่ข้อมูลล่าสุด จึงเป็น "อายุงานค้าง" ไม่ใช่ SLA ที่ทำได้จริง"""
+    required = ['sla_total', 'start_date', 'end_date', 'result']
+    if df.empty or any(c not in df.columns for c in required):
+        return df.iloc[0:0]
+    return df[
+        (df['result'] == 'Completed') &
+        (df['sla_total'] >= 0) &
+        (df['sla_total'].notna()) &
+        (df['start_date'].notna()) &
+        (df['end_date'].notna())
+    ]
+
+
+def step_finished_mask(df, status_col):
+    """ตัดขั้นตอนที่ยังดำเนินการอยู่ (end = วันนี้) ออกจากค่าเฉลี่ย SLA รายขั้นตอน"""
+    if status_col not in df.columns:
+        return pd.Series(True, index=df.index)
+    return df[status_col].astype(str).str.strip().str.lower() != 'onprocess'
+
 # ===============================
 # CONTEXT PROCESSOR
 # ===============================
@@ -271,6 +293,7 @@ def get_summary_stats(df):
             'dropoff_rate': 0,
             'theory_pass': 0,
             'theory_fail': 0,
+            'theory_noshow': 0,
             'theory_rate': 0,
             'ojt_pass': 0,
             'ojt_fail': 0,
@@ -303,6 +326,7 @@ def get_summary_stats(df):
     # ผลอบรมทฤษฎี
     theory_pass = len(df[df['result_round'] == 'ผ่าน']) if 'result_round' in df.columns else 0
     theory_fail = len(df[df['result_round'] == 'ไม่ผ่าน']) if 'result_round' in df.columns else 0
+    theory_noshow = len(df[df['result_round'] == 'ไม่เข้าอบรม']) if 'result_round' in df.columns else 0
     
     # ผล OJT
     ojt_pass = len(df[df['result_round_ojt'] == 'ผ่าน']) if 'result_round_ojt' in df.columns else 0
@@ -313,12 +337,7 @@ def get_summary_stats(df):
     sla_within_target_count = 0
     try:
         if 'sla_total' in df.columns and 'start_date' in df.columns and 'end_date' in df.columns:
-            valid_sla_df = df[
-                (df['sla_total'] >= 0) & 
-                (df['sla_total'].notna()) & 
-                (df['start_date'].notna()) & 
-                (df['end_date'].notna())
-            ]
+            valid_sla_df = completed_sla_rows(df)
             sla_valid_count = len(valid_sla_df)
             if sla_valid_count > 0:
                 avg_sla_total = valid_sla_df['sla_total'].mean()
@@ -373,6 +392,7 @@ def get_summary_stats(df):
         'dropoff_rate': round((dropoff / total * 100), 1) if total > 0 else 0,
         'theory_pass': theory_pass,
         'theory_fail': theory_fail,
+        'theory_noshow': theory_noshow,
         'theory_rate': round((theory_pass / (theory_pass + theory_fail) * 100), 1) if (theory_pass + theory_fail) > 0 else 0,
         'ojt_pass': ojt_pass,
         'ojt_fail': ojt_fail,
@@ -406,7 +426,8 @@ def get_sla_by_step_stats(df):
                 (df[sla_col] >= 0) & 
                 (df[sla_col].notna()) & 
                 (df[start_col].notna()) & 
-                (df[end_col].notna())
+                (df[end_col].notna()) &
+                step_finished_mask(df, status_col)
             ]
             total = len(valid_df)
             avg_sla = valid_df[sla_col].mean() if total > 0 else 0
@@ -452,6 +473,8 @@ def get_sla_analysis_step_stats(df):
             required_columns = ['sla_genid', 'sla_printcard', 'genid_start', 'genid_end', 'printcard_start', 'printcard_end']
             if all(column in df.columns for column in required_columns):
                 valid_df = df[
+                    step_finished_mask(df, 'status_genid') &
+                    step_finished_mask(df, 'status_printcard') &
                     (df['sla_genid'] >= 0) &
                     (df['sla_genid'].notna()) &
                     (df['sla_printcard'] >= 0) &
@@ -852,14 +875,14 @@ def get_onprocess_pivot(df, group_col):
     grand_total = {'cells': grand_cells, 'total': sum(grand_cells)}
     return {'columns': columns, 'rows': rows, 'grand_total': grand_total}
 
-def get_onprocess_detail_rows(df):
-    """รายละเอียดช่างที่ยังขึ้นทะเบียนไม่เรียบร้อย (result = 'Onprocess') รายคน
+def get_onprocess_detail_rows(df, result='Onprocess'):
+    """รายละเอียดช่างรายคนตาม result (ค่าเริ่มต้น 'Onprocess' = ยังขึ้นทะเบียนไม่เรียบร้อย; 'Completed' = ขึ้นทะเบียนสำเร็จ)
     คอลัมน์ตรงกับไฟล์ติดตามงาน: ลำดับ, ชื่อช่าง, Depot, รหัส Depot, จังหวัด, พื้นที่,
     ผลอบรมทฤษฎี, ผล OJT, สถานะ, Result, รอบอบรม, เดือนอบรม"""
     if df.empty or 'result' not in df.columns:
         return []
 
-    onprocess_df = df[df['result'] == 'Onprocess']
+    onprocess_df = df[df['result'] == result]
     if onprocess_df.empty:
         return []
 
@@ -997,7 +1020,7 @@ def get_executive_insight(monthly, sla_steps, onprocess_pivot):
     return insight
 
 
-def get_executive_home_insight(monthly, all_monthly, sla_analysis_steps, onprocess_pivot, areas, summary, selected_months=None):
+def get_executive_home_insight(monthly, all_monthly, sla_analysis_steps, onprocess_pivot, areas, summary, selected_months=None, overdue=None):
     """สรุป Insight สำหรับหน้าหลักผู้บริหาร (เปลี่ยนตามเดือนที่เลือก หรือเดือนปัจจุบันเป็นค่าเริ่มต้น)"""
     selected_months = selected_months or []
     is_single_month = len(selected_months) == 1 or (not selected_months and len(monthly) == 1)
@@ -1023,6 +1046,9 @@ def get_executive_home_insight(monthly, all_monthly, sla_analysis_steps, onproce
         'top_stuck': None,
         'top_backlog_area': None,
         'slowest_area': None,
+        'overdue': overdue or get_overdue_backlog(pd.DataFrame()),
+        'is_partial_month': False,
+        'headline': None,
         'recommendations': []
     }
 
@@ -1123,52 +1149,151 @@ def get_executive_home_insight(monthly, all_monthly, sla_analysis_steps, onproce
                 'over': round(slowest['avg_sla'] - SLA_TOTAL_TARGET_DAYS, 1),
             }
 
-    # ข้อเสนอแนะเชิงบริหารตามช่วงเดือนที่เลือก
+    # ข้อสรุปเชิงบริหาร: แต่ละข้อ = ข้อเท็จจริง + สิ่งที่ควรทำ, tone ใช้กำหนดสี (risk/warn/good/info)
     recs = []
-    recs.append(
-        f"ภาพรวม{period_label}: ลงทะเบียน {summary.get('total', 0)} คน • "
-        f"ขึ้นทะเบียนสำเร็จ {summary.get('completed', 0)} คน ({summary.get('completed_rate', 0)}%) • "
-        f"อยู่ระหว่างดำเนินการ {summary.get('onprocess', 0)} คน ({summary.get('onprocess_rate', 0)}%)"
+    total = summary.get('total', 0)
+    completed = summary.get('completed', 0)
+    onprocess = summary.get('onprocess', 0)
+    target = SLA_TOTAL_TARGET_DAYS
+
+    now_bkk = pd.Timestamp.now(tz='Asia/Bangkok')
+    insight['is_partial_month'] = bool(
+        is_single_month and monthly and monthly[-1].get('month') == now_bkk.strftime('%b%y')
     )
+    insight['as_of_label'] = now_bkk.strftime('%d %b %Y')
+
+    if insight['is_partial_month']:
+        recs.append({
+            'tone': 'info',
+            'text': (
+                f"{period_label} ยังไม่สิ้นเดือน (ข้อมูลถึง {insight['as_of_label']}): ลงทะเบียนแล้ว {total} คน "
+                f"ยังอยู่ระหว่างดำเนินการ {onprocess} คน — อัตราขึ้นทะเบียนสำเร็จ {summary.get('completed_rate', 0)}% "
+                f"เป็นปกติของรุ่นที่เพิ่งเริ่ม จึงยังไม่ควรเทียบกับเดือนที่ปิดรอบแล้ว"
+            ),
+        })
+    elif total > 0:
+        rate = summary.get('completed_rate', 0)
+        prev = insight.get('prev_cohort')
+        trend = ''
+        if prev:
+            diff = round(rate - prev['completion_rate'], 1)
+            trend = f" ({'+' if diff >= 0 else ''}{diff} จุด เทียบ {prev['month']})"
+        recs.append({
+            'tone': 'good' if rate >= 70 else ('warn' if rate >= 50 else 'risk'),
+            'text': (
+                f"ผลลัพธ์ {period_label}: ขึ้นทะเบียนสำเร็จ {completed}/{total} คน ({rate}%){trend} • "
+                f"ยังค้าง {onprocess} คน • ไม่ผ่าน/ลาออก {summary.get('dropoff', 0)} คน ({summary.get('dropoff_rate', 0)}%)"
+            ),
+        })
 
     avg_sla = summary.get('avg_sla_total', 0)
-    if avg_sla > 0:
-        if avg_sla > SLA_TOTAL_TARGET_DAYS:
-            over_days = round(avg_sla - SLA_TOTAL_TARGET_DAYS, 1)
-            recs.append(
-                f"SLA เฉลี่ยรวมของ{period_label}อยู่ที่ {avg_sla} วัน (เกินเป้า {SLA_TOTAL_TARGET_DAYS} วันอยู่ +{over_days} วัน) "
-                f"— เสร็จทันเกณฑ์ {summary.get('sla_within_target_rate', 0)}%"
-            )
+    sla_n = summary.get('sla_valid_count', 0)
+    if sla_n > 0:
+        within = summary.get('sla_within_target_rate', 0)
+        if avg_sla > target:
+            recs.append({
+                'tone': 'risk',
+                'text': (
+                    f"SLA จริงของช่างที่ขึ้นทะเบียนแล้ว {sla_n} คน เฉลี่ย {avg_sla} วัน เกินเป้า {target} วัน "
+                    f"(+{round(avg_sla - target, 1)} วัน) ทันเป้าเพียง {within}% — ควรทบทวนขั้นตอนที่เกินเป้า"
+                ),
+            })
         else:
-            recs.append(
-                f"SLA เฉลี่ยรวมของ{period_label}อยู่ที่ {avg_sla} วัน อยู่ในเป้าหมาย ≤ {SLA_TOTAL_TARGET_DAYS} วัน "
-                f"(เสร็จทันเกณฑ์ {summary.get('sla_within_target_rate', 0)}%)"
-            )
+            recs.append({
+                'tone': 'good' if within >= 80 else 'warn',
+                'text': (
+                    f"SLA จริงของช่างที่ขึ้นทะเบียนแล้ว {sla_n} คน เฉลี่ย {avg_sla} วัน อยู่ในเป้า ≤ {target} วัน "
+                    f"(ทันเป้า {within}%)"
+                ),
+            })
+    elif total > 0:
+        recs.append({
+            'tone': 'info',
+            'text': f"ยังไม่มีช่างใน{period_label} ที่ขึ้นทะเบียนครบทุกขั้นตอน จึงยังวัด SLA รวม (เป้า {target} วัน) ไม่ได้",
+        })
+
+    overdue = insight['overdue']
+    if overdue['count'] > 0:
+        month_note = ', '.join(f"{m['month']} {m['count']} คน" for m in overdue['by_month'][:3])
+        recs.append({
+            'tone': 'risk',
+            'text': (
+                f"งานค้างเกิน SLA {target} วัน (ทุกรุ่นที่ยังไม่ปิด) {overdue['count']} คน ({month_note}) "
+                f"ค้างนานสุด {overdue['max_days']} วัน ส่วนใหญ่อยู่ที่ \"{overdue['top_status']}\" "
+                f"พื้นที่ {overdue['top_area']} — ควรเร่งปิดงานกลุ่มนี้ก่อน"
+            ),
+        })
+    if overdue['near_count'] > 0:
+        recs.append({
+            'tone': 'warn',
+            'text': f"อีก {overdue['near_count']} คนจะครบ {target} วันภายใน 7 วัน — ติดตามล่วงหน้าเพื่อไม่ให้เกิน SLA",
+        })
 
     over_bottlenecks = [b for b in insight['bottlenecks'] if b['is_over']]
     if over_bottlenecks:
         top_b = over_bottlenecks[0]
-        recs.append(
-            f"คอขวดเวลาหลักใน{period_label}คือขั้นตอน \"{top_b['name']}\" เฉลี่ย {top_b['avg_sla']} วัน "
-            f"(เป้า {top_b['target_days']} วัน, เกิน +{top_b['diff']} วัน)"
-        )
-    elif insight['bottlenecks']:
-        top_b = insight['bottlenecks'][0]
-        recs.append(
-            f"ทุกขั้นตอนใน{period_label}อยู่ในเป้าหมาย โดย \"{top_b['name']}\" ใช้เวลาเฉลี่ยสูงสุดที่ {top_b['avg_sla']} วัน (เป้า {top_b['target_days']} วัน)"
-        )
+        recs.append({
+            'tone': 'risk' if top_b['diff'] > 3 else 'warn',
+            'text': (
+                f"คอขวดหลักคือขั้นตอน \"{top_b['name']}\" เฉลี่ย {top_b['avg_sla']} วัน "
+                f"(เป้า {top_b['target_days']} วัน, เกิน +{top_b['diff']} วัน) — ควรหาสาเหตุและกำหนดผู้รับผิดชอบ"
+            ),
+        })
 
     if insight['top_stuck']:
         area_note = ''
         if insight['top_backlog_area']:
-            area_note = f" โดยพื้นที่ค้างสูงสุดคือ {insight['top_backlog_area']['area']} ({insight['top_backlog_area']['onprocess']} คน)"
-        recs.append(
-            f"จุดค้างสะสมสูงสุดใน{period_label}อยู่ที่ \"{insight['top_stuck']['status']}\" จำนวน "
-            f"{insight['top_stuck']['count']} คน{area_note}"
-        )
+            area_note = f" พื้นที่ค้างมากสุดคือ {insight['top_backlog_area']['area']} ({insight['top_backlog_area']['onprocess']} คน)"
+        recs.append({
+            'tone': 'info',
+            'text': (
+                f"งานค้างของ{period_label} กระจุกที่ \"{insight['top_stuck']['status']}\" "
+                f"{insight['top_stuck']['count']} คน{area_note}"
+            ),
+        })
+
+    if insight['slowest_area']:
+        sa = insight['slowest_area']
+        recs.append({
+            'tone': 'warn',
+            'text': f"พื้นที่ {sa['area']} มี SLA เฉลี่ยสูงสุด {sa['avg_sla']} วัน (เกินเป้า +{sa['over']} วัน)",
+        })
+
+    # หัวข้อ 1 บรรทัดให้ผู้บริหารเห็นสถานะทันที
+    risks = [r for r in recs if r['tone'] == 'risk']
+    warns = [r for r in recs if r['tone'] == 'warn']
+    if risks:
+        insight['headline'] = {'tone': 'risk', 'text': f"ต้องเร่งแก้ไข {len(risks)} ประเด็น", 'detail': risks[0]['text']}
+    elif warns:
+        insight['headline'] = {'tone': 'warn', 'text': 'มีจุดที่ต้องติดตาม', 'detail': warns[0]['text']}
+    elif recs:
+        insight['headline'] = {'tone': 'good', 'text': 'ภาพรวมอยู่ในเป้าหมาย', 'detail': recs[0]['text']}
 
     insight['recommendations'] = recs
     return insight
+
+
+def get_overdue_backlog(df):
+    """ช่าง Onprocess ทุกรุ่นที่เกิน/ใกล้เกิน SLA รวม (sla_total ของ Onprocess = อายุงานค้างถึงวันข้อมูลล่าสุด)"""
+    result = {'count': 0, 'near_count': 0, 'max_days': 0, 'by_month': [], 'top_status': '', 'top_area': ''}
+    if df.empty or any(c not in df.columns for c in ['result', 'sla_total']):
+        return result
+    onp = df[(df['result'] == 'Onprocess') & df['sla_total'].notna()]
+    target = SLA_TOTAL_TARGET_DAYS
+    overdue = onp[onp['sla_total'] > target]
+    result['near_count'] = int(((onp['sla_total'] > target - 7) & (onp['sla_total'] <= target)).sum())
+    if overdue.empty:
+        return result
+    result['count'] = len(overdue)
+    result['max_days'] = int(overdue['sla_total'].max())
+    if 'training_month' in overdue.columns:
+        counts = overdue['training_month'].value_counts()
+        result['by_month'] = [{'month': m, 'count': int(c)} for m, c in counts.items()]
+    if 'status' in overdue.columns and overdue['status'].notna().any():
+        result['top_status'] = str(overdue['status'].mode().iloc[0])
+    if 'area' in overdue.columns and overdue['area'].notna().any():
+        result['top_area'] = str(overdue['area'].mode().iloc[0])
+    return result
 
 def get_area_stats(df):
     """สรุปสถิติตามพื้นที่ (area) - นับจากคอลัมน์ result"""
@@ -1189,12 +1314,7 @@ def get_area_stats(df):
         
         # คำนวณ avg_sla เฉพาะที่มี sla_total >= 0 และมี start/end date
         if 'sla_total' in area_df.columns and 'start_date' in area_df.columns and 'end_date' in area_df.columns:
-            valid_sla_df = area_df[
-                (area_df['sla_total'] >= 0) & 
-                (area_df['sla_total'].notna()) & 
-                (area_df['start_date'].notna()) & 
-                (area_df['end_date'].notna())
-            ]
+            valid_sla_df = completed_sla_rows(area_df)
             avg_sla = valid_sla_df['sla_total'].mean() if len(valid_sla_df) > 0 else 0
         else:
             avg_sla = 0
@@ -1210,16 +1330,7 @@ def get_area_stats(df):
             'success_rate': round((completed / len(area_df) * 100), 1) if len(area_df) > 0 else 0
         })
     
-    # เรียงตามชื่อ area (RSM1, RSM2, RSM3...)
-    # ดึงตัวเลขจากชื่อ area เช่น RSM3_UPC-East -> 3
-    def get_area_sort_key(area):
-        import re
-        match = re.search(r'RSM(\d+)', area.get('area', ''))
-        if match:
-            return int(match.group(1))
-        return 999  # ถ้าไม่มีตัวเลข ให้ไปท้ายสุด
-    
-    return sorted(area_stats, key=get_area_sort_key)
+    return sorted(area_stats, key=lambda a: extract_area_sort_key(a.get('area')))
 
 def get_province_stats(df):
     """สรุปสถิติตามจังหวัด - นับจำนวนลงทะเบียนและขึ้นทะเบียนเรียบร้อย"""
@@ -1743,6 +1854,7 @@ def executive_home():
     onprocess_area_pivot = get_onprocess_pivot(filtered_df, 'area')
     onprocess_province_pivot = get_onprocess_pivot(filtered_df, 'province')
     onprocess_details = get_onprocess_detail_rows(filtered_df)
+    completed_details = get_onprocess_detail_rows(filtered_df, result='Completed')
     monthly = get_monthly_stats(filtered_df)
     all_monthly_for_area = get_monthly_stats(area_filtered_df)
     depot_agents = get_depot_agent_stats(filtered_df)
@@ -1755,6 +1867,7 @@ def executive_home():
         areas,
         summary,
         selected_months=ctx['selected_months'],
+        overdue=get_overdue_backlog(area_filtered_df),
     )
 
     total = summary.get('total', 0)
@@ -1796,6 +1909,7 @@ def executive_home():
         onprocess_area_pivot=onprocess_area_pivot,
         onprocess_province_pivot=onprocess_province_pivot,
         onprocess_details=onprocess_details,
+        completed_details=completed_details,
         exec_insight=exec_insight,
         funnel=funnel,
         monthly=monthly,
