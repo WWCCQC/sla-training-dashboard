@@ -125,6 +125,16 @@ def completed_sla_rows(df):
     ]
 
 
+def current_sla_avg(df):
+    """SLA เฉลี่ยนับจากวันลงทะเบียนถึงสถานะปัจจุบัน: ช่างที่ขึ้นทะเบียนสำเร็จ (ถึงวันจบ)
+    + ช่าง Onprocess (ถึงวันข้อมูลล่าสุด) — ไม่รวมไม่ผ่าน/ลาออก เพราะออกจากกระบวนการแล้ว"""
+    if df.empty or 'sla_total' not in df.columns or 'result' not in df.columns:
+        return 0
+    sla = pd.to_numeric(df.loc[df['result'].isin(['Completed', 'Onprocess']), 'sla_total'], errors='coerce')
+    sla = sla[sla >= 0]
+    return round(float(sla.mean()), 1) if len(sla) else 0
+
+
 def step_finished_mask(df, status_col):
     """ตัดขั้นตอนที่ยังดำเนินการอยู่ (end = วันนี้) ออกจากค่าเฉลี่ย SLA รายขั้นตอน"""
     if status_col not in df.columns:
@@ -308,6 +318,7 @@ def get_summary_stats(df):
             'ojt_fail': 0,
             'ojt_rate': 0,
             'avg_sla_total': 0,
+            'avg_sla_current': 0,
             'sla_valid_count': 0,
             'sla_within_target_count': 0,
             'sla_within_target_rate': 0,
@@ -407,6 +418,7 @@ def get_summary_stats(df):
         'ojt_fail': ojt_fail,
         'ojt_rate': round((ojt_pass / (ojt_pass + ojt_fail) * 100), 1) if (ojt_pass + ojt_fail) > 0 else 0,
         'avg_sla_total': round(float(avg_sla_total), 1) if avg_sla_total else 0,
+        'avg_sla_current': current_sla_avg(df),
         'sla_valid_count': sla_valid_count,
         'sla_within_target_count': sla_within_target_count,
         'sla_within_target_rate': round((sla_within_target_count / sla_valid_count * 100), 1) if sla_valid_count > 0 else 0,
@@ -1338,6 +1350,7 @@ def get_area_stats(df):
             'closed': closed,
             'cancel': cancel,
             'avg_sla': round(avg_sla, 1) if not np.isnan(avg_sla) else 0,
+            'avg_sla_current': current_sla_avg(area_df),
             'success_rate': round((completed / len(area_df) * 100), 1) if len(area_df) > 0 else 0
         })
     

@@ -797,28 +797,24 @@
     </div>
 </div>
 
-<!-- Zone 5: Core Executive Visuals -->
-<div class="mb-6">
-    <!-- Chart 3: Monthly Trend & Completion Rate Combo -->
-    <div class="exec-card exec-reveal p-5">
-        <div class="flex items-center justify-between mb-3">
-            <div>
-                <h3 class="text-sm font-bold text-slate-900">
-                    แนวโน้มรายเดือนและอัตราความสำเร็จ (ปี 2026)
-                </h3>
-                <p class="text-xs text-slate-400">เปรียบเทียบแนวโน้มรายเดือนทั้งปี • เส้นประแสดงอัตราขึ้นทะเบียนสำเร็จ (%)</p>
-            </div>
-        </div>
-        <div style="position: relative; height: 270px; width: 100%;">
-            {% if monthly|length > 0 %}
-            <canvas id="execMonthlyComboChart"></canvas>
-            {% else %}
-            <div class="h-full flex items-center justify-center text-sm text-slate-400">ไม่มีข้อมูลสำหรับแสดงกราฟ</div>
-            {% endif %}
-        </div>
-    </div>
-</div>
-
+<!-- Area summary table styles (used by Tab 1 in Zone 6) -->
+<style>
+    .area-tbl { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+    .area-tbl thead th { position: sticky; top: 0; background: #fff; font-size: 11px; font-weight: 600; letter-spacing: .02em; color: #64748B; text-transform: none; padding: 10px 12px; border-bottom: 1px solid #E2E8F0; white-space: nowrap; }
+    .area-tbl td { padding: 11px 12px; border-bottom: 1px solid #F1F5F9; vertical-align: middle; }
+    .area-tbl tbody tr { transition: background .15s; }
+    .area-tbl tbody tr:hover { background: #F8FAFC; }
+    .area-tbl tr.is-total td { background: linear-gradient(90deg, #EEF2FF, #F8FAFC); border-bottom: 1px solid #E0E7FF; font-weight: 700; }
+    .area-tbl tr.is-total td:first-child { border-radius: .75rem 0 0 .75rem; }
+    .area-tbl tr.is-total td:last-child { border-radius: 0 .75rem .75rem 0; }
+    .area-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+</style>
+{% macro sla_chip(v, has) %}
+    {% if has %}
+    {% set cls = 'bg-emerald-50 text-emerald-700' if v <= sla_total_target else ('bg-amber-50 text-amber-700' if v <= sla_total_target + 5 else 'bg-rose-50 text-rose-700') %}
+    <span class="area-chip {{ cls }}">{{ v }} <span class="font-medium opacity-70">วัน</span></span>
+    {% else %}<span class="text-slate-300">-</span>{% endif %}
+{% endmacro %}
 <!-- Zone 6: Tabbed Detail & Drill-down Hub (Default: Tab 1 Area Summary) -->
 <div class="exec-card exec-reveal overflow-hidden mb-6">
     <!-- Tab Navigation -->
@@ -854,89 +850,70 @@
     <div class="p-5">
         <!-- Tab 1: Area Summary (Default Visible) -->
         <div id="tab-area" class="exec-tab-panel">
-            <div class="flex items-center justify-end mb-3">
-                <span class="text-xs text-slate-400">เกณฑ์สี SLA เฉลี่ย: ≤ {{ sla_total_target }} วัน = ตามเป้า</span>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="min-w-full text-sm">
-                    <thead class="text-slate-500 text-xs border-b border-slate-200">
-                        <tr>
-                            <th class="px-4 py-3 text-left font-medium">พื้นที่ (Area)</th>
-                            <th class="px-4 py-3 text-center font-medium">ลงทะเบียน</th>
-                            <th class="px-4 py-3 text-center font-medium">ขึ้นทะเบียนสำเร็จ</th>
-                            <th class="px-4 py-3 text-center font-medium">อยู่ระหว่างดำเนินการ</th>
-                            <th class="px-4 py-3 text-center font-medium">ไม่ผ่าน</th>
-                            <th class="px-4 py-3 text-center font-medium">ลาออก</th>
-                            <th class="px-4 py-3 text-center font-medium">SLA เฉลี่ย (วัน)</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100">
-                        <tr class="bg-slate-50 font-bold">
-                            <td class="px-4 py-3 text-slate-800">รวมทั้งหมด</td>
-                            <td class="px-4 py-3 text-center text-slate-800">{{ summary.total }}</td>
-                            <td class="px-4 py-3 text-center text-slate-900">
-                                {{ summary.completed }} <span class="text-xs font-semibold">({{ summary.completed_rate }}%)</span>
-                            </td>
-                            <td class="px-4 py-3 text-center text-slate-900">
-                                {% if summary.onprocess > 0 %}
-                                <button type="button" class="onprocess-status-link hover:bg-indigo-50 hover:text-indigo-700 px-2.5 py-1 rounded-lg cursor-pointer" data-status="__all__">
-                                    {{ summary.onprocess }} ({{ summary.onprocess_rate }}%)
-                                    <i class="fas fa-arrow-up-right-from-square ml-1 text-[10px] opacity-60"></i>
-                                </button>
-                                {% else %}0{% endif %}
-                            </td>
-                            <td class="px-4 py-3 text-center text-slate-900">{{ summary.closed }}</td>
-                            <td class="px-4 py-3 text-center text-slate-600">{{ summary.cancel }}</td>
-                            <td class="px-4 py-3 text-center">
-                                {% if sum_sla_valid > 0 %}
-                                <span class="px-2.5 py-1 rounded-full text-xs font-bold {{ 'text-slate-700' if summary.avg_sla_total <= sla_total_target else ('bg-amber-100 text-amber-800' if summary.avg_sla_total <= sla_total_target + 5 else 'bg-rose-100 text-rose-800') }}">
-                                    {{ summary.avg_sla_total }} วัน
-                                </span>
-                                {% else %}
-                                <span class="text-slate-400">-</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% for a in areas %}
-                        <tr class="hover:bg-slate-50">
-                            <td class="px-4 py-3 font-semibold text-slate-800">{{ a.area }}</td>
-                            <td class="px-4 py-3 text-center font-medium text-slate-700">{{ a.total }}</td>
-                            <td class="px-4 py-3 text-center">
-                                <span class="text-slate-900 font-semibold">{{ a.completed }}</span>
-                                <span class="text-xs text-slate-400 ml-1">({{ a.success_rate }}%)</span>
-                            </td>
-                            <td class="px-4 py-3 text-center">
-                                {% if a.onprocess > 0 %}
-                                <button type="button"
-                                    class="onprocess-area-link bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-700 font-semibold px-2.5 py-1 rounded-lg text-xs cursor-pointer"
-                                    data-area="{{ a.area }}">
-                                    {{ a.onprocess }} คน
-                                    <i class="fas fa-arrow-up-right-from-square ml-1 text-[10px] opacity-60"></i>
-                                </button>
-                                {% else %}
-                                <span class="text-slate-300">0</span>
-                                {% endif %}
-                            </td>
-                            <td class="px-4 py-3 text-center {{ 'text-slate-700 font-medium' if a.closed > 0 else 'text-slate-300' }}">{{ a.closed }}</td>
-                            <td class="px-4 py-3 text-center {{ 'text-slate-700 font-medium' if a.cancel > 0 else 'text-slate-300' }}">{{ a.cancel }}</td>
-                            <td class="px-4 py-3 text-center">
-                                {% if a.avg_sla > 0 %}
-                                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold {{ 'text-slate-700' if a.avg_sla <= sla_total_target else ('bg-amber-100 text-amber-700' if a.avg_sla <= sla_total_target + 5 else 'bg-rose-100 text-rose-700') }}">
-                                    {{ a.avg_sla }} วัน
-                                </span>
-                                {% else %}
-                                <span class="text-slate-300">-</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="7" class="px-4 py-8 text-center text-slate-400">ไม่มีข้อมูลพื้นที่</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+    <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
+        <div>
+            <h3 class="text-sm font-bold text-slate-900">สรุปตามพื้นที่ ({{ active_period_short }})</h3>
+            <p class="text-xs text-slate-400">{{ areas|length }} พื้นที่ • คลิกจำนวนที่ดำเนินการเพื่อดูรายชื่อช่าง</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
+            <span class="text-slate-400">SLA เฉลี่ย = วันลงทะเบียน → สถานะปัจจุบัน (ขึ้นทะเบียนสำเร็จ + อยู่ระหว่างดำเนินการ) • ≤ {{ sla_total_target }} วัน = ตามเป้า</span>
+        </div>
+    </div>
+    <div class="overflow-x-auto -mx-1 px-1">
+        <table class="area-tbl">
+            <thead>
+                <tr>
+                    <th class="text-left">พื้นที่ (Area)</th>
+                    <th class="text-right">ลงทะเบียน</th>
+                    <th class="text-right">ขึ้นทะเบียนสำเร็จ</th>
+                    <th class="text-center">อยู่ระหว่างดำเนินการ</th>
+                    <th class="text-right">ไม่ผ่าน</th>
+                    <th class="text-right">ลาออก</th>
+                    <th class="text-center">SLA เฉลี่ย</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="is-total">
+                    <td class="text-slate-900"><i class="fas fa-layer-group text-indigo-500 mr-1.5"></i>รวมทั้งหมด</td>
+                    <td class="text-right text-slate-900 text-base tabular-nums">{{ summary.total }}</td>
+                    <td class="text-right tabular-nums"><span class="text-emerald-700">{{ summary.completed }}</span> <span class="text-xs font-medium text-slate-400">{{ summary.completed_rate }}%</span></td>
+                    <td class="text-center">
+                        {% if summary.onprocess > 0 %}
+                        <button type="button" class="onprocess-status-link area-chip bg-amber-100 text-amber-800 hover:bg-amber-200 cursor-pointer" data-status="__all__">
+                            {{ summary.onprocess }} คน <span class="font-medium opacity-70">{{ summary.onprocess_rate }}%</span>
+                            <i class="fas fa-arrow-up-right-from-square text-[10px] opacity-60"></i>
+                        </button>
+                        {% else %}<span class="text-slate-300">0</span>{% endif %}
+                    </td>
+                    <td class="text-right tabular-nums {{ 'text-rose-600' if summary.closed > 0 else 'text-slate-300' }}">{{ summary.closed }}</td>
+                    <td class="text-right tabular-nums {{ 'text-slate-600' if summary.cancel > 0 else 'text-slate-300' }}">{{ summary.cancel }}</td>
+                    <td class="text-center">{{ sla_chip(summary.avg_sla_current, summary.avg_sla_current > 0) }}</td>
+                </tr>
+                {% for a in areas %}
+                <tr>
+                    <td class="font-semibold text-slate-800 whitespace-nowrap">{{ a.area }}</td>
+                    <td class="text-right font-semibold text-slate-700 tabular-nums">{{ a.total }}</td>
+                    <td class="text-right tabular-nums">
+                        <span class="font-semibold {{ 'text-emerald-700' if a.completed > 0 else 'text-slate-300' }}">{{ a.completed }}</span>
+                        <span class="text-xs text-slate-400 ml-0.5">{{ a.success_rate }}%</span>
+                    </td>
+                    <td class="text-center">
+                        {% if a.onprocess > 0 %}
+                        <button type="button" class="onprocess-area-link area-chip bg-amber-50 text-amber-800 ring-1 ring-amber-200 hover:bg-amber-100 cursor-pointer" data-area="{{ a.area }}">
+                            {{ a.onprocess }} คน <i class="fas fa-arrow-up-right-from-square text-[10px] opacity-60"></i>
+                        </button>
+                        {% else %}<span class="text-slate-300">0</span>{% endif %}
+                    </td>
+                    <td class="text-right tabular-nums {{ 'text-rose-600 font-semibold' if a.closed > 0 else 'text-slate-300' }}">{{ a.closed }}</td>
+                    <td class="text-right tabular-nums {{ 'text-slate-700 font-semibold' if a.cancel > 0 else 'text-slate-300' }}">{{ a.cancel }}</td>
+                    <td class="text-center">{{ sla_chip(a.avg_sla_current, a.avg_sla_current > 0) }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="py-8 text-center text-slate-400">ไม่มีข้อมูลพื้นที่</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
         </div>
 
         <!-- Tab 2: Onprocess Bottleneck Matrix (Region / Province Toggle) -->
@@ -1212,6 +1189,28 @@
             </div>
             {% else %}
             <p class="text-sm text-slate-400 py-8 text-center">ไม่มีรายชื่อช่างในสถานะ Onprocess</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Zone 5: Core Executive Visuals -->
+<div class="mb-6">
+    <!-- Chart 3: Monthly Trend & Completion Rate Combo -->
+    <div class="exec-card exec-reveal p-5">
+        <div class="flex items-center justify-between mb-3">
+            <div>
+                <h3 class="text-sm font-bold text-slate-900">
+                    แนวโน้มรายเดือนและอัตราความสำเร็จ (ปี 2026)
+                </h3>
+                <p class="text-xs text-slate-400">เปรียบเทียบแนวโน้มรายเดือนทั้งปี • เส้นประแสดงอัตราขึ้นทะเบียนสำเร็จ (%)</p>
+            </div>
+        </div>
+        <div style="position: relative; height: 270px; width: 100%;">
+            {% if monthly|length > 0 %}
+            <canvas id="execMonthlyComboChart"></canvas>
+            {% else %}
+            <div class="h-full flex items-center justify-center text-sm text-slate-400">ไม่มีข้อมูลสำหรับแสดงกราฟ</div>
             {% endif %}
         </div>
     </div>
