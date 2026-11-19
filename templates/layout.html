@@ -121,14 +121,6 @@
             margin-left: 72px;
         }
 
-        .toggle-btn {
-            transition: transform 0.3s ease;
-        }
-
-        .toggle-btn.rotated {
-            transform: rotate(180deg);
-        }
-
         .card-hover:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
@@ -277,14 +269,6 @@
             transition: background-color 0.15s ease;
         }
 
-        /* Header แบบกระจกเบลอ (glassmorphism) */
-        .main-content > header {
-            background: rgba(255, 255, 255, 0.82) !important;
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
-            border-bottom: 1px solid #e6ebf3 !important;
-        }
-
         /* Footer โปร่งเบา */
         .main-content footer {
             background: transparent !important;
@@ -385,6 +369,7 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/topbar.css') }}">
     {% block extra_styles %}{% endblock %}
 </head>
 
@@ -408,12 +393,6 @@
                 <p class="sidebar-subtitle text-xs text-blue-200">Training Management</p>
             </div>
         </div>
-
-        <!-- Toggle Button -->
-        <button id="toggleSidebar"
-            class="hidden md:flex absolute -right-3 top-20 w-6 h-6 bg-blue-500 rounded-full items-center justify-center text-white shadow-lg hover:bg-blue-600 transition z-50">
-            <i class="fas fa-chevron-left text-xs toggle-btn"></i>
-        </button>
 
         <!-- Navigation Menu -->
         <nav class="p-4 space-y-2 overflow-y-auto" style="max-height: calc(100vh - 100px);">
@@ -457,26 +436,37 @@
     <!-- Main Content -->
     <main id="mainContent" class="main-content min-h-screen flex flex-col">
         <!-- Top Bar -->
-        <header class="bg-white shadow-sm border-b sticky top-0 z-30">
-            <div class="pl-20 pr-4 md:px-6 py-4 flex items-center justify-between gap-4">
-                <div class="flex items-center">
-                    <!-- Desktop Toggle Button in Header -->
-                    <button id="headerToggle"
-                        class="hidden md:flex mr-4 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition">
-                        <i class="fas fa-bars"></i>
+        <header class="brand-topbar sticky top-0 z-30">
+            <div class="brand-topbar-inner">
+                <div class="brand-topbar-heading">
+                    <button id="headerToggle" type="button" aria-label="ย่อหรือขยายเมนู"
+                        class="brand-menu-button hidden md:flex">
+                        <i class="fas fa-bars" aria-hidden="true"></i>
                     </button>
-                    <div>
-                        <h2 class="text-xl font-bold text-blue-600">{% block page_title %}สถานะการอบรมและการขึ้นทะเบียนช่าง{% endblock %}</h2>
-                        {% if self.page_subtitle() | trim %}<p class="text-sm text-gray-500">{% block page_subtitle %}{% endblock %}</p>{% endif %}
+                    <div class="brand-heading-content">
+                        <div class="topbar-brand-3d">
+                            <div class="topbar-ww-sphere-wrap" aria-hidden="true">
+                                <img src="{{ url_for('static', filename='images/ww-3d-sphere.png') }}"
+                                    alt="" width="42" height="42" class="topbar-ww-sphere-img">
+                                <span class="topbar-ww-sphere-gloss"></span>
+                            </div>
+                            <div class="topbar-ww-text-col">
+                                <span class="topbar-ww-title">W&amp;W : Strategic Assurance Office/Last-Mile Service Management</span>
+                                <div class="topbar-ww-horizon-bar" aria-hidden="true"></div>
+                                <div class="topbar-ww-horizon-reflection" aria-hidden="true"></div>
+                            </div>
+                        </div>
+                        <h2 class="brand-page-title">{% block page_title %}สถานะการอบรมและการขึ้นทะเบียนช่าง{% endblock %}</h2>
+                        {% if self.page_subtitle() | trim %}<p class="brand-page-subtitle">{% block page_subtitle %}{% endblock %}</p>{% endif %}
                     </div>
                 </div>
-                <div class="flex items-center space-x-3">
-                    <div class="hidden sm:flex flex-col items-end leading-tight">
-                        <span class="text-sm text-gray-500">
-                            <i class="fas fa-calendar mr-1"></i>
+                <div class="brand-topbar-actions">
+                    <div class="brand-date-panel">
+                        <span class="brand-current-date">
+                            <i class="fas fa-calendar" aria-hidden="true"></i>
                             {{ current_date }}
                         </span>
-                        {% if data_updated_as %}<span class="text-xs text-gray-400 mt-0.5">อัปเดตข้อมูลล่าสุด: {{ data_updated_as }}</span>{% endif %}
+                        {% if data_updated_as %}<span class="brand-updated-at">อัปเดตข้อมูลล่าสุด: {{ data_updated_as }}</span>{% endif %}
                     </div>
                     {% block topbar_actions %}{% endblock %}
                 </div>
@@ -502,34 +492,26 @@
         // Elements
         const sidebar = document.getElementById('sidebar');
         const mainContent = document.getElementById('mainContent');
-        const toggleSidebar = document.getElementById('toggleSidebar');
         const headerToggle = document.getElementById('headerToggle');
         const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-        const toggleIcon = toggleSidebar ? toggleSidebar.querySelector('.toggle-btn') : null;
 
         // Load saved state from localStorage
         const savedState = localStorage.getItem('sidebarCollapsed');
         if (savedState === 'true' && window.innerWidth >= 768) {
             sidebar.classList.add('collapsed');
             mainContent.classList.add('expanded');
-            if (toggleIcon) toggleIcon.classList.add('rotated');
         }
 
         // Toggle sidebar function
         function toggleSidebarState() {
             sidebar.classList.toggle('collapsed');
             mainContent.classList.toggle('expanded');
-            if (toggleIcon) toggleIcon.classList.toggle('rotated');
 
             // Save state to localStorage
             localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
         }
 
         // Desktop toggle buttons
-        if (toggleSidebar) {
-            toggleSidebar.addEventListener('click', toggleSidebarState);
-        }
-
         if (headerToggle) {
             headerToggle.addEventListener('click', toggleSidebarState);
         }

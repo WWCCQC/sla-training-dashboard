@@ -1,0 +1,212 @@
+/* Brand styling adapted from registration/app/globals.css. */
+.topbar-brand-3d {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-right: auto;
+  min-width: 0;
+  padding: 2px 0;
+}
+
+.topbar-ww-sphere-wrap {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow:
+    0 8px 16px rgba(4, 8, 40, 0.65),
+    0 0 14px rgba(239, 68, 68, 0.35);
+  animation: topbarSphereFloat 5.5s ease-in-out infinite;
+}
+
+.topbar-ww-sphere-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 50%;
+  animation: topbarSphereSpin 18s linear infinite;
+  transform-origin: center center;
+}
+
+.topbar-ww-sphere-gloss {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 28% 24%, rgba(255, 255, 255, 0.56) 0%, rgba(255, 255, 255, 0.14) 28%, transparent 54%),
+    radial-gradient(circle at 50% 50%, transparent 62%, rgba(0, 0, 0, 0.44) 100%);
+  box-shadow: inset 0 1.5px 3px rgba(255, 255, 255, 0.6);
+  pointer-events: none;
+}
+
+.topbar-ww-text-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.topbar-ww-title {
+  display: block;
+  font-size: var(--brand-title-size);
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: #f8fafc;
+  background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 55%, #cbd5e1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 1.5px 0 #475569) drop-shadow(0 4px 10px rgba(4, 8, 40, 0.65));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar-ww-horizon-bar {
+  position: relative;
+  margin-top: 4px;
+  height: 3px;
+  width: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #38bdf8 0%, #60a5fa 45%, #38bdf8 85%, rgba(56, 189, 248, 0.22) 100%);
+  box-shadow:
+    0 0 10px rgba(56, 189, 248, 0.9),
+    0 3px 14px rgba(56, 189, 248, 0.6);
+  overflow: hidden;
+}
+
+.topbar-ww-horizon-bar::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -35%;
+  width: 35%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.95) 50%, transparent 100%);
+  animation: topbarHorizonSweep 4.5s ease-in-out infinite;
+}
+
+.topbar-ww-horizon-reflection {
+  margin-top: 3px;
+  height: 1.5px;
+  width: 86%;
+  margin-left: auto;
+  margin-right: auto;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(125, 211, 252, 0.9) 0%, rgba(56, 189, 248, 0.35) 45%, transparent 80%);
+  filter: blur(0.6px);
+}
+
+@keyframes topbarSphereSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes topbarSphereFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-2.5px); }
+}
+
+@keyframes topbarHorizonSweep {
+  0% { left: -35%; }
+  65%, 100% { left: 105%; }
+}
+
+.brand-topbar {
+  color: #fff;
+  background: linear-gradient(180deg, #101a33 0%, #0a1226 60%, #080e1f 100%);
+  border-bottom: 1px solid rgba(146, 168, 255, .55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .2), 0 10px 24px -12px rgba(4, 8, 40, .6);
+}
+
+.brand-topbar-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 24px;
+  padding: 18px 24px;
+}
+
+.brand-topbar-heading {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1 1 580px;
+  min-width: 0;
+}
+
+.brand-heading-content { --brand-title-size: 16.5px; min-width: 0; flex: 1; }
+.topbar-ww-title { white-space: normal; overflow: visible; text-wrap: balance; }
+.topbar-ww-text-col { flex: 1; }
+.brand-page-title {
+  margin: 8px 0 0 55px;
+  font-size: calc(var(--brand-title-size) - 1px);
+  font-weight: 600;
+  color: #dbeafe;
+  line-height: 1.5;
+}
+.brand-page-subtitle { margin-left: 55px; font-size: 11px; color: #c7d2fe; }
+
+.brand-topbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-left: auto;
+  min-width: 0;
+}
+.brand-date-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.brand-current-date { display: flex; align-items: center; gap: 7px; font-size: 13px; color: #fff; }
+.brand-updated-at { font-size: 11px; color: #c7d2fe; }
+
+.brand-presentation-button, .brand-menu-button {
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-shrink: 0;
+  color: #fff;
+  background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.06));
+  border: 1px solid rgba(255,255,255,.25);
+  border-radius: 11px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 4px 10px -5px rgba(4,8,40,.7);
+  cursor: pointer;
+}
+.brand-presentation-button { display: inline-flex; padding: 10px 14px; font-size: 12px; font-weight: 600; }
+.brand-menu-button { width: 36px; height: 36px; }
+.brand-presentation-button:hover, .brand-menu-button:hover { background: rgba(255,255,255,.24); }
+.brand-presentation-button:focus-visible, .brand-menu-button:focus-visible {
+  outline: 2px solid #7dd3fc;
+  outline-offset: 3px;
+}
+
+@media (max-width: 767px) {
+  .brand-topbar-inner { padding: 16px; gap: 14px; }
+  .brand-topbar-heading { padding-left: 52px; flex-basis: 100%; }
+  .topbar-brand-3d { gap: 10px; }
+  .topbar-ww-sphere-wrap { width: 34px; height: 34px; }
+  .brand-heading-content { --brand-title-size: 13px; }
+  .topbar-ww-title { line-height: 1.4; }
+  .brand-page-title, .brand-page-subtitle { margin-left: 44px; }
+  .brand-topbar-actions { width: 100%; justify-content: space-between; }
+  .brand-date-panel { align-items: flex-start; }
+  .brand-updated-at { font-size: 10px; }
+  .brand-presentation-button { padding: 9px 11px; font-size: 11px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar-ww-sphere-wrap, .topbar-ww-sphere-img, .topbar-ww-horizon-bar::after { animation: none; }
+}
+
+@media print {
+  .brand-topbar { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .topbar-ww-sphere-wrap, .topbar-ww-sphere-img, .topbar-ww-horizon-bar::after { animation: none; }
+}
