@@ -235,7 +235,7 @@
     .exec-flow { position: absolute; left: 0; right: 0; top: 1.05rem; height: 2px; background: #E2E8F0; overflow: hidden; }
     .exec-flow::after { content: ''; position: absolute; top: 0; left: -30%; width: 30%; height: 100%; background: linear-gradient(90deg, transparent, #6366F1, transparent); animation: execFlow 3.2s linear infinite; }
     .exec-node { width: 2.15rem; height: 2.15rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 700; background: #fff; border: 2px solid #E2E8F0; color: #64748B; position: relative; z-index: 1; box-shadow: 0 4px 10px -6px rgba(15,23,42,.3); }
-    .exec-node.is-ok { border-color: #C7D2FE; color: #4F46E5; }
+    .exec-node.is-ok { border-color: #A7F3D0; color: #059669; background: #ECFDF5; }
     .exec-node.is-warn { border-color: #FCD34D; color: #B45309; background: #FFFBEB; }
     .exec-node.is-risk { border-color: #FDA4AF; color: #BE123C; background: #FFF1F2; animation: execNodePulse 2s ease-in-out infinite; }
 
@@ -590,7 +590,7 @@
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
                 <span class="exec-icon3d !w-8 !h-8 !rounded-lg !text-sm"><i class="fas fa-route"></i></span>
-                เส้นทาง 7 ขั้นตอน
+                Summary SLA
             </h3>
             <a href="/sla-analysis" class="no-print text-xs text-indigo-600 hover:text-indigo-800 font-medium">วิเคราะห์เชิงลึก <i class="fas fa-arrow-right text-[10px]"></i></a>
         </div>
@@ -598,17 +598,24 @@
             <div class="exec-flow" aria-hidden="true"></div>
             <div class="relative grid grid-cols-7 gap-1">
                 {% for step in sla_analysis_steps %}
-                {% set st = 'none' if step.avg_sla <= 0 else ('ok' if step.avg_sla <= step.target_days else ('warn' if step.avg_sla <= step.target_days * 1.5 else 'risk')) %}
-                <div class="flex flex-col items-center text-center" title="{{ step.name }}: เฉลี่ย {{ step.avg_sla if step.avg_sla > 0 else '-' }} วัน / เป้า {{ step.target_days }} วัน">
+                {# ไม่เกิน SLA = เขียว, เกิน SLA = แดง #}
+                {% set has_sla = (step.count > 0) if step.count is defined else (step.avg_sla > 0) %}
+                {% set st = 'none' if not has_sla else ('ok' if step.avg_sla <= step.target_days else 'risk') %}
+                <div class="flex flex-col items-center text-center" title="{{ step.name }}: {{ ('เฉลี่ย ' ~ step.avg_sla ~ ' วัน จาก ' ~ step.count ~ ' คนที่ปิดขั้นตอนแล้ว') if has_sla else 'ยังไม่มีช่างที่ปิดขั้นตอนนี้' }} / เป้า {{ step.target_days }} วัน">
                     <div class="exec-node is-{{ st }}">
                         {% if st == 'ok' %}<i class="fas fa-check text-[11px]"></i>{% else %}{{ loop.index }}{% endif %}
                     </div>
                     <p class="mt-2 text-[10px] leading-tight font-medium text-slate-600 h-6">{{ step.name }}</p>
-                    <p class="text-xs font-bold {{ 'text-rose-600' if st == 'risk' else ('text-amber-600' if st == 'warn' else 'text-slate-800') }}">{{ step.avg_sla if step.avg_sla > 0 else '-' }}</p>
+                    <p class="text-xs font-bold {{ 'text-rose-600' if st == 'risk' else ('text-emerald-600' if st == 'ok' else 'text-slate-400') }}">{{ step.avg_sla if has_sla else '-' }}</p>
                     <p class="text-[10px] text-slate-400">/{{ step.target_days }} วัน</p>
                 </div>
                 {% endfor %}
             </div>
+        </div>
+        <div class="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
+            <span><span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1"></span>ไม่เกิน SLA</span>
+            <span><span class="inline-block w-2 h-2 rounded-full bg-rose-500 mr-1"></span>เกิน SLA</span>
+            <span><span class="font-bold text-slate-400 mr-1">-</span>ยังไม่มีช่างปิดขั้นตอนนี้</span>
         </div>
         <div class="mt-auto pt-4">
             {% if exec_insight.bottlenecks and exec_insight.bottlenecks[0].is_over %}

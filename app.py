@@ -507,17 +507,20 @@ def get_sla_analysis_step_stats(df):
                 ]
                 combined_sla = valid_df['sla_genid'] + valid_df['sla_printcard']
                 stats = {
+                    'count': len(combined_sla),
                     'avg_sla': round(float(combined_sla.mean()), 1) if not combined_sla.empty else 0,
                     'min_sla': int(combined_sla.min()) if not combined_sla.empty else 0,
                     'max_sla': int(combined_sla.max()) if not combined_sla.empty else 0
                 }
             else:
-                stats = {'avg_sla': 0, 'min_sla': 0, 'max_sla': 0}
+                stats = {'count': 0, 'avg_sla': 0, 'min_sla': 0, 'max_sla': 0}
         else:
-            stats = base_stats.get(key, {'avg_sla': 0, 'min_sla': 0, 'max_sla': 0})
+            base = base_stats.get(key, {'total': 0, 'avg_sla': 0, 'min_sla': 0, 'max_sla': 0})
+            stats = dict(base, count=base.get('total', 0))
 
         if key == 'training':
             stats = {
+                'count': stats['count'],
                 'avg_sla': min(stats['avg_sla'], guideline['target_days']),
                 'min_sla': min(stats['min_sla'], guideline['target_days']),
                 'max_sla': min(stats['max_sla'], guideline['target_days'])
@@ -529,7 +532,8 @@ def get_sla_analysis_step_stats(df):
             'target_days': guideline['target_days'],
             'avg_sla': stats['avg_sla'],
             'min_sla': stats['min_sla'],
-            'max_sla': stats['max_sla']
+            'max_sla': stats['max_sla'],
+            'count': stats['count'],  # จำนวนช่างที่ปิดขั้นตอนแล้ว (0 = ยังไม่มีข้อมูล, ต่างจากเฉลี่ย 0 วัน)
         })
 
     return analysis_steps
