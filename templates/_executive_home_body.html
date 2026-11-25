@@ -387,7 +387,7 @@
                 <div>
                     <p class="text-xs font-semibold text-slate-500">ลงทะเบียนอบรม</p>
                     <div class="flex items-baseline gap-1.5 mt-1.5">
-                        <h3 class="text-3xl font-extrabold text-slate-900 tracking-tight">{{ summary.total }}</h3>
+                        <h3 class="text-3xl font-extrabold text-slate-900 tracking-tight">{{ summary.total | comma }}</h3>
                         <span class="text-xs font-medium text-slate-400">คน</span>
                     </div>
                 </div>
@@ -404,7 +404,7 @@
                 <div>
                     <p class="text-xs font-semibold text-slate-500">ขึ้นทะเบียนสำเร็จ</p>
                     <div class="flex items-baseline gap-2 mt-1.5">
-                        <h3 class="text-3xl font-extrabold text-emerald-600 tracking-tight">{{ summary.completed }}</h3>
+                        <h3 class="text-3xl font-extrabold text-emerald-600 tracking-tight">{{ summary.completed | comma }}</h3>
                         <span class="text-xs font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
                             {{ summary.completed_rate }}%
                         </span>
@@ -423,7 +423,7 @@
                 <div>
                     <p class="text-xs font-semibold text-slate-500">อยู่ระหว่างดำเนินการ</p>
                     <div class="flex items-baseline gap-2 mt-1.5">
-                        <h3 class="text-3xl font-extrabold text-amber-600 tracking-tight">{{ summary.onprocess }}</h3>
+                        <h3 class="text-3xl font-extrabold text-amber-600 tracking-tight">{{ summary.onprocess | comma }}</h3>
                         <span class="text-xs font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
                             {{ summary.onprocess_rate }}%
                         </span>
@@ -442,7 +442,7 @@
                 <div>
                     <p class="text-xs font-semibold text-slate-500">ไม่ผ่าน / ลาออก</p>
                     <div class="flex items-baseline gap-2 mt-1.5">
-                        <h3 class="text-3xl font-extrabold text-rose-600 tracking-tight">{{ sum_dropoff }}</h3>
+                        <h3 class="text-3xl font-extrabold text-rose-600 tracking-tight">{{ sum_dropoff | comma }}</h3>
                         <span class="text-xs font-bold bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full">
                             {{ sum_dropoff_rate }}%
                         </span>
@@ -500,9 +500,46 @@
     </div>
 </div>
 
-<!-- Zone 4: Insight + Process pipeline -->
-<div class="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-6">
-    <div class="exec-card exec-reveal p-5 lg:col-span-7">
+<!-- Zone 4: Monthly trend chart (60%) | Summary insight + Summary SLA (40%) -->
+<div class="grid grid-cols-1 lg:grid-cols-5 gap-5 mb-6">
+    <!-- Chart 3: Monthly registered vs completed (smooth line + area) -->
+    <div class="exec-card exec-reveal p-5 lg:col-span-3 flex flex-col">
+        <div class="mb-3">
+            <h3 class="text-sm font-bold text-slate-900">แนวโน้มรายเดือน: ลงทะเบียน vs ขึ้นทะเบียนสำเร็จ (ปี 2026)</h3>
+            <p class="text-xs text-slate-400">จำนวนช่างที่ลงทะเบียนและขึ้นทะเบียนสำเร็จในแต่ละเดือน • ป้ายใต้เดือนคืออัตราสำเร็จ (%)</p>
+        </div>
+        {% if monthly|length > 0 %}
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4" id="monthlyTrendKpis">
+            <div class="rounded-xl bg-slate-50 px-4 py-3">
+                <p class="text-xs font-semibold text-slate-500">ลงทะเบียนทั้งปี</p>
+                <p class="text-2xl font-extrabold text-slate-900 tabular-nums" data-kpi="total">-</p>
+            </div>
+            <div class="rounded-xl bg-slate-50 px-4 py-3">
+                <p class="text-xs font-semibold text-slate-500">ขึ้นทะเบียนสำเร็จ</p>
+                <p class="text-2xl font-extrabold text-emerald-700 tabular-nums" data-kpi="completed">-</p>
+            </div>
+            <div class="rounded-xl bg-slate-50 px-4 py-3">
+                <p class="text-xs font-semibold text-slate-500">อัตราสำเร็จ</p>
+                <p class="text-2xl font-extrabold text-slate-900 tabular-nums" data-kpi="rate">-</p>
+            </div>
+        </div>
+        {# กล่อง absolute กันกราฟดันความสูงแถวเอง: กราฟยืดตามความสูงของคอลัมน์ขวา #}
+        <div class="flex-1" style="position: relative; min-height: 320px; width: 100%;"><div style="position: absolute; inset: 0;">
+            <canvas id="execMonthlyComboChart" role="img" aria-label="กราฟเส้นจำนวนช่างลงทะเบียนและขึ้นทะเบียนสำเร็จรายเดือน พร้อมอัตราสำเร็จ"></canvas>
+        </div></div>
+        <div class="flex flex-wrap items-center gap-x-5 gap-y-1.5 mt-3 text-xs text-slate-500">
+            <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm" style="background:#3B82F6"></span>ลงทะเบียน</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm" style="background:#65A30D"></span>ขึ้นทะเบียนสำเร็จ</span>
+            <span class="inline-flex items-center gap-1.5"><span class="px-1.5 rounded-full font-semibold bg-slate-100 text-slate-700">%</span>อัตราสำเร็จของเดือน</span>
+            <span class="inline-flex items-center gap-1.5"><span class="px-1.5 rounded-full font-semibold bg-slate-50 text-slate-400">ไม่ปิด</span>เดือนปัจจุบันยังไม่มีช่างขึ้นทะเบียนสำเร็จ (มีแล้วจะคำนวณ % ทันที)</span>
+        </div>
+        {% else %}
+        <div class="flex-1 min-h-[16rem] flex items-center justify-center text-sm text-slate-400">ไม่มีข้อมูลสำหรับแสดงกราฟ</div>
+        {% endif %}
+    </div>
+
+    <div class="lg:col-span-2 flex flex-col gap-5">
+    <div class="exec-card exec-reveal p-5">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
                 <span class="exec-icon3d !w-8 !h-8 !rounded-lg !text-sm"><i class="fas fa-lightbulb"></i></span>
@@ -510,14 +547,15 @@
             </h3>
             {% if month_insight %}
             <span class="text-[11px] font-semibold bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full">
-                {{ 'เดือนปัจจุบัน' if month_insight.is_current else 'เดือนล่าสุด' }}: {{ month_insight.month_label }}
+                {{ month_insight.badge }}
             </span>
             {% endif %}
         </div>
         {% macro mi_delta(c, unit='คน') %}
-            {% if c.prev == 0 and c.cur == 0 %}<span class="mi-chip is-flat">เท่าเดิม</span>
-            {% elif c.delta > 0 %}<span class="mi-chip is-up"><i class="fas fa-arrow-up text-[9px]"></i> {{ c.delta }} {{ unit }}{% if c.pct is not none %} (+{{ c.pct }}%){% endif %}</span>
-            {% elif c.delta < 0 %}<span class="mi-chip is-down"><i class="fas fa-arrow-down text-[9px]"></i> {{ -c.delta }} {{ unit }}{% if c.pct is not none %} ({{ c.pct }}%){% endif %}</span>
+            {% if c.prev is none %}
+            {% elif c.prev == 0 and c.cur == 0 %}<span class="mi-chip is-flat">เท่าเดิม</span>
+            {% elif c.delta > 0 %}<span class="mi-chip is-up"><i class="fas fa-arrow-up text-[9px]"></i> {{ c.delta | comma }} {{ unit }}{% if c.pct is not none %} (+{{ c.pct }}%){% endif %}</span>
+            {% elif c.delta < 0 %}<span class="mi-chip is-down"><i class="fas fa-arrow-down text-[9px]"></i> {{ -c.delta | comma }} {{ unit }}{% if c.pct is not none %} ({{ c.pct }}%){% endif %}</span>
             {% else %}<span class="mi-chip is-flat">เท่าเดิม</span>{% endif %}
         {% endmacro %}
         <style>
@@ -538,10 +576,10 @@
                 <div class="min-w-0 flex-1">
                     <p class="text-xs font-semibold text-slate-500">ลงทะเบียนอบรม</p>
                     <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 mt-0.5">
-                        <span class="mi-num">{{ mi.registered.cur }}</span><span class="text-xs text-slate-500">คน</span>
+                        <span class="mi-num">{{ mi.registered.cur | comma }}</span><span class="text-xs text-slate-500">คน</span>
                         {{ mi_delta(mi.registered) }}
                     </div>
-                    <p class="text-xs text-slate-500 mt-1">เดือนที่แล้ว ({{ mi.prev_label }}) {{ mi.registered.prev }} คน</p>
+                    {% if mi.prev_label %}<p class="text-xs text-slate-500 mt-1">{{ mi.prev_label }} {{ mi.registered.prev | comma }} คน</p>{% endif %}
                 </div>
             </div>
             <div class="mi-item exec-reveal" style="--d:70ms">
@@ -549,13 +587,15 @@
                 <div class="min-w-0 flex-1">
                     <p class="text-xs font-semibold text-slate-500">ขึ้นทะเบียนสำเร็จ</p>
                     <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 mt-0.5">
-                        <span class="mi-num">{{ mi.completed.cur }}</span><span class="text-xs text-slate-500">คน</span>
+                        <span class="mi-num">{{ mi.completed.cur | comma }}</span><span class="text-xs text-slate-500">คน</span>
                         {{ mi_delta(mi.completed) }}
                     </div>
+                    {% if mi.prev_label or mi.is_current %}
                     <p class="text-xs text-slate-500 mt-1">
-                        เดือนที่แล้ว ({{ mi.prev_label }}) {{ mi.completed.prev }} คน
+                        {% if mi.prev_label %}{{ mi.prev_label }} {{ mi.completed.prev | comma }} คน{% endif %}
                         {% if mi.is_current %}<span class="text-slate-400">• เดือนยังไม่ปิด ข้อมูลถึง {{ mi.as_of }} ช่างรุ่นนี้ส่วนใหญ่ยังอยู่ระหว่างดำเนินการ</span>{% endif %}
                     </p>
+                    {% endif %}
                 </div>
             </div>
             <div class="mi-item exec-reveal" style="--d:140ms">
@@ -565,13 +605,13 @@
                     {% if mi.top_area %}
                     <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 mt-0.5">
                         <span class="text-lg font-extrabold text-slate-900">{{ mi.top_area.name }}</span>
-                        <span class="text-sm font-semibold text-slate-700">{{ mi.top_area.count }} คน</span>
+                        <span class="text-sm font-semibold text-slate-700">{{ mi.top_area.count | comma }} คน</span>
                         <span class="mi-chip is-flat">{{ mi.top_area.share }}% ของทั้งหมด</span>
                     </div>
                     {% if mi.top_province %}
                     <p class="text-xs text-slate-500 mt-1">
                         จังหวัดที่มากที่สุด: <span class="font-semibold text-slate-800">{{ mi.top_province.names | join(', ') }}</span>
-                        ({{ mi.top_province.count }} คน{{ ' ต่อจังหวัด' if mi.top_province.names|length > 1 }})
+                        ({{ mi.top_province.count | comma }} คน{{ ' ต่อจังหวัด' if mi.top_province.names|length > 1 }})
                     </p>
                     {% endif %}
                     {% else %}
@@ -586,7 +626,7 @@
         {% endif %}
     </div>
 
-    <div class="exec-card exec-reveal p-5 lg:col-span-5 flex flex-col" style="--d:120ms">
+    <div class="exec-card exec-reveal p-5 flex flex-col" style="--d:120ms">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
                 <span class="exec-icon3d !w-8 !h-8 !rounded-lg !text-sm"><i class="fas fa-route"></i></span>
@@ -629,11 +669,12 @@
             {% endif %}
             {% if exec_insight.top_stuck %}
             <button type="button" class="no-print onprocess-status-link mt-2 w-full flex items-center justify-between rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-700 hover:border-indigo-300 hover:text-indigo-700 transition cursor-pointer" data-status="{{ exec_insight.top_stuck.status }}">
-                <span>งานค้างกระจุกที่ <strong>{{ exec_insight.top_stuck.status }}</strong> ({{ exec_insight.top_stuck.count }} คน)</span>
+                <span>งานค้างกระจุกที่ <strong>{{ exec_insight.top_stuck.status }}</strong> ({{ exec_insight.top_stuck.count | comma }} คน)</span>
                 <span class="font-semibold">ดูรายชื่อ <i class="fas fa-arrow-right text-[10px]"></i></span>
             </button>
             {% endif %}
         </div>
+    </div>
     </div>
 </div>
 
@@ -750,13 +791,13 @@
                     <div class="iso-num"><i class="fa-solid fa-right-to-bracket text-sm"></i></div>
                     <div class="iso-icon" aria-hidden="true"><i class="fa-solid fa-user-plus main"></i></div>
                     <div class="iso-platform" aria-hidden="true"><div class="left"></div><div class="right"></div><div class="top"></div></div>
-                    <div class="iso-count">{{ summary.total }}<small>คน</small></div>
+                    <div class="iso-count">{{ summary.total | comma }}<small>คน</small></div>
                     <div class="iso-label">ลงทะเบียน</div>
                 </div>
                 <ul class="iso-sum">
-                    <li class="is-drop"><span class="name">ไม่ผ่าน / ลาออก</span><span class="n">{{ sum_dropoff }} คน</span></li>
-                    <li class="is-wip"><span class="name">อยู่ระหว่างดำเนินการ</span><span class="n">{{ summary.onprocess }} คน</span></li>
-                    <li class="is-done"><span class="name">ขึ้นทะเบียนสำเร็จ</span><span class="n">{{ summary.completed }} คน</span></li>
+                    <li class="is-drop"><span class="name">ไม่ผ่าน / ลาออก</span><span class="n">{{ sum_dropoff | comma }} คน</span></li>
+                    <li class="is-wip"><span class="name">อยู่ระหว่างดำเนินการ</span><span class="n">{{ summary.onprocess | comma }} คน</span></li>
+                    <li class="is-done"><span class="name">ขึ้นทะเบียนสำเร็จ</span><span class="n">{{ summary.completed | comma }} คน</span></li>
                 </ul>
             </div>
             <div class="iso-dash" aria-hidden="true"><svg viewBox="0 0 56 280" height="280" preserveAspectRatio="none"><path d="M2 248 C 30 248, 26 138, 50 138" class="line"/><path d="M44 132 L52 138 L44 144" class="head"/></svg></div>
@@ -775,7 +816,7 @@
                         {% if s.badge %}<i class="fa-solid {{ s.badge }} badge {{ s.type }}"></i>{% endif %}
                     </div>
                     <div class="iso-platform" aria-hidden="true"><div class="left"></div><div class="right"></div><div class="top"></div></div>
-                    <div class="iso-count">{{ cnt }}<small>คน</small></div>
+                    <div class="iso-count">{{ cnt | comma }}<small>คน</small></div>
                     <div class="iso-label">{{ s.label }}</div>
                 {% if cnt > 0 %}</button>{% else %}</div>{% endif %}
                 {% set dep_items = (iso_depots.get(s.label, {}).items() | sort(attribute='1', reverse=true) | list) %}
@@ -783,8 +824,8 @@
                 <ul class="iso-depots">
                     {% for d in dep_items %}
                     <li>
-                        <button type="button" class="onprocess-depot-link" data-status="{{ s.label }}" data-depot="{{ '' if d[0] == 'ไม่ระบุ Depot' else d[0] }}" title="ดูรายชื่อช่าง: {{ d[0] }} ({{ d[1] }} คน)">
-                            <span class="name">{{ iso_short(d[0]) }}</span><span class="n">{{ d[1] }}</span>
+                        <button type="button" class="onprocess-depot-link" data-status="{{ s.label }}" data-depot="{{ '' if d[0] == 'ไม่ระบุ Depot' else d[0] }}" title="ดูรายชื่อช่าง: {{ d[0] }} ({{ d[1] | comma }} คน)">
+                            <span class="name">{{ iso_short(d[0]) }}</span><span class="n">{{ d[1] | comma }}</span>
                         </button>
                     </li>
                     {% endfor %}
@@ -803,15 +844,15 @@
                     <div class="iso-num"><i class="fa-solid fa-flag-checkered text-sm"></i></div>
                     <div class="iso-icon" aria-hidden="true"><i class="fa-solid fa-user-check main"></i></div>
                     <div class="iso-platform" aria-hidden="true"><div class="left"></div><div class="right"></div><div class="top"></div></div>
-                    <div class="iso-count">{{ summary.completed }}<small>คน</small></div>
+                    <div class="iso-count">{{ summary.completed | comma }}<small>คน</small></div>
                     <div class="iso-label">ขึ้นทะเบียนสำเร็จ</div>
                 {% if summary.completed > 0 %}</button>{% else %}</div>{% endif %}
                 {% if iso_done_items %}
                 <ul class="iso-depots is-scroll">
                     {% for d in iso_done_items %}
                     <li>
-                        <button type="button" class="completed-depot-link" data-depot="{{ '' if d[0] == 'ไม่ระบุ Depot' else d[0] }}" title="ดูรายชื่อช่าง: {{ d[0] }} ({{ d[1] }} คน)">
-                            <span class="name">{{ iso_short(d[0]) }}</span><span class="n">{{ d[1] }}</span>
+                        <button type="button" class="completed-depot-link" data-depot="{{ '' if d[0] == 'ไม่ระบุ Depot' else d[0] }}" title="ดูรายชื่อช่าง: {{ d[0] }} ({{ d[1] | comma }} คน)">
+                            <span class="name">{{ iso_short(d[0]) }}</span><span class="n">{{ d[1] | comma }}</span>
                         </button>
                     </li>
                     {% endfor %}
@@ -853,7 +894,7 @@
             <button type="button" class="exec-tab-btn px-4 py-2.5 text-xs sm:text-sm font-medium rounded-t-lg border-b-2 border-transparent text-slate-600 hover:text-slate-900 hover:bg-white/60 cursor-pointer"
                 data-tab="tab-bottleneck">
                 <i class="fas fa-clock mr-1.5"></i>Onprocess by RBM
-                <span class="ml-1 bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full text-[11px]">{{ summary.onprocess }}</span>
+                <span class="ml-1 bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full text-[11px]">{{ summary.onprocess | comma }}</span>
             </button>
             <button type="button" class="exec-tab-btn px-4 py-2.5 text-xs sm:text-sm font-medium rounded-t-lg border-b-2 border-transparent text-slate-600 hover:text-slate-900 hover:bg-white/60 cursor-pointer"
                 data-tab="tab-province">
@@ -868,7 +909,7 @@
             <button type="button" class="exec-tab-btn px-4 py-2.5 text-xs sm:text-sm font-medium rounded-t-lg border-b-2 border-transparent text-slate-600 hover:text-slate-900 hover:bg-white/60 cursor-pointer"
                 data-tab="tab-onprocess-list">
                 <i class="fas fa-user-clock mr-1.5"></i>รายชื่อช่าง Onprocess
-                <span class="ml-1 bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full text-[11px]">{{ onprocess_details|length }}</span>
+                <span class="ml-1 bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full text-[11px]">{{ onprocess_details|length | comma }}</span>
             </button>
         </div>
         <a href="/technicians" class="text-xs text-blue-600 hover:text-blue-800 font-medium pb-2 hidden sm:inline-flex items-center gap-1">
@@ -905,37 +946,37 @@
             <tbody>
                 <tr class="is-total">
                     <td class="text-slate-900"><i class="fas fa-layer-group text-indigo-500 mr-1.5"></i>รวมทั้งหมด</td>
-                    <td class="text-right text-slate-900 text-base tabular-nums">{{ summary.total }}</td>
-                    <td class="text-right tabular-nums"><span class="text-emerald-700">{{ summary.completed }}</span> <span class="text-xs font-medium text-slate-400">{{ summary.completed_rate }}%</span></td>
+                    <td class="text-right text-slate-900 text-base tabular-nums">{{ summary.total | comma }}</td>
+                    <td class="text-right tabular-nums"><span class="text-emerald-700">{{ summary.completed | comma }}</span> <span class="text-xs font-medium text-slate-400">{{ summary.completed_rate }}%</span></td>
                     <td class="text-center">
                         {% if summary.onprocess > 0 %}
                         <button type="button" class="onprocess-status-link area-chip bg-amber-100 text-amber-800 hover:bg-amber-200 cursor-pointer" data-status="__all__">
-                            {{ summary.onprocess }} คน <span class="font-medium opacity-70">{{ summary.onprocess_rate }}%</span>
+                            {{ summary.onprocess | comma }} คน <span class="font-medium opacity-70">{{ summary.onprocess_rate }}%</span>
                             <i class="fas fa-arrow-up-right-from-square text-[10px] opacity-60"></i>
                         </button>
                         {% else %}<span class="text-slate-300">0</span>{% endif %}
                     </td>
-                    <td class="text-right tabular-nums {{ 'text-rose-600' if summary.closed > 0 else 'text-slate-300' }}">{{ summary.closed }}</td>
-                    <td class="text-right tabular-nums {{ 'text-slate-600' if summary.cancel > 0 else 'text-slate-300' }}">{{ summary.cancel }}</td>
+                    <td class="text-right tabular-nums {{ 'text-rose-600' if summary.closed > 0 else 'text-slate-300' }}">{{ summary.closed | comma }}</td>
+                    <td class="text-right tabular-nums {{ 'text-slate-600' if summary.cancel > 0 else 'text-slate-300' }}">{{ summary.cancel | comma }}</td>
                     <td class="text-center">{{ sla_chip(summary.avg_sla_current, summary.avg_sla_current > 0) }}</td>
                 </tr>
                 {% for a in areas %}
                 <tr>
                     <td class="font-semibold text-slate-800 whitespace-nowrap">{{ a.area }}</td>
-                    <td class="text-right font-semibold text-slate-700 tabular-nums">{{ a.total }}</td>
+                    <td class="text-right font-semibold text-slate-700 tabular-nums">{{ a.total | comma }}</td>
                     <td class="text-right tabular-nums">
-                        <span class="font-semibold {{ 'text-emerald-700' if a.completed > 0 else 'text-slate-300' }}">{{ a.completed }}</span>
+                        <span class="font-semibold {{ 'text-emerald-700' if a.completed > 0 else 'text-slate-300' }}">{{ a.completed | comma }}</span>
                         <span class="text-xs text-slate-400 ml-0.5">{{ a.success_rate }}%</span>
                     </td>
                     <td class="text-center">
                         {% if a.onprocess > 0 %}
                         <button type="button" class="onprocess-area-link area-chip bg-amber-50 text-amber-800 ring-1 ring-amber-200 hover:bg-amber-100 cursor-pointer" data-area="{{ a.area }}">
-                            {{ a.onprocess }} คน <i class="fas fa-arrow-up-right-from-square text-[10px] opacity-60"></i>
+                            {{ a.onprocess | comma }} คน <i class="fas fa-arrow-up-right-from-square text-[10px] opacity-60"></i>
                         </button>
                         {% else %}<span class="text-slate-300">0</span>{% endif %}
                     </td>
-                    <td class="text-right tabular-nums {{ 'text-rose-600 font-semibold' if a.closed > 0 else 'text-slate-300' }}">{{ a.closed }}</td>
-                    <td class="text-right tabular-nums {{ 'text-slate-700 font-semibold' if a.cancel > 0 else 'text-slate-300' }}">{{ a.cancel }}</td>
+                    <td class="text-right tabular-nums {{ 'text-rose-600 font-semibold' if a.closed > 0 else 'text-slate-300' }}">{{ a.closed | comma }}</td>
+                    <td class="text-right tabular-nums {{ 'text-slate-700 font-semibold' if a.cancel > 0 else 'text-slate-300' }}">{{ a.cancel | comma }}</td>
                     <td class="text-center">{{ sla_chip(a.avg_sla_current, a.avg_sla_current > 0) }}</td>
                 </tr>
                 {% else %}
@@ -974,14 +1015,14 @@
                                     {% if cell > 0 %}
                                     <button type="button" class="onprocess-status-link text-indigo-700 font-bold hover:bg-indigo-50 px-2 py-0.5 rounded cursor-pointer"
                                         data-status="{{ onprocess_area_pivot.columns[loop.index0] }}">
-                                        {{ cell }}<i class="fas fa-arrow-up-right-from-square ml-1 text-[9px] opacity-60"></i>
+                                        {{ cell | comma }}<i class="fas fa-arrow-up-right-from-square ml-1 text-[9px] opacity-60"></i>
                                     </button>
                                     {% else %}-{% endif %}
                                 </td>
                                 {% endfor %}
                                 <td class="px-3 py-2.5 text-center bg-slate-100 text-slate-900">
                                     <button type="button" class="onprocess-status-link hover:bg-indigo-50 px-2 py-0.5 rounded cursor-pointer" data-status="__all__">
-                                        {{ onprocess_area_pivot.grand_total.total }}
+                                        {{ onprocess_area_pivot.grand_total.total | comma }}
                                     </button>
                                 </td>
                             </tr>
@@ -991,7 +1032,7 @@
                                 {% for cell in row.cells %}
                                 <td class="px-2.5 py-2 text-center text-slate-700">{{ cell if cell > 0 else '' }}</td>
                                 {% endfor %}
-                                <td class="px-3 py-2 text-center font-bold bg-slate-50 text-slate-900">{{ row.total }}</td>
+                                <td class="px-3 py-2 text-center font-bold bg-slate-50 text-slate-900">{{ row.total | comma }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -1030,14 +1071,14 @@
                                     {% if cell > 0 %}
                                     <button type="button" class="onprocess-status-link text-indigo-700 font-bold hover:bg-indigo-50 px-2 py-0.5 rounded cursor-pointer"
                                         data-status="{{ onprocess_province_pivot.columns[loop.index0] }}">
-                                        {{ cell }}<i class="fas fa-arrow-up-right-from-square ml-1 text-[9px] opacity-60"></i>
+                                        {{ cell | comma }}<i class="fas fa-arrow-up-right-from-square ml-1 text-[9px] opacity-60"></i>
                                     </button>
                                     {% else %}-{% endif %}
                                 </td>
                                 {% endfor %}
                                 <td class="px-3 py-2.5 text-center bg-slate-100 text-slate-900">
                                     <button type="button" class="onprocess-status-link hover:bg-indigo-50 px-2 py-0.5 rounded cursor-pointer" data-status="__all__">
-                                        {{ onprocess_province_pivot.grand_total.total }}
+                                        {{ onprocess_province_pivot.grand_total.total | comma }}
                                     </button>
                                 </td>
                             </tr>
@@ -1047,7 +1088,7 @@
                                 {% for cell in row.cells %}
                                 <td class="px-2.5 py-2 text-center text-slate-700">{{ cell if cell > 0 else '' }}</td>
                                 {% endfor %}
-                                <td class="px-3 py-2 text-center font-bold bg-slate-50 text-slate-900">{{ row.total }}</td>
+                                <td class="px-3 py-2 text-center font-bold bg-slate-50 text-slate-900">{{ row.total | comma }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -1115,9 +1156,9 @@
                             <td class="px-3 py-2 text-slate-600">{{ agent.depot_code }}</td>
                             <td class="px-3 py-2 text-slate-800 max-w-[200px] truncate" title="{{ agent.depot_name }}">{{ agent.depot_name }}</td>
                             <td class="px-3 py-2 text-slate-600">{{ agent.province }}</td>
-                            <td class="px-3 py-2 text-center font-medium">{{ agent.total }}</td>
-                            <td class="px-3 py-2 text-center font-medium text-slate-900">{{ agent.completed }}</td>
-                            <td class="px-3 py-2 text-center font-medium {{ 'text-slate-900' if agent.onprocess > 0 else 'text-slate-300' }}">{{ agent.onprocess }}</td>
+                            <td class="px-3 py-2 text-center font-medium">{{ agent.total | comma }}</td>
+                            <td class="px-3 py-2 text-center font-medium text-slate-900">{{ agent.completed | comma }}</td>
+                            <td class="px-3 py-2 text-center font-medium {{ 'text-slate-900' if agent.onprocess > 0 else 'text-slate-300' }}">{{ agent.onprocess | comma }}</td>
                             <td class="px-3 py-2 text-center">
                                 <span class="px-2 py-0.5 rounded font-semibold {{ 'text-slate-700' if agent.success_rate >= 80 else ('bg-amber-100 text-amber-800' if agent.success_rate >= 50 else 'bg-rose-100 text-rose-800') }}">
                                     {{ agent.success_rate }}%
@@ -1215,28 +1256,6 @@
             </div>
             {% else %}
             <p class="text-sm text-slate-400 py-8 text-center">ไม่มีรายชื่อช่างในสถานะ Onprocess</p>
-            {% endif %}
-        </div>
-    </div>
-</div>
-
-<!-- Zone 5: Core Executive Visuals -->
-<div class="mb-6">
-    <!-- Chart 3: Monthly Trend & Completion Rate Combo -->
-    <div class="exec-card exec-reveal p-5">
-        <div class="flex items-center justify-between mb-3">
-            <div>
-                <h3 class="text-sm font-bold text-slate-900">
-                    แนวโน้มรายเดือนและอัตราความสำเร็จ (ปี 2026)
-                </h3>
-                <p class="text-xs text-slate-400">เปรียบเทียบแนวโน้มรายเดือนทั้งปี • เส้นประแสดงอัตราขึ้นทะเบียนสำเร็จ (%)</p>
-            </div>
-        </div>
-        <div style="position: relative; height: 360px; width: 100%;">
-            {% if monthly|length > 0 %}
-            <canvas id="execMonthlyComboChart"></canvas>
-            {% else %}
-            <div class="h-full flex items-center justify-center text-sm text-slate-400">ไม่มีข้อมูลสำหรับแสดงกราฟ</div>
             {% endif %}
         </div>
     </div>

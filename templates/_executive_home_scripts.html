@@ -355,7 +355,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         font: { weight: 'bold', size: 11 },
                         formatter: function (val, ctx) {
                             const stage = FUNNEL_STAGES[ctx.dataIndex];
-                            return stage.count + ' คน (' + stage.pct_total.toFixed(1) + '%)';
+                            return Number(stage.count).toLocaleString('en-US') + ' คน (' + stage.pct_total.toFixed(1) + '%)';
                         }
                     }
                 },
@@ -468,184 +468,108 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Chart 3: Monthly Trend & Completion Rate Combo
+    // Chart 3: Monthly registered vs completed — smooth lines + area, % pill under each month
     if (MONTHLY_DATA.length > 0) {
-        const monthlySuccessRates = MONTHLY_DATA.map(m =>
-            m.total > 0 ? Number((m.completed / m.total * 100).toFixed(1)) : 0
-        );
-        const monthlyTotalPlugin = {
-            id: 'monthlyTotalPlugin',
-            afterDatasetsDraw: function (chart) {
-                const ctx = chart.ctx;
-                const datasets = chart.data.datasets;
-                chart.data.labels.forEach((label, idx) => {
-                    let visibleTotal = 0;
-                    let minY = null;
-                    for (let d = 0; d < 4; d++) {
-                        const meta = chart.getDatasetMeta(d);
-                        if (!meta.hidden && meta.data[idx]) {
-                            const val = datasets[d].data[idx] || 0;
-                            visibleTotal += val;
-                            if (val > 0) {
-                                const barY = meta.data[idx].y;
-                                if (minY === null || barY < minY) minY = barY;
-                            }
-                        }
-                    }
-                    if (visibleTotal > 0 && minY !== null) {
-                        ctx.save();
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'bottom';
-                        ctx.font = 'bold 11px sans-serif';
-                        ctx.fillStyle = '#1E293B';
-                        ctx.fillText(visibleTotal, chart.getDatasetMeta(0).data[idx].x, minY - 4);
-                        ctx.restore();
-                    }
+        const REG_BLUE = '#3B82F6', DONE_GREEN = '#65A30D';
+        const fmtN = v => Number(v || 0).toLocaleString('en-US');
+        const rates = MONTHLY_DATA.map(m => m.total > 0 ? Number((m.completed / m.total * 100).toFixed(1)) : 0);
+        // เดือนปัจจุบัน (เวลาไทย) ยังไม่ปิด: แสดง "ไม่ปิด" แทน % และจุดโปร่ง
+        const nowTh = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
+        const curKey = nowTh.toLocaleString('en-US', { month: 'short' }) + String(nowTh.getFullYear()).slice(2);
+        const isOpen = MONTHLY_DATA.map(m => String(m.month || '').replace(/\s/g, '') === curKey);
+        // เดือนที่ยังไม่ปิดแต่มีช่างขึ้นทะเบียนสำเร็จแล้ว ให้คำนวณ % ตามจริง; ถ้ายังไม่มีเลยค่อยแสดง "ไม่ปิด"
+        const noRateYet = MONTHLY_DATA.map((m, i) => isOpen[i] && !(m.completed > 0));
+        // ยังไม่มีเป้าหมาย: ป้าย % ใช้สีเดียวกันทุกเดือน (ไม่ตัดสินดี/แย่)
+        const rateTone = (i) => noRateYet[i] ? ['#F8FAFC', '#94A3B8'] : ['#F1F5F9', '#334155'];
+
+        const sumTotal = MONTHLY_DATA.reduce((a, m) => a + (m.total || 0), 0);
+        const sumDone = MONTHLY_DATA.reduce((a, m) => a + (m.completed || 0), 0);
+        const kpiBox = document.getElementById('monthlyTrendKpis');
+        if (kpiBox) {
+            kpiBox.querySelector('[data-kpi="total"]').textContent = fmtN(sumTotal);
+            kpiBox.querySelector('[data-kpi="completed"]').textContent = fmtN(sumDone);
+            kpiBox.querySelector('[data-kpi="rate"]').textContent = sumTotal ? (sumDone / sumTotal * 100).toFixed(1) + '%' : '-';
+        }
+
+        const ratePillPlugin = {
+            id: 'ratePills',
+            afterDraw(chart) {
+                const { ctx, scales: { x } } = chart;
+                const y = x.bottom + 12;
+                ctx.save();
+                ctx.font = '600 11px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                MONTHLY_DATA.forEach((m, i) => {
+                    const cx = x.getPixelForValue(i);
+                    const label = noRateYet[i] ? 'ไม่ปิด' : rates[i] + '%';
+                    const w = Math.max(40, ctx.measureText(label).width + 14), h = 18;
+                    const [bg, fg] = rateTone(i);
+                    ctx.fillStyle = bg;
+                    ctx.beginPath();
+                    ctx.roundRect(cx - w / 2, y - h / 2, w, h, h / 2);
+                    ctx.fill();
+                    ctx.fillStyle = fg;
+                    ctx.fillText(label, cx, y + 0.5);
                 });
+                ctx.restore();
             }
         };
 
-        // แบ่งพื้นที่แนวตั้ง: แท่งอยู่ครึ่งล่าง (≤ 50%), เส้นอัตราสำเร็จลอยอยู่ด้านบน (0% ≈ 58% ของความสูง)
-        const monthlyMaxTotal = Math.max(1, ...MONTHLY_DATA.map(m => m.total || 0));
-        const RATE_GREEN = '#7CB342';
+        const lineDs = (label, key, color, fillAlpha, labelAlign) => ({
+            label,
+            data: MONTHLY_DATA.map(m => m[key] || 0),
+            borderColor: color,
+            backgroundColor: color + fillAlpha,
+            fill: 'origin',
+            borderWidth: 3,
+            tension: 0.4,
+            cubicInterpolationMode: 'monotone',
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            pointBackgroundColor: MONTHLY_DATA.map((m, i) => isOpen[i] ? '#fff' : color),
+            pointBorderColor: MONTHLY_DATA.map((m, i) => isOpen[i] ? color : '#fff'),
+            pointBorderWidth: 2,
+            datalabels: {
+                align: labelAlign, anchor: 'center', offset: 6,
+                color, font: { weight: 'bold', size: 12 },
+                formatter: (v, c) => (isOpen[c.dataIndex] && !v) ? '' : fmtN(v)
+            }
+        });
+
         createChart('execMonthlyComboChart', {
-            type: 'bar',
-            plugins: [monthlyTotalPlugin],
+            type: 'line',
+            plugins: [ratePillPlugin],
             data: {
                 labels: MONTHLY_DATA.map(m => m.month),
                 datasets: [
-                    {
-                        label: 'ขึ้นทะเบียนสำเร็จ',
-                        data: MONTHLY_DATA.map(m => m.completed),
-                        backgroundColor: '#43A047',
-                        stack: 'headcount',
-                        order: 2,
-                        datalabels: {
-                            color: '#fff',
-                            font: { weight: 'bold', size: 10 },
-                            formatter: v => v > 0 ? v : ''
-                        }
-                    },
-                    {
-                        label: 'อยู่ระหว่างดำเนินการ',
-                        data: MONTHLY_DATA.map(m => m.onprocess),
-                        backgroundColor: '#A5B4FC',
-                        stack: 'headcount',
-                        order: 2,
-                        datalabels: {
-                            color: '#1E1B4B',
-                            font: { weight: 'bold', size: 10 },
-                            formatter: v => v > 0 ? v : ''
-                        }
-                    },
-                    {
-                        label: 'ไม่ผ่าน',
-                        data: MONTHLY_DATA.map(m => m.closed),
-                        backgroundColor: '#FDA4AF',
-                        stack: 'headcount',
-                        order: 2,
-                        datalabels: {
-                            color: '#881337',
-                            font: { weight: 'bold', size: 10 },
-                            formatter: v => v > 0 ? v : ''
-                        }
-                    },
-                    {
-                        label: 'ลาออก',
-                        data: MONTHLY_DATA.map(m => m.cancel),
-                        backgroundColor: '#E2E8F0',
-                        stack: 'headcount',
-                        order: 2,
-                        datalabels: {
-                            color: '#475569',
-                            font: { weight: 'bold', size: 10 },
-                            formatter: v => v > 0 ? v : ''
-                        }
-                    },
-                    {
-                        type: 'line',
-                        label: 'อัตราสำเร็จ (%)',
-                        data: monthlySuccessRates,
-                        yAxisID: 'y1',
-                        borderColor: RATE_GREEN,
-                        backgroundColor: RATE_GREEN,
-                        borderWidth: 2.5,
-                        borderDash: [5, 4],
-                        tension: 0.25,
-                        pointRadius: 4,
-                        pointBackgroundColor: RATE_GREEN,
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 1.5,
-                        order: 1,
-                        datalabels: {
-                            display: true,
-                            align: 'top',
-                            offset: 4,
-                            color: '#33691E',
-                            backgroundColor: 'rgba(255,255,255,0.85)',
-                            borderRadius: 4,
-                            padding: { top: 1, bottom: 1, left: 3, right: 3 },
-                            font: { weight: 'bold', size: 10 },
-                            formatter: v => v + '%'
-                        }
-                    }
+                    lineDs('ลงทะเบียน', 'total', REG_BLUE, '1A', 'top'),
+                    lineDs('ขึ้นทะเบียนสำเร็จ', 'completed', DONE_GREEN, '24', 'bottom')
                 ]
             },
             options: {
-                layout: { padding: { top: 22 } },
+                layout: { padding: { top: 24, bottom: 26, left: 4, right: 16 } },
+                interaction: { mode: 'index', intersect: false },
                 plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            usePointStyle: true,
-                            font: { size: 11 },
-                            padding: 14,
-                            // แท่ง = สี่เหลี่ยมมุมมน, เส้นอัตราสำเร็จ = เส้นประสีเขียว
-                            generateLabels: function (chart) {
-                                return Chart.defaults.plugins.legend.labels.generateLabels(chart).map(item => {
-                                    const ds = chart.data.datasets[item.datasetIndex];
-                                    if (ds.type === 'line') {
-                                        return Object.assign(item, {
-                                            pointStyle: 'line', fillStyle: RATE_GREEN, strokeStyle: RATE_GREEN,
-                                            lineWidth: 3, lineDash: [5, 3]
-                                        });
-                                    }
-                                    return Object.assign(item, { pointStyle: 'rectRounded', lineWidth: 0 });
-                                });
-                            }
-                        }
-                    },
+                    legend: { display: false },
                     tooltip: {
-                        mode: 'index',
-                        intersect: false,
                         callbacks: {
-                            afterTitle: function (items) {
-                                const idx = items[0].dataIndex;
-                                return 'ลงทะเบียนรวม: ' + MONTHLY_DATA[idx].total + ' คน';
+                            label: item => ' ' + item.dataset.label + ': ' + fmtN(item.raw) + ' คน',
+                            footer: items => {
+                                const i = items[0].dataIndex;
+                                return 'อัตราสำเร็จ: ' + (noRateYet[i] ? 'ยังไม่มีช่างขึ้นทะเบียนสำเร็จ' : rates[i] + '%') + (isOpen[i] ? ' (เดือนยังไม่ปิด)' : '');
                             }
                         }
                     }
                 },
                 scales: {
-                    x: { stacked: true, grid: { display: false } },
+                    x: { offset: true, grid: { display: false }, ticks: { color: '#475569', font: { size: 12 } } },
                     y: {
-                        stacked: true,
                         beginAtZero: true,
-                        max: Math.ceil(monthlyMaxTotal / 0.5),
-                        grid: { color: '#F1F5F9' },
-                        ticks: { display: false }
-                    },
-                    y1: {
-                        position: 'right',
-                        min: -150,
-                        max: 110,
-                        grid: { display: false },
-                        ticks: {
-                            color: '#689F38',
-                            font: { size: 10 },
-                            stepSize: 25,
-                            callback: v => (v >= 0 && v <= 100) ? v + '%' : ''
-                        }
+                        suggestedMax: Math.ceil(Math.max(1, ...MONTHLY_DATA.map(m => m.total || 0)) * 1.15 / 10) * 10,
+                        grid: { color: '#EEF2F7' },
+                        border: { display: false },
+                        ticks: { color: '#94A3B8', font: { size: 11 }, maxTicksLimit: 5, callback: v => fmtN(v) }
                     }
                 }
             }

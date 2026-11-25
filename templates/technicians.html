@@ -322,7 +322,7 @@ function updateStats(data) {
     const closed = data.filter(t => t.result === 'Closed').length;
     const cancel = data.filter(t => t.result === 'Cancel').length;
     
-    document.querySelector('#stat-total p:last-child').textContent = total;
+    document.querySelector('#stat-total p:last-child').textContent = Number(total).toLocaleString('en-US');
     document.querySelector('#stat-completed p:last-child').textContent = completed;
     document.querySelector('#stat-onprocess p:last-child').textContent = onprocess;
     document.querySelector('#stat-closed p:last-child').textContent = closed;

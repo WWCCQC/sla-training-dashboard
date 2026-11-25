@@ -1300,55 +1300,88 @@ def get_executive_home_insight(monthly, all_monthly, sla_analysis_steps, onproce
     return insight
 
 
-def get_current_month_insight(df):
-    """Summary insight ของเดือนปัจจุบัน (เวลาไทย): ลงทะเบียน/ขึ้นทะเบียนสำเร็จ เทียบเดือนที่แล้ว
-    + พื้นที่ที่ลงทะเบียนมากที่สุด และจังหวัดที่มากที่สุดในพื้นที่นั้น
-    ถ้าเดือนปัจจุบันยังไม่มีข้อมูล ใช้เดือนล่าสุดที่มีข้อมูลแทน"""
-    if df.empty or 'training_month' not in df.columns:
+def get_period_insight(period_df, scope_df):
+    """Summary insight ตามช่วงเวลาที่เลือก (period_df = ข้อมูลที่กรองเดือน/พื้นที่แล้ว,
+    scope_df = ข้อมูลที่กรองเฉพาะพื้นที่ ใช้หาช่วงก่อนหน้า):
+    ลงทะเบียน/ขึ้นทะเบียนสำเร็จ เทียบช่วงก่อนหน้าที่ยาวเท่ากัน (ถ้าเดือนที่เลือกต่อเนื่องกันและมีข้อมูล)
+    + พื้นที่ที่ลงทะเบียนมากที่สุด และจังหวัดที่มากที่สุดในพื้นที่นั้น"""
+    if period_df.empty or 'training_month' not in period_df.columns:
         return None
-    months = df['training_month'].astype(str).str.strip()
-    month_dt = pd.to_datetime(months, format='%b%y', errors='coerce')
+
+    def to_month(frame):
+        return pd.to_datetime(frame['training_month'].astype(str).str.strip(), format='%b%y', errors='coerce')
+
+    months = sorted(to_month(period_df).dropna().unique())
+    if not months:
+        return None
+    months = [pd.Timestamp(m) for m in months]
+    first, last, n = months[0], months[-1], len(months)
+    contiguous = (last.year - first.year) * 12 + last.month - first.month + 1 == n
+
+    scope_months = to_month(scope_df)
+    all_months = sorted(pd.Timestamp(m) for m in scope_months.dropna().unique())
     now = pd.Timestamp.now(tz='Asia/Bangkok')
-    cur = pd.Timestamp(year=now.year, month=now.month, day=1)
-    if not (month_dt == cur).any():
-        if month_dt.notna().sum() == 0:
-            return None
-        cur = month_dt.max()
-    prev = cur - pd.DateOffset(months=1)
-    cur_df, prev_df = df[month_dt == cur], df[month_dt == prev]
+    is_current = n == 1 and first.year == now.year and first.month == now.month
+
+    def label(a, b):
+        if a == b:
+            return a.strftime('%b %Y')
+        if a.year == b.year:
+            return f"{a.strftime('%b')} – {b.strftime('%b %Y')}"
+        return f"{a.strftime('%b %Y')} – {b.strftime('%b %Y')}"
+
+    if is_current:
+        badge = f"เดือนปัจจุบัน: {label(first, last)}"
+    elif n == 1:
+        badge = f"เดือน: {label(first, last)}"
+    elif months == all_months and first.year == last.year:
+        badge = f"ทั้งปี {first.year}"
+    else:
+        badge = f"ช่วง: {label(first, last)}" if contiguous else f"{n} เดือนที่เลือก"
+
+    prev_df, prev_label = None, None
+    if contiguous:
+        p_first, p_last = first - pd.DateOffset(months=n), first - pd.DateOffset(months=1)
+        mask = (scope_months >= p_first) & (scope_months <= p_last)
+        if mask.any():
+            prev_df = scope_df[mask]
+            prev_label = ('เดือนที่แล้ว' if n == 1 else f'ช่วงก่อนหน้า {n} เดือน') + f" ({label(p_first, p_last)})"
 
     def counts(part):
         res = part['result'] if 'result' in part.columns else pd.Series(dtype=str)
         return {'total': len(part), 'completed': int((res == 'Completed').sum())}
 
+    cur_counts = counts(period_df)
+    prev_counts = counts(prev_df) if prev_df is not None else None
+
     def compare(key):
-        c, p = counts(cur_df)[key], counts(prev_df)[key]
+        c = cur_counts[key]
+        if prev_counts is None:
+            return {'cur': c, 'prev': None, 'delta': None, 'pct': None}
+        p = prev_counts[key]
         delta = c - p
         return {'cur': c, 'prev': p, 'delta': delta,
                 'pct': round(delta / p * 100, 1) if p else None}
 
     top_area = top_province = None
-    if 'area' in cur_df.columns and not cur_df.empty:
-        area_counts = cur_df['area'].dropna().astype(str).str.strip()
+    if 'area' in period_df.columns:
+        area_counts = period_df['area'].dropna().astype(str).str.strip()
         area_counts = area_counts[area_counts != ''].value_counts()
         if len(area_counts):
-            name, n = area_counts.index[0], int(area_counts.iloc[0])
-            top_area = {'name': name, 'count': n, 'share': round(n / len(cur_df) * 100, 1)}
-            if 'province' in cur_df.columns:
-                prov = cur_df.loc[cur_df['area'].astype(str).str.strip() == name, 'province']
+            name, cnt = area_counts.index[0], int(area_counts.iloc[0])
+            top_area = {'name': name, 'count': cnt, 'share': round(cnt / len(period_df) * 100, 1)}
+            if 'province' in period_df.columns:
+                prov = period_df.loc[period_df['area'].astype(str).str.strip() == name, 'province']
                 prov = prov.dropna().astype(str).str.strip()
                 prov = prov[prov != ''].value_counts()
                 if len(prov):
                     top_n = int(prov.iloc[0])  # จังหวัดที่เท่ากันอันดับ 1 แสดงทั้งหมด
                     top_province = {'names': [str(x) for x in prov[prov == top_n].index], 'count': top_n}
 
-    th_months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
     return {
-        'month_label': cur.strftime('%b %Y'),
-        'prev_label': prev.strftime('%b %Y'),
-        'month_th': f"{th_months[cur.month - 1]} {cur.year + 543}",
-        'prev_th': f"{th_months[prev.month - 1]} {prev.year + 543}",
-        'is_current': cur.year == now.year and cur.month == now.month,
+        'badge': badge,
+        'prev_label': prev_label,
+        'is_current': is_current,
         'as_of': now.strftime('%d %b %Y'),
         'registered': compare('total'),
         'completed': compare('completed'),
@@ -1921,6 +1954,16 @@ def prepare_dashboard_filter_context(df, allow_area_filter=False, default_to_lat
     }
 
 
+@app.template_filter('comma')
+def comma_filter(value):
+    """แสดงตัวเลขพร้อมตัวคั่นหลักพัน (1069 -> 1,069); ค่าที่ไม่ใช่ตัวเลขคืนค่าเดิม"""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return value
+    if isinstance(value, float) and not value.is_integer():
+        return f"{value:,}"
+    return f"{int(value):,}"
+
+
 @app.route('/')
 def executive_home():
     """หน้าหลักสำหรับนำเสนอผู้บริหาร (Default เป็นเดือนปัจจุบัน/ล่าสุด)"""
@@ -1957,7 +2000,7 @@ def executive_home():
         overdue=get_overdue_backlog(area_filtered_df),
     )
 
-    month_insight = get_current_month_insight(area_filtered_df)
+    month_insight = get_period_insight(filtered_df, area_filtered_df)
 
     total = summary.get('total', 0)
     funnel = {

@@ -405,9 +405,10 @@
                 <span class="ml-3 sidebar-text">หน้าหลัก</span>
             </a>
 
-            {# ซ่อนเมนู Dashboard (เดิม) ไว้ — หน้ายังเปิดได้ที่ /?view=legacy #}
-            <a href="/?view=legacy" data-tooltip="Dashboard (เดิม)" hidden
-                class="hidden sidebar-item flex items-center px-4 py-3 rounded-lg text-white/90 hover:text-white {% if is_legacy_view %}active{% endif %}">
+            {# ซ่อนเมนูอื่นไว้ก่อน เหลือแค่หน้าหลัก — หน้าต่างๆ ยังเปิดได้จากลิงก์ในหน้าหลัก #}
+            <div class="hidden" hidden>
+            <a href="/?view=legacy" data-tooltip="Dashboard (เดิม)"
+                class="sidebar-item flex items-center px-4 py-3 rounded-lg text-white/90 hover:text-white {% if is_legacy_view %}active{% endif %}">
                 <i class="fas fa-columns w-6 text-center"></i>
                 <span class="ml-3 sidebar-text">Dashboard (เดิม)</span>
             </a>
@@ -431,6 +432,7 @@
                 <i class="fas fa-map w-6 text-center"></i>
                 <span class="ml-3 sidebar-text">ช่างอบรมรายจังหวัด</span>
             </a>
+            </div>
         </nav>
     </aside>
 

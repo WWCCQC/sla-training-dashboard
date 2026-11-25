@@ -661,7 +661,7 @@ document.addEventListener('DOMContentLoaded', function() {
             : 0;
         
         document.getElementById('total-provinces').textContent = `${provincesWithData.length} จังหวัด`;
-        document.getElementById('total-technicians').textContent = `${totalTechnicians} คน`;
+        document.getElementById('total-technicians').textContent = `${Number(totalTechnicians).toLocaleString('en-US')} คน`;
         document.getElementById('top-province').textContent = topProvince 
             ? `${topProvince.province} (${topProvince.total})` 
             : '-';
