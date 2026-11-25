@@ -171,6 +171,25 @@ document.addEventListener('DOMContentLoaded', function () {
         window.addEventListener('resize', fit);
     })();
 
+    // แถวกราฟแนวโน้ม + Summary insight + Summary SLA สูงพอดีหน้าจอ (จอกว้าง ทั้งโหมดปกติและโหมดนำเสนอ)
+    function fitTrendRow() {
+        const row = document.getElementById('execTrendRow');
+        const col = row && row.querySelector('[data-fit-col]');
+        if (!row || !col) return;
+        row.style.height = '';
+        col.style.zoom = '1';
+        if (window.innerWidth < 1024) return;
+        const hdr = document.querySelector('header');
+        const stickyTop = hdr && getComputedStyle(hdr).position === 'sticky' ? hdr.offsetHeight : 0;
+        const avail = Math.max(420, window.innerHeight - stickyTop - 32);
+        const need = col.scrollHeight;
+        if (need > avail) col.style.zoom = String(Math.max(0.65, avail / need));
+        row.style.height = avail + 'px';
+    }
+    window.addEventListener('resize', fitTrendRow);
+    window.addEventListener('load', fitTrendRow); // วัดใหม่หลังฟอนต์/รูปโหลดครบ
+    fitTrendRow();
+
     // ===== 1. Presentation Mode Toggle =====
     const presBtn = document.getElementById('presentationToggleBtn');
     const presText = document.getElementById('presentationToggleText');
@@ -184,6 +203,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 icon.className = active ? 'fas fa-compress' : 'fas fa-expand';
             }
             window.dispatchEvent(new Event('resize'));
+            setTimeout(fitTrendRow, 400); // วัดใหม่หลัง sidebar/เนื้อหาเปลี่ยนความกว้างเสร็จ
         });
     }
 
@@ -566,10 +586,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     x: { offset: true, grid: { display: false }, ticks: { color: '#475569', font: { size: 12 } } },
                     y: {
                         beginAtZero: true,
-                        suggestedMax: Math.ceil(Math.max(1, ...MONTHLY_DATA.map(m => m.total || 0)) * 1.15 / 10) * 10,
+                        // ไม่แสดงตัวเลขแกน y และให้เพดานพอดีกับค่าสูงสุดจริง (ไม่เผื่อช่วงที่ยังไม่มีข้อมูล)
+                        max: Math.ceil(Math.max(1, ...MONTHLY_DATA.map(m => m.total || 0)) * 1.06),
                         grid: { color: '#EEF2F7' },
                         border: { display: false },
-                        ticks: { color: '#94A3B8', font: { size: 11 }, maxTicksLimit: 5, callback: v => fmtN(v) }
+                        ticks: { display: false, maxTicksLimit: 5 }
                     }
                 }
             }

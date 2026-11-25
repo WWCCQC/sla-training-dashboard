@@ -501,7 +501,16 @@
 </div>
 
 <!-- Zone 4: Monthly trend chart (60%) | Summary insight + Summary SLA (40%) -->
-<div class="grid grid-cols-1 lg:grid-cols-5 gap-5 mb-6">
+<style>
+    /* จอกว้าง (ทั้งโหมดปกติและโหมดนำเสนอ): ทั้ง 3 กรอบสูงพอดีจอ
+       (JS fitTrendRow กำหนดความสูงแถว และย่อคอลัมน์ขวาถ้ายังล้น) */
+    @media (min-width: 1024px) {
+        #execTrendRow .exec-card { padding: 1rem 1.25rem; }
+        #execTrendRow .mi-item { padding: 6px 10px; }
+        #execTrendRow [data-fit-col] > .exec-card { flex: 1 1 auto; }
+    }
+</style>
+<div id="execTrendRow" class="grid grid-cols-1 lg:grid-cols-5 gap-5 mb-6">
     <!-- Chart 3: Monthly registered vs completed (smooth line + area) -->
     <div class="exec-card exec-reveal p-5 lg:col-span-3 flex flex-col">
         <div class="mb-3">
@@ -538,7 +547,7 @@
         {% endif %}
     </div>
 
-    <div class="lg:col-span-2 flex flex-col gap-5">
+    <div class="lg:col-span-2 flex flex-col gap-5" data-fit-col>
     <div class="exec-card exec-reveal p-5">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
