@@ -365,6 +365,51 @@
     </div>
 </div>
 
+{# ===== KPI icons: Isometric float (ไอคอนลอยขึ้นลงบนแท่นไอโซเมตริก) ===== #}
+{% set ISO_PAL = {"blue": {"m": "#6366F1", "l": "#A5B4FC", "d": "#4338CA", "a": "#38BDF8", "m2": "#9A9CF6", "l2": "#C4CEFD", "d2": "#857EDD", "a2": "#7ED4FA", "pt": "#C7D2FE", "pl": "#818CF8", "pr": "#4F46E5"}, "green": {"m": "#22C55E", "l": "#86EFAC", "d": "#15803D", "a": "#FACC15", "m2": "#6FD996", "l2": "#B0F5C9", "d2": "#67AC81", "a2": "#FCDE67", "pt": "#BBF7D0", "pl": "#4ADE80", "pr": "#16A34A"}, "amber": {"m": "#F59E0B", "l": "#FEF3C7", "d": "#92400E", "a": "#FBBF24", "m2": "#F8C060", "l2": "#FEF7DB", "d2": "#B88362", "a2": "#FCD571", "pt": "#FDE68A", "pl": "#FBBF24", "pr": "#D97706"}, "rose": {"m": "#F43F5E", "l": "#FDA4AF", "d": "#BE123C", "a": "#94A3B8", "m2": "#F88296", "l2": "#FEC4CB", "d2": "#D56580", "a2": "#B9C3D1", "pt": "#FECDD3", "pl": "#FB7185", "pr": "#E11D48"}, "teal": {"m": "#14B8A6", "l": "#F0FDFA", "d": "#0F766E", "a": "#5EEAD4", "m2": "#66D1C5", "l2": "#F5FEFC", "d2": "#63A6A1", "a2": "#96F1E3", "pt": "#99F6E4", "pl": "#2DD4BF", "pr": "#0D9488"}, "slate": {"m": "#94A3B8", "l": "#F1F5F9", "d": "#475569", "a": "#CBD5E1", "m2": "#B9C3D1", "l2": "#F6F8FB", "d2": "#87909E", "a2": "#DDE4EC", "pt": "#E2E8F0", "pl": "#94A3B8", "pr": "#64748B"}} %}
+{% macro iso_kpi_icon(kind, tone, delay=0) %}{% set c = ISO_PAL[tone] %}{% set g = 'isoK-' ~ kind %}
+<svg class="iso-kpi" viewBox="0 0 72 72" width="72" height="72" aria-hidden="true">
+    <defs>{% for r in ['m','l','d','a'] %}<linearGradient id="{{ g }}{{ r }}" x1="0" y1="0" x2=".4" y2="1"><stop offset="0" stop-color="{{ c[r ~ '2'] }}"/><stop offset="1" stop-color="{{ c[r] }}"/></linearGradient>{% endfor %}</defs>
+    <path d="M36 48 64 58 36 68 8 58z" fill="{{ c.pt }}"/><path d="M8 58 36 68v4L8 62z" fill="{{ c.pl }}"/><path d="M36 68 64 58v4L36 72z" fill="{{ c.pr }}"/>
+    <ellipse class="iso-kpi-shadow" cx="36" cy="58" rx="13" ry="4" fill="{{ c.d }}" opacity=".25" style="animation-delay: {{ delay }}ms"/>
+    <g class="iso-kpi-float" style="animation-delay: {{ delay }}ms"><g transform="translate(10.5 5) scale(.8)">
+    {% set M, L, D, A = 'url(#' ~ g ~ 'm)', 'url(#' ~ g ~ 'l)', 'url(#' ~ g ~ 'd)', 'url(#' ~ g ~ 'a)' %}
+    {% if kind == 'reg' %}
+        <circle cx="27" cy="21" r="10" fill="{{ M }}"/><path d="M9 52c0-12 8-19 18-19s18 7 18 19z" fill="{{ M }}"/>
+        <circle cx="47" cy="43" r="10" fill="{{ A }}"/><path d="M47 38v10M42 43h10" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/>
+        <ellipse cx="23" cy="16" rx="5" ry="2.8" fill="#fff" opacity=".6" transform="rotate(-25 23 16)"/>
+    {% elif kind == 'done' %}
+        <path d="M22 38 16 56l8-3 4 7 6-16z" fill="{{ D }}"/><path d="M42 38l6 18-8-3-4 7-6-16z" fill="{{ D }}"/>
+        <circle cx="32" cy="28" r="18" fill="{{ A }}"/><circle cx="32" cy="28" r="12.5" fill="{{ M }}"/>
+        <path d="M26 28.5l4.5 4.5L39 24" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <ellipse cx="25" cy="20" rx="5" ry="2.8" fill="#fff" opacity=".6" transform="rotate(-25 25 20)"/>
+    {% elif kind == 'onp' %}
+        <path d="M20 15h24c0 10-8 13-8 17s8 7 8 17H20c0-10 8-13 8-17s-8-7-8-17z" fill="{{ L }}"/>
+        <path d="M24 19h16c-1 5-6 8-8 9-2-1-7-4-8-9z" fill="{{ A }}"/><path d="M22 47c1-5 6-8 10-8s9 3 10 8z" fill="{{ A }}"/>
+        <path d="M32 29v10" stroke="{{ c.a }}" stroke-width="1.6" stroke-dasharray="2 2"/>
+        <rect x="15" y="8" width="34" height="7" rx="3.5" fill="{{ D }}"/><rect x="15" y="49" width="34" height="7" rx="3.5" fill="{{ D }}"/>
+        <ellipse cx="27" cy="19" rx="5" ry="2.8" fill="#fff" opacity=".6" transform="rotate(-25 27 19)"/>
+    {% elif kind == 'drop' %}
+        <circle cx="27" cy="21" r="10" fill="{{ A }}"/><path d="M9 52c0-12 8-19 18-19s18 7 18 19z" fill="{{ A }}"/>
+        <circle cx="47" cy="43" r="10" fill="{{ M }}"/><path d="M43.5 39.5l7 7M50.5 39.5l-7 7" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/>
+        <ellipse cx="23" cy="16" rx="5" ry="2.8" fill="#fff" opacity=".6" transform="rotate(-25 23 16)"/>
+    {% else %}
+        <rect x="28" y="6" width="8" height="8" rx="2.5" fill="{{ D }}"/><rect x="45" y="13" width="7" height="6" rx="2" transform="rotate(40 48 16)" fill="{{ D }}"/>
+        <circle cx="32" cy="36" r="21" fill="{{ M }}"/><circle cx="32" cy="36" r="15.5" fill="{{ L }}"/>
+        <path d="M32 36V20.5a15.5 15.5 0 0 1 13.4 7.7z" fill="{{ A }}"/><path d="M32 36l7-9" stroke="{{ c.d }}" stroke-width="3" stroke-linecap="round"/><circle cx="32" cy="36" r="2.6" fill="{{ c.d }}"/>
+        <ellipse cx="24" cy="28" rx="5" ry="2.8" fill="#fff" opacity=".6" transform="rotate(-25 24 28)"/>
+    {% endif %}
+    </g></g>
+</svg>
+{% endmacro %}
+<style>
+    .iso-kpi { flex-shrink: 0; margin: -12px -10px -14px 0; overflow: visible; }
+    .iso-kpi-float { animation: isoKpiFloat 2.8s ease-in-out infinite; }
+    .iso-kpi-shadow { transform-box: fill-box; transform-origin: center; animation: isoKpiShadow 2.8s ease-in-out infinite; }
+    @keyframes isoKpiFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+    @keyframes isoKpiShadow { 0%, 100% { transform: scale(1); opacity: .25; } 50% { transform: scale(.82); opacity: .15; } }
+    @media (prefers-reduced-motion: reduce) { .iso-kpi-float, .iso-kpi-shadow { animation: none; } }
+</style>
 <!-- Zone 2: Modern Status Cards Header + 5 Cards (Dynamic by Selected Month) -->
 <div class="mb-6">
     <div class="flex flex-wrap items-center justify-between gap-2 mb-3 px-1">
@@ -391,9 +436,7 @@
                         <span class="text-xs font-medium text-slate-400">คน</span>
                     </div>
                 </div>
-                <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md shadow-blue-500/20 flex items-center justify-center">
-                    <i class="fas fa-user-plus text-base"></i>
-                </div>
+                {{ iso_kpi_icon('reg', 'blue', 0) }}
             </div>
         </div>
 
@@ -410,9 +453,7 @@
                         </span>
                     </div>
                 </div>
-                <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/20 flex items-center justify-center">
-                    <i class="fas fa-check-circle text-base"></i>
-                </div>
+                {{ iso_kpi_icon('done', 'green', 350) }}
             </div>
         </div>
 
@@ -429,9 +470,7 @@
                         </span>
                     </div>
                 </div>
-                <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-md shadow-amber-500/20 flex items-center justify-center">
-                    <i class="fas fa-hourglass-half text-base"></i>
-                </div>
+                {{ iso_kpi_icon('onp', 'amber', 700) }}
             </div>
         </div>
 
@@ -448,9 +487,7 @@
                         </span>
                     </div>
                 </div>
-                <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-rose-500 to-red-600 text-white shadow-md shadow-rose-500/20 flex items-center justify-center">
-                    <i class="fas fa-user-times text-base"></i>
-                </div>
+                {{ iso_kpi_icon('drop', 'rose', 1050) }}
             </div>
         </div>
 
@@ -492,9 +529,7 @@
                         {% if sla_has %}<span class="text-xs font-medium text-slate-400">วัน</span>{% endif %}
                     </div>
                 </div>
-                <div class="w-11 h-11 rounded-2xl bg-gradient-to-br {{ sla_grad }} text-white shadow-md flex items-center justify-center">
-                    <i class="fas fa-stopwatch text-base"></i>
-                </div>
+                {% set sla_tone = 'teal' if 'emerald' in sla_grad else ('amber' if 'amber' in sla_grad else ('rose' if 'rose' in sla_grad else 'slate')) %}{{ iso_kpi_icon('sla', sla_tone, 1400) }}
             </div>
         </div>
     </div>
