@@ -546,36 +546,42 @@
     }
 </style>
 <div id="execTrendRow" class="grid grid-cols-1 lg:grid-cols-5 gap-5 mb-6">
-    <!-- Chart 3: Monthly registered vs completed (smooth line + area) -->
+    <!-- Chart 3: Monthly registered vs completed (Style 4: Executive Gap & Active-Cohort Zone) -->
     <div class="exec-card exec-reveal p-5 lg:col-span-3 flex flex-col">
         <div class="mb-3">
             <h3 class="text-sm font-bold text-slate-900">แนวโน้มรายเดือน: ลงทะเบียน vs ขึ้นทะเบียนสำเร็จ (ปี 2026)</h3>
-            <p class="text-xs text-slate-400">จำนวนช่างที่ลงทะเบียนและขึ้นทะเบียนสำเร็จในแต่ละเดือน • ป้ายใต้เดือนคืออัตราสำเร็จ (%)</p>
+            <p class="text-xs text-slate-400">ระบายสีส่วนต่าง (Gap) ช่วงปิดรอบแล้ว • แยกโซนรุ่นเดือนปัจจุบันที่กำลังดำเนินการไม่ให้เส้นสำเร็จหักลงศูนย์</p>
         </div>
         {% if monthly|length > 0 %}
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4" id="monthlyTrendKpis">
-            <div class="rounded-xl bg-slate-50 px-4 py-3">
+            <div class="relative overflow-hidden rounded-xl bg-slate-50/90 border border-slate-200/80 pl-4 pr-3.5 py-2.5">
+                <span class="absolute left-0 top-2.5 bottom-2.5 w-1 rounded-r bg-blue-600"></span>
                 <p class="text-xs font-semibold text-slate-500">ลงทะเบียนทั้งปี</p>
-                <p class="text-2xl font-extrabold text-slate-900 tabular-nums" data-kpi="total">-</p>
+                <p class="text-2xl font-extrabold text-slate-900 tabular-nums leading-tight mt-0.5"><span data-kpi="total">-</span> <span class="text-xs font-semibold text-slate-400">คน</span></p>
+                <p class="text-[11px] font-semibold text-blue-600 mt-0.5 truncate" data-kpi="total-sub">-</p>
             </div>
-            <div class="rounded-xl bg-slate-50 px-4 py-3">
+            <div class="relative overflow-hidden rounded-xl bg-slate-50/90 border border-slate-200/80 pl-4 pr-3.5 py-2.5">
+                <span class="absolute left-0 top-2.5 bottom-2.5 w-1 rounded-r bg-emerald-600"></span>
                 <p class="text-xs font-semibold text-slate-500">ขึ้นทะเบียนสำเร็จ</p>
-                <p class="text-2xl font-extrabold text-emerald-700 tabular-nums" data-kpi="completed">-</p>
+                <p class="text-2xl font-extrabold text-slate-900 tabular-nums leading-tight mt-0.5"><span data-kpi="completed">-</span> <span class="text-xs font-semibold text-slate-400">คน</span></p>
+                <p class="text-[11px] font-semibold text-emerald-600 mt-0.5 truncate" data-kpi="completed-sub">-</p>
             </div>
-            <div class="rounded-xl bg-slate-50 px-4 py-3">
-                <p class="text-xs font-semibold text-slate-500">อัตราสำเร็จ</p>
-                <p class="text-2xl font-extrabold text-slate-900 tabular-nums" data-kpi="rate">-</p>
+            <div class="relative overflow-hidden rounded-xl bg-slate-50/90 border border-slate-200/80 pl-4 pr-3.5 py-2.5">
+                <span class="absolute left-0 top-2.5 bottom-2.5 w-1 rounded-r bg-amber-500"></span>
+                <p class="text-xs font-semibold text-slate-500">อัตราสำเร็จรวมทั้งปี</p>
+                <p class="text-2xl font-extrabold text-slate-900 tabular-nums leading-tight mt-0.5" data-kpi="rate">-</p>
+                <p class="text-[11px] font-semibold text-amber-600 mt-0.5 truncate" data-kpi="rate-sub">-</p>
             </div>
         </div>
         {# กล่อง absolute กันกราฟดันความสูงแถวเอง: กราฟยืดตามความสูงของคอลัมน์ขวา #}
         <div class="flex-1" style="position: relative; min-height: 320px; width: 100%;"><div style="position: absolute; inset: 0;">
-            <canvas id="execMonthlyComboChart" role="img" aria-label="กราฟเส้นจำนวนช่างลงทะเบียนและขึ้นทะเบียนสำเร็จรายเดือน พร้อมอัตราสำเร็จ"></canvas>
+            <canvas id="execMonthlyComboChart" role="img" aria-label="กราฟเส้นจำนวนช่างลงทะเบียนและขึ้นทะเบียนสำเร็จรายเดือน พร้อมโซนรุ่นปัจจุบันและอัตราสำเร็จ"></canvas>
         </div></div>
-        <div class="flex flex-wrap items-center gap-x-5 gap-y-1.5 mt-3 text-xs text-slate-500">
-            <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm" style="background:#3B82F6"></span>ลงทะเบียน</span>
-            <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm" style="background:#65A30D"></span>ขึ้นทะเบียนสำเร็จ</span>
-            <span class="inline-flex items-center gap-1.5"><span class="px-1.5 rounded-full font-semibold bg-slate-100 text-slate-700">%</span>อัตราสำเร็จของเดือน</span>
-            <span class="inline-flex items-center gap-1.5"><span class="px-1.5 rounded-full font-semibold bg-slate-50 text-slate-400">ไม่ปิด</span>เดือนปัจจุบันยังไม่มีช่างขึ้นทะเบียนสำเร็จ (มีแล้วจะคำนวณ % ทันที)</span>
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 text-xs text-slate-500">
+            <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full" style="background:#2563EB"></span>ลงทะเบียน</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full" style="background:#059669"></span>ขึ้นทะเบียนสำเร็จ</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-3 h-2.5 rounded-sm border border-blue-200" style="background:rgba(191,219,254,0.55)"></span>ส่วนต่าง (Gap)</span>
+            <span class="inline-flex items-center gap-1.5"><span class="w-3 h-2.5 rounded-sm border border-dashed border-amber-400" style="background:#FFFBEB"></span>รุ่นเดือนปัจจุบัน (กำลังดำเนินการ)</span>
         </div>
         {% else %}
         <div class="flex-1 min-h-[16rem] flex items-center justify-center text-sm text-slate-400">ไม่มีข้อมูลสำหรับแสดงกราฟ</div>

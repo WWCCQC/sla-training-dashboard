@@ -488,46 +488,178 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Chart 3: Monthly registered vs completed — smooth lines + area, % pill under each month
+    // Chart 3: Style 4 — Executive Gap & Active-Cohort Zone Area Chart
     if (MONTHLY_DATA.length > 0) {
-        const REG_BLUE = '#3B82F6', DONE_GREEN = '#65A30D';
+        const REG_BLUE = '#2563EB', DONE_GREEN = '#059669', ACTIVE_AMBER = '#D97706';
         const fmtN = v => Number(v || 0).toLocaleString('en-US');
         const rates = MONTHLY_DATA.map(m => m.total > 0 ? Number((m.completed / m.total * 100).toFixed(1)) : 0);
-        // เดือนปัจจุบัน (เวลาไทย) ยังไม่ปิด: แสดง "ไม่ปิด" แทน % และจุดโปร่ง
+
+        // ตรวจเดือนปัจจุบัน (เวลาไทย) หรือเดือนท้ายสุดที่ยังอยู่ระหว่างดำเนินการและยังไม่มีผู้ปิดจบ
         const nowTh = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
         const curKey = nowTh.toLocaleString('en-US', { month: 'short' }) + String(nowTh.getFullYear()).slice(2);
-        const isOpen = MONTHLY_DATA.map(m => String(m.month || '').replace(/\s/g, '') === curKey);
-        // เดือนที่ยังไม่ปิดแต่มีช่างขึ้นทะเบียนสำเร็จแล้ว ให้คำนวณ % ตามจริง; ถ้ายังไม่มีเลยค่อยแสดง "ไม่ปิด"
+        const isOpen = MONTHLY_DATA.map((m, i) =>
+            String(m.month || '').replace(/\s/g, '') === curKey ||
+            (i === MONTHLY_DATA.length - 1 && !(m.completed > 0) && (m.onprocess || 0) > 0)
+        );
         const noRateYet = MONTHLY_DATA.map((m, i) => isOpen[i] && !(m.completed > 0));
-        // ยังไม่มีเป้าหมาย: ป้าย % ใช้สีเดียวกันทุกเดือน (ไม่ตัดสินดี/แย่)
-        const rateTone = (i) => noRateYet[i] ? ['#F8FAFC', '#94A3B8'] : ['#F1F5F9', '#334155'];
 
+        // คำนวณตัวเลขการ์ดสรุปทั้ง 3 กล่องด้านบนกราฟ
         const sumTotal = MONTHLY_DATA.reduce((a, m) => a + (m.total || 0), 0);
         const sumDone = MONTHLY_DATA.reduce((a, m) => a + (m.completed || 0), 0);
+        const sumOnp = MONTHLY_DATA.reduce((a, m) => a + (m.onprocess || 0), 0);
+        const closedMonths = MONTHLY_DATA.filter((_, i) => !isOpen[i]);
+        const closedTotal = closedMonths.reduce((a, m) => a + (m.total || 0), 0);
+        const closedDone = closedMonths.reduce((a, m) => a + (m.completed || 0), 0);
+
         const kpiBox = document.getElementById('monthlyTrendKpis');
         if (kpiBox) {
-            kpiBox.querySelector('[data-kpi="total"]').textContent = fmtN(sumTotal);
-            kpiBox.querySelector('[data-kpi="completed"]').textContent = fmtN(sumDone);
-            kpiBox.querySelector('[data-kpi="rate"]').textContent = sumTotal ? (sumDone / sumTotal * 100).toFixed(1) + '%' : '-';
+            const setTxt = (k, v) => { const el = kpiBox.querySelector('[data-kpi="' + k + '"]'); if (el) el.textContent = v; };
+            setTxt('total', fmtN(sumTotal));
+            setTxt('completed', fmtN(sumDone));
+            setTxt('rate', sumTotal ? (sumDone / sumTotal * 100).toFixed(1) + '%' : '-');
+            setTxt('total-sub', 'เฉลี่ย ' + (sumTotal / MONTHLY_DATA.length).toFixed(1) + ' คน/เดือน');
+            if (closedMonths.length > 0 && closedMonths.length < MONTHLY_DATA.length && closedTotal > 0) {
+                const firstM = String(closedMonths[0].month || '').slice(0, 3);
+                const lastM = String(closedMonths[closedMonths.length - 1].month || '').slice(0, 3);
+                const rangeTxt = closedMonths.length > 1 ? (firstM + '–' + lastM) : firstM;
+                setTxt('completed-sub', 'เฉพาะรุ่น ' + rangeTxt + ' เฉลี่ย ' + (closedDone / closedTotal * 100).toFixed(1) + '%');
+            } else {
+                setTxt('completed-sub', 'สำเร็จ ' + fmtN(sumDone) + ' จาก ' + fmtN(sumTotal) + ' คน');
+            }
+            setTxt('rate-sub', sumOnp > 0 ? ('ส่วนต่างอยู่ระหว่างดำเนินการ ' + fmtN(sumOnp) + ' คน') : 'ปิดรอบครบทุกรายการ');
         }
 
-        const ratePillPlugin = {
-            id: 'ratePills',
+        // หาเดือนที่มียอดลงทะเบียนสูงสุดในกลุ่มเดือนที่ปิดรอบแล้ว สำหรับป้าย Peak Callout
+        let peakIdx = -1;
+        MONTHLY_DATA.forEach((m, i) => {
+            if (!isOpen[i] && (m.total || 0) > 0) {
+                if (peakIdx === -1 || (m.total || 0) > (MONTHLY_DATA[peakIdx].total || 0)) peakIdx = i;
+            }
+        });
+
+        // ถ้าเดือนปัจจุบันยังไม่มีผู้สำเร็จ (0 คน) ให้ตัดเส้นเขียวหยุดที่เดือนก่อนหน้า ไม่ให้เส้นดิ่งลง 0
+        const regSeries = MONTHLY_DATA.map(m => m.total || 0);
+        const doneSeries = MONTHLY_DATA.map((m, i) => (noRateYet[i] ? null : (m.completed || 0)));
+
+        // สีป้าย % ด้านล่างแกนเดือน
+        const rateTone = (i) => {
+            if (noRateYet[i]) return ['#FEF3C7', '#B45309'];
+            if (isOpen[i]) return ['#FEF3C7', '#B45309'];
+            if (rates[i] >= 75) return ['#DCFCE7', '#15803D'];
+            if (rates[i] >= 65) return ['#FEF3C7', '#B45309'];
+            return ['#FEE2E2', '#B91C1C'];
+        };
+
+        // Plugin วาดโซนสีเหลืองอ่อนของรุ่นเดือนปัจจุบัน (ก่อนวาดเส้นกราฟ)
+        const activeCohortZonePlugin = {
+            id: 'activeCohortZone',
+            beforeDatasetsDraw(chart) {
+                const openIdx = isOpen.findIndex(Boolean);
+                if (openIdx === -1) return;
+                const { ctx, chartArea, scales: { x } } = chart;
+                if (!chartArea) return;
+                const cx = x.getPixelForValue(openIdx);
+                const step = MONTHLY_DATA.length > 1
+                    ? Math.abs(x.getPixelForValue(Math.min(1, MONTHLY_DATA.length - 1)) - x.getPixelForValue(0))
+                    : 110;
+                const halfW = Math.max(42, Math.min(64, step * 0.52));
+                const zx = Math.max(chartArea.left + 4, cx - halfW);
+                const zw = Math.min(chartArea.right - zx + 6, halfW * 2);
+                const zy = chartArea.top - 26;
+                const zh = chartArea.bottom - zy;
+
+                ctx.save();
+                ctx.fillStyle = '#FFFBEB';
+                ctx.strokeStyle = '#FCD34D';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([5, 4]);
+                ctx.beginPath();
+                ctx.roundRect(zx, zy, zw, zh, 12);
+                ctx.fill();
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#B45309';
+                ctx.font = '700 11px sans-serif';
+                ctx.fillText('รุ่นเดือนปัจจุบัน', zx + zw / 2, zy + 16);
+                ctx.fillStyle = '#D97706';
+                ctx.font = '500 10px sans-serif';
+                ctx.fillText('(กำลังดำเนินการ)', zx + zw / 2, zy + 30);
+                ctx.restore();
+            }
+        };
+
+        // Plugin วาดป้ายชี้จุดสูงสุด (Peak Callout) + ป้ายค้างดำเนินการในเดือนปัจจุบัน + ป้าย % ใต้แกน X
+        const execAnnotationsPlugin = {
+            id: 'execAnnotations',
+            afterDatasetsDraw(chart) {
+                const { ctx, chartArea, scales: { x } } = chart;
+                if (!chartArea) return;
+                const regMeta = chart.getDatasetMeta(0);
+
+                // 1) ป้าย Peak Callout เหนือจุดสูงสุด
+                if (peakIdx !== -1 && regMeta.data[peakIdx]) {
+                    const pt = regMeta.data[peakIdx];
+                    const pm = MONTHLY_DATA[peakIdx];
+                    const txt = 'สูงสุด ' + pm.month + ': ' + fmtN(pm.total) + ' → สำเร็จ ' + fmtN(pm.completed);
+                    ctx.save();
+                    ctx.font = '700 11px sans-serif';
+                    const bw = ctx.measureText(txt).width + 20;
+                    const bh = 24;
+                    const openIdx = isOpen.findIndex(Boolean);
+                    let maxRight = chartArea.right - bw / 2 - 4;
+                    if (openIdx > peakIdx && regMeta.data[openIdx]) {
+                        const step = MONTHLY_DATA.length > 1 ? Math.abs(x.getPixelForValue(1) - x.getPixelForValue(0)) : 110;
+                        maxRight = Math.min(maxRight, x.getPixelForValue(openIdx) - step * 0.55 - bw / 2);
+                    }
+                    const bx = Math.max(chartArea.left + bw / 2 + 4, Math.min(pt.x, maxRight));
+                    const by = Math.max(chartArea.top - 26, pt.y - 34);
+
+                    ctx.fillStyle = '#1E293B';
+                    ctx.beginPath();
+                    ctx.roundRect(bx - bw / 2, by, bw, bh, 7);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(txt, bx, by + bh / 2 + 0.5);
+                    ctx.restore();
+                }
+
+                // 2) ป้ายจำนวนค้างดำเนินการใต้จุดเดือนปัจจุบัน (กรณีเดือนยังไม่ปิด)
+                MONTHLY_DATA.forEach((m, i) => {
+                    if (!isOpen[i] || !regMeta.data[i]) return;
+                    const pt = regMeta.data[i];
+                    const onp = m.onprocess || 0;
+                    if (onp <= 0) return;
+                    ctx.save();
+                    ctx.font = '700 11px sans-serif';
+                    ctx.fillStyle = '#D97706';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'top';
+                    const subTxt = fmtN(onp) + ' ค้าง';
+                    const clampedX = Math.min(chartArea.right - 10, pt.x);
+                    ctx.fillText(subTxt, clampedX, pt.y + 11);
+                    ctx.restore();
+                });
+            },
             afterDraw(chart) {
                 const { ctx, scales: { x } } = chart;
-                const y = x.bottom + 12;
+                const y = x.bottom + 13;
                 ctx.save();
-                ctx.font = '600 11px sans-serif';
+                ctx.font = '700 11px sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 MONTHLY_DATA.forEach((m, i) => {
                     const cx = x.getPixelForValue(i);
-                    const label = noRateYet[i] ? 'ไม่ปิด' : rates[i] + '%';
-                    const w = Math.max(40, ctx.measureText(label).width + 14), h = 18;
+                    const label = noRateYet[i] ? 'รอปิดรอบ' : rates[i] + '%';
+                    const w = Math.max(46, ctx.measureText(label).width + 14), h = 20;
                     const [bg, fg] = rateTone(i);
                     ctx.fillStyle = bg;
                     ctx.beginPath();
-                    ctx.roundRect(cx - w / 2, y - h / 2, w, h, h / 2);
+                    ctx.roundRect(cx - w / 2, y - h / 2, w, h, 6);
                     ctx.fill();
                     ctx.fillStyle = fg;
                     ctx.fillText(label, cx, y + 0.5);
@@ -536,61 +668,119 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         };
 
-        const lineDs = (label, key, color, fillAlpha, labelAlign) => ({
-            label,
-            data: MONTHLY_DATA.map(m => m[key] || 0),
-            borderColor: color,
-            backgroundColor: color + fillAlpha,
-            fill: 'origin',
-            borderWidth: 3,
-            tension: 0.4,
-            cubicInterpolationMode: 'monotone',
-            pointRadius: 5,
-            pointHoverRadius: 7,
-            pointBackgroundColor: MONTHLY_DATA.map((m, i) => isOpen[i] ? '#fff' : color),
-            pointBorderColor: MONTHLY_DATA.map((m, i) => isOpen[i] ? color : '#fff'),
-            pointBorderWidth: 2,
-            datalabels: {
-                align: labelAlign, anchor: 'center', offset: 6,
-                color, font: { weight: 'bold', size: 12 },
-                formatter: (v, c) => (isOpen[c.dataIndex] && !v) ? '' : fmtN(v)
-            }
-        });
+        const maxVal = Math.max(20, ...regSeries);
+        const yMax = Math.ceil(maxVal * 1.18 / 20) * 20;
 
         createChart('execMonthlyComboChart', {
             type: 'line',
-            plugins: [ratePillPlugin],
+            plugins: [activeCohortZonePlugin, execAnnotationsPlugin],
             data: {
                 labels: MONTHLY_DATA.map(m => m.month),
                 datasets: [
-                    lineDs('ลงทะเบียน', 'total', REG_BLUE, '1A', 'top'),
-                    lineDs('ขึ้นทะเบียนสำเร็จ', 'completed', DONE_GREEN, '24', 'bottom')
+                    {
+                        label: 'ลงทะเบียน',
+                        data: regSeries,
+                        borderColor: REG_BLUE,
+                        backgroundColor: 'rgba(191, 219, 254, 0.45)',
+                        fill: '+1',
+                        borderWidth: 3.5,
+                        tension: 0.38,
+                        cubicInterpolationMode: 'monotone',
+                        segment: {
+                            borderDash: ctx => isOpen[ctx.p1DataIndex] ? [6, 5] : undefined,
+                            borderColor: ctx => isOpen[ctx.p1DataIndex] ? '#3B82F6' : REG_BLUE
+                        },
+                        pointRadius: MONTHLY_DATA.map((_, i) => isOpen[i] ? 7 : 5.5),
+                        pointHoverRadius: 8,
+                        pointBackgroundColor: MONTHLY_DATA.map((_, i) => isOpen[i] ? '#FFFBEB' : REG_BLUE),
+                        pointBorderColor: MONTHLY_DATA.map((_, i) => isOpen[i] ? ACTIVE_AMBER : '#FFFFFF'),
+                        pointBorderWidth: MONTHLY_DATA.map((_, i) => isOpen[i] ? 3 : 2),
+                        datalabels: {
+                            align: 'top',
+                            anchor: 'end',
+                            offset: 4,
+                            color: ctx => isOpen[ctx.dataIndex] ? '#B45309' : '#1D4ED8',
+                            font: { weight: 'bold', size: 12 },
+                            formatter: (v, c) => {
+                                if (c.dataIndex === peakIdx) return '';
+                                return isOpen[c.dataIndex] ? (fmtN(v) + ' คน') : fmtN(v);
+                            }
+                        }
+                    },
+                    {
+                        label: 'ขึ้นทะเบียนสำเร็จ',
+                        data: doneSeries,
+                        spanGaps: false,
+                        borderColor: DONE_GREEN,
+                        backgroundColor: function (context) {
+                            const { ctx, chartArea } = context.chart;
+                            if (!chartArea) return 'rgba(16, 185, 129, 0.14)';
+                            const grad = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                            grad.addColorStop(0, 'rgba(16, 185, 129, 0.26)');
+                            grad.addColorStop(1, 'rgba(16, 185, 129, 0.02)');
+                            return grad;
+                        },
+                        fill: 'origin',
+                        borderWidth: 3.5,
+                        tension: 0.38,
+                        cubicInterpolationMode: 'monotone',
+                        segment: {
+                            borderDash: ctx => isOpen[ctx.p1DataIndex] ? [6, 5] : undefined
+                        },
+                        pointRadius: MONTHLY_DATA.map((_, i) => noRateYet[i] ? 0 : 5.5),
+                        pointHoverRadius: 7.5,
+                        pointBackgroundColor: MONTHLY_DATA.map((_, i) => isOpen[i] ? '#FFFFFF' : DONE_GREEN),
+                        pointBorderColor: MONTHLY_DATA.map((_, i) => isOpen[i] ? DONE_GREEN : '#FFFFFF'),
+                        pointBorderWidth: 2,
+                        datalabels: {
+                            align: 'bottom',
+                            anchor: 'start',
+                            offset: 4,
+                            color: '#047857',
+                            font: { weight: 'bold', size: 11.5 },
+                            formatter: (v, c) => (v === null || noRateYet[c.dataIndex]) ? '' : fmtN(v)
+                        }
+                    }
                 ]
             },
             options: {
-                layout: { padding: { top: 24, bottom: 26, left: 4, right: 16 } },
+                layout: { padding: { top: 34, bottom: 30, left: 4, right: 14 } },
                 interaction: { mode: 'index', intersect: false },
                 plugins: {
                     legend: { display: false },
                     tooltip: {
+                        filter: item => item.raw !== null,
                         callbacks: {
                             label: item => ' ' + item.dataset.label + ': ' + fmtN(item.raw) + ' คน',
                             footer: items => {
+                                if (!items.length) return '';
                                 const i = items[0].dataIndex;
-                                return 'อัตราสำเร็จ: ' + (noRateYet[i] ? 'ยังไม่มีช่างขึ้นทะเบียนสำเร็จ' : rates[i] + '%') + (isOpen[i] ? ' (เดือนยังไม่ปิด)' : '');
+                                const m = MONTHLY_DATA[i];
+                                const lines = [];
+                                if (noRateYet[i]) {
+                                    lines.push('สถานะ: รุ่นปัจจุบันกำลังดำเนินการ (' + fmtN(m.onprocess || 0) + ' คน)');
+                                } else {
+                                    lines.push('อัตราสำเร็จ: ' + rates[i] + '%' + (isOpen[i] ? ' (เดือนยังไม่ปิด)' : ''));
+                                    const gap = (m.total || 0) - (m.completed || 0);
+                                    if (gap > 0) lines.push('ส่วนต่าง (Gap): ' + fmtN(gap) + ' คน');
+                                }
+                                return lines;
                             }
                         }
                     }
                 },
                 scales: {
-                    x: { offset: true, grid: { display: false }, ticks: { color: '#475569', font: { size: 12 } } },
+                    x: {
+                        offset: true,
+                        grid: { display: false },
+                        ticks: { color: '#334155', font: { size: 12, weight: '600' } }
+                    },
                     y: {
                         beginAtZero: true,
-                        // ไม่แสดงตัวเลขแกน y และให้เพดานพอดีกับค่าสูงสุดจริง (ไม่เผื่อช่วงที่ยังไม่มีข้อมูล)
-                        max: Math.ceil(Math.max(1, ...MONTHLY_DATA.map(m => m.total || 0)) * 1.06),
-                        grid: { color: '#EEF2F7' },
+                        max: yMax,
+                        grid: { color: '#F1F5F9' },
                         border: { display: false },
-                        ticks: { display: false, maxTicksLimit: 5 }
+                        ticks: { color: '#94A3B8', font: { size: 11 }, stepSize: Math.max(20, Math.round(yMax / 4 / 10) * 10) }
                     }
                 }
             }
