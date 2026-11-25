@@ -381,7 +381,7 @@
     </button>
 
     <!-- Sidebar -->
-    <aside id="sidebar" class="sidebar fixed left-0 top-0 h-full text-white z-40 shadow-xl">
+    <aside id="sidebar" class="sidebar collapsed fixed left-0 top-0 h-full text-white z-40 shadow-xl">
         <!-- Logo Section -->
         <div class="sidebar-logo flex items-center p-6 border-b border-white/10">
             <div
@@ -437,7 +437,7 @@
     </aside>
 
     <!-- Main Content -->
-    <main id="mainContent" class="main-content min-h-screen flex flex-col">
+    <main id="mainContent" class="main-content min-h-screen flex flex-col expanded">
         <!-- Top Bar -->
         <header class="brand-topbar sticky top-0 z-30">
             <div class="brand-topbar-inner">
@@ -498,20 +498,21 @@
         const headerToggle = document.getElementById('headerToggle');
         const mobileMenuBtn = document.getElementById('mobileMenuBtn');
 
-        // Load saved state from localStorage
-        const savedState = localStorage.getItem('sidebarCollapsed');
-        if (savedState === 'true' && window.innerWidth >= 768) {
-            sidebar.classList.add('collapsed');
-            mainContent.classList.add('expanded');
+        // เปิดหน้าเว็บแบบย่อเมนูเหลือแต่ไอคอนเสมอ (ตั้งไว้ใน HTML: sidebar.collapsed + mainContent.expanded)
+        // กดปุ่มเมนูเพื่อขยายได้ แต่ไม่จำค่าข้ามการเปิดหน้า
+        try { localStorage.removeItem('sidebarCollapsed'); } catch (e) {}
+        if (window.innerWidth < 768) { // มือถือใช้เมนูเลื่อนออกแบบเต็ม
+            sidebar.classList.remove('collapsed');
+            mainContent.classList.remove('expanded');
         }
 
         // Toggle sidebar function
         function toggleSidebarState() {
             sidebar.classList.toggle('collapsed');
             mainContent.classList.toggle('expanded');
+            // ให้กราฟ/เลย์เอาต์ที่ผูกกับขนาดจอวัดใหม่หลังเมนูขยาย-ย่อเสร็จ
+            setTimeout(() => window.dispatchEvent(new Event('resize')), 350);
 
-            // Save state to localStorage
-            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
         }
 
         // Desktop toggle buttons
